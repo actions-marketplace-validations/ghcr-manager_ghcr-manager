@@ -11,6 +11,9 @@ This section is the canonical place for session-to-session continuity.
 - ☑ `6899876` Add GHCR manager analysis and roadmap.
 - ☑ `bc651cb` Add initial TypeScript project scaffold.
 - ☑ `2483a75` Replace Python linting with Node-native tooling.
+- ☑ `b902eda` Strengthen session handoff documentation.
+- ☑ `9d2eb23` Add live GHCR package scan support.
+- ☑ `e33d011` Restructure modules and enforce source-test boundaries.
 
 ### Completed Plan
 
@@ -25,6 +28,8 @@ This section is the canonical place for session-to-session continuity.
 
 - ☑ Add a real GitHub Packages and GHCR ingest adapter beside the fixture loader.
 - ☑ Normalize live package, version, tag, manifest, and edge data into the existing SQLite schema.
+- ☐ Refactor ingest so GitHub and fixture input write incrementally into SQLite instead of assembling package-level
+  in-memory snapshots.
 - ☐ Expand planner output so it explains why versions are protected or deletable.
 - ☐ Add tests for multi-arch images, referrers, and explicit tag exclusion behavior.
 - ☐ Revisit action packaging after the live ingest path exists.
@@ -37,8 +42,14 @@ This section is the canonical place for session-to-session continuity.
 - Current ingest sources:
   - local JSON snapshot fixture
   - live GitHub Packages plus GHCR manifest scan for one org-owned container package
+- Current ingest implementation:
+  - still assembles package-level in-memory snapshot objects before writing to SQLite
+- Ingest architecture direction:
+  - full remote traversal may still be required for correctness
+  - SQLite is the integration surface between ingest stages
+  - target state: avoid package-level in-memory aggregate models as the ingest contract
 - Current action shape: thin composite wrapper that invokes the shared CLI.
-- Working tree expectation at the end of the last session: clean after `b902eda`.
+- Working tree expectation at the end of the last session: clean after `e33d011`.
 - Commit policy: do not commit agent changes until the user has reviewed and explicitly asked for a commit.
 - File size guideline for production TypeScript:
   - up to about 100 lines is comfortable
@@ -122,10 +133,14 @@ src/
 - Refactored the flat `src/` layout into explicit `action`, `cli`, `core`, `db`, and `ingest` boundaries.
 - Added ESLint enforcement for the rule that cross-folder imports must target folder `index.ts` entrypoints.
 - Standardized internal source file names in `src/` so non-public implementation files use the `_*.ts` prefix.
+- Mirrored `tests/` to `src/` one-to-one and added an enforced source-to-test mapping check.
+- Settled the ingest direction for the next refactor: write remote results incrementally into SQLite instead of using
+  package-level in-memory aggregate objects as the primary ingest boundary.
 
 ## Next Increment
 
-1. Replace or complement the snapshot-file scan path with a real GitHub Packages and GHCR ingest adapter.
+1. Replace the current package-level snapshot ingest flow with incremental DB-first ingest for both fixture and
+   GitHub/GHCR paths.
 2. Improve planner output so it explains why versions are protected or deletable.
 3. Add more planner tests for multi-arch images, referrers, and explicit tag exclusion cases.
 4. Revisit action packaging after the live ingest path exists.
