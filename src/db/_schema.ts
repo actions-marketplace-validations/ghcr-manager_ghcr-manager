@@ -14,7 +14,8 @@ const _schemaStatements = [
       digest TEXT NOT NULL UNIQUE,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
-      metadata_json TEXT NOT NULL
+      metadata_json TEXT NOT NULL,
+      UNIQUE(version_id, digest)
     )
   `,
   `
@@ -22,8 +23,7 @@ const _schemaStatements = [
       tag TEXT PRIMARY KEY,
       digest TEXT NOT NULL,
       version_id INTEGER NOT NULL,
-      FOREIGN KEY(version_id) REFERENCES package_versions(version_id),
-      FOREIGN KEY(digest) REFERENCES package_versions(digest)
+      FOREIGN KEY(version_id, digest) REFERENCES package_versions(version_id, digest)
     )
   `,
   `
