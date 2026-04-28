@@ -4,9 +4,8 @@ Inspect, analyze, and manage GitHub Container Registry packages.
 
 ## Status
 
-This repository is starting as a new public GitHub Action and companion CLI for safe GHCR cleanup and
-inspection, with a focus on large packages and correct handling of multi-arch images, referrers, and
-attestations.
+This repository is starting as a new public GitHub Action and companion CLI for safe GHCR cleanup and inspection, with a
+focus on large packages and correct handling of multi-arch images, referrers, and attestations.
 
 The initial design record and implementation path live in [docs/analysis-summary.md](docs/analysis-summary.md).
 

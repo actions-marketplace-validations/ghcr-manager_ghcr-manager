@@ -47,11 +47,11 @@ async function _handleScan(args: string[]): Promise<number> {
         packageVersions: snapshot.packageVersions.length,
         tags: snapshot.tags.length,
         manifests: snapshot.manifests.length,
-        manifestEdges: snapshot.manifestEdges.length
+        manifestEdges: snapshot.manifestEdges.length,
       },
       null,
-      2
-    )
+      2,
+    ),
   );
   database.close();
   return 0;
@@ -67,7 +67,7 @@ async function _handlePlanSummary(args: string[]): Promise<number> {
   const options: PlanOptions = {
     olderThanDays,
     deleteUntagged: args.includes("--delete-untagged"),
-    excludeTags: _collectRepeatedOption(args, "--exclude-tag")
+    excludeTags: _collectRepeatedOption(args, "--exclude-tag"),
   };
 
   const database = openDatabase(databasePath);

@@ -45,7 +45,7 @@ const _schemaStatements = [
   `CREATE INDEX IF NOT EXISTS idx_package_versions_created_at ON package_versions(created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_tags_digest ON tags(digest)`,
   `CREATE INDEX IF NOT EXISTS idx_manifest_edges_parent ON manifest_edges(parent_digest)`,
-  `CREATE INDEX IF NOT EXISTS idx_manifest_edges_child ON manifest_edges(child_digest)`
+  `CREATE INDEX IF NOT EXISTS idx_manifest_edges_child ON manifest_edges(child_digest)`,
 ];
 
 export function initializeSchema(database: Database.Database): void {

@@ -25,7 +25,7 @@ test("repository imports snapshot and planner keeps tagged graph while exposing 
     const summary = buildPlanSummary(repository, {
       olderThanDays: 30,
       deleteUntagged: true,
-      excludeTags: ["keep-me"]
+      excludeTags: ["keep-me"],
     });
 
     assert.equal(summary.packageName, "acme/example");

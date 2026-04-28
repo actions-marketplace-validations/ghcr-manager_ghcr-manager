@@ -1,4 +1,0 @@
-# Development dependencies for running tests and linters.
--r requirements.txt
-pymarkdownlnt>=0.9.36,<1
-yamllint>=1.38.0,<2

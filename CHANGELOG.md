@@ -2,18 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
 ### Added
 
-- Added the initial TypeScript project skeleton for shared core logic, CLI, and a thin action
-  wrapper.
+- Added the initial TypeScript project skeleton for shared core logic, CLI, and a thin action wrapper.
 - Added a SQLite-backed schema and repository layer for package scans.
 - Added a fixture-backed `scan` flow and `plan-summary` command for the first read-only increment.
 - Added implementation tracking notes in `docs/implementation-notes.md`.
+
+### Changed
+
+- Replaced Python-based Markdown and YAML linting with a Node-native lint stack using ESLint, `eslint-plugin-yml`,
+  `markdownlint-cli2`, and Prettier.
 
 ## [0.0.4] - 2026-03-27
 
@@ -38,5 +42,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Made the release workflow validate README action references against the current repository owner and name
-  instead of a copied hard-coded source repository reference.
+- Made the release workflow validate README action references against the current repository owner and name instead of a
+  copied hard-coded source repository reference.

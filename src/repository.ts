@@ -47,7 +47,7 @@ export class Repository {
           digest: version.digest,
           createdAt: version.createdAt,
           updatedAt: version.updatedAt,
-          metadataJson: JSON.stringify(version.metadata ?? {})
+          metadataJson: JSON.stringify(version.metadata ?? {}),
         });
       }
 
@@ -94,16 +94,16 @@ export class Repository {
   }
 
   getPackageMetadata(): { packageName: string; scannedAt: string } {
-    const row = this.#database
-      .prepare("SELECT package_name, scanned_at FROM package_scans LIMIT 1")
-      .get() as _ScanRow | undefined;
+    const row = this.#database.prepare("SELECT package_name, scanned_at FROM package_scans LIMIT 1").get() as
+      | _ScanRow
+      | undefined;
     if (!row) {
       throw new Error("database does not contain a package scan");
     }
 
     return {
       packageName: row.package_name,
-      scannedAt: row.scanned_at
+      scannedAt: row.scanned_at,
     };
   }
 
@@ -139,31 +139,31 @@ export class Repository {
 
   getVersionsCreatedBefore(cutoffTimestamp: string): Array<{ versionId: number; digest: string }> {
     const rows = this.#database
-      .prepare(`
+      .prepare(
+        `
         SELECT version_id, digest
         FROM package_versions
         WHERE created_at < ?
         ORDER BY version_id
-      `)
+      `,
+      )
       .all(cutoffTimestamp) as _VersionRow[];
 
     return rows.map((row) => ({
       versionId: row.version_id,
-      digest: row.digest
+      digest: row.digest,
     }));
   }
 
   getTaggedVersionIds(): number[] {
-    const rows = this.#database
-      .prepare("SELECT DISTINCT version_id FROM tags ORDER BY version_id")
-      .all() as Array<{ version_id: number }>;
+    const rows = this.#database.prepare("SELECT DISTINCT version_id FROM tags ORDER BY version_id").all() as Array<{
+      version_id: number;
+    }>;
     return rows.map((row) => row.version_id);
   }
 
   countPackageVersions(): number {
-    const row = this.#database
-      .prepare("SELECT COUNT(*) AS total FROM package_versions")
-      .get() as { total: number };
+    const row = this.#database.prepare("SELECT COUNT(*) AS total FROM package_versions").get() as { total: number };
     return row.total;
   }
 
@@ -182,7 +182,7 @@ export class Repository {
       totalPackageVersions: this.countPackageVersions(),
       totalTaggedVersions: this.countTaggedVersions(),
       protectedVersionIds: [...protectedVersionIds].sort((left, right) => left - right),
-      deletableVersionIds: [...deletableVersionIds].sort((left, right) => left - right)
+      deletableVersionIds: [...deletableVersionIds].sort((left, right) => left - right),
     };
   }
 
@@ -193,7 +193,7 @@ export class Repository {
       artifactType: manifest.artifactType ?? null,
       platformOs: manifest.platform?.os ?? null,
       platformArchitecture: manifest.platform?.architecture ?? null,
-      platformVariant: manifest.platform?.variant ?? null
+      platformVariant: manifest.platform?.variant ?? null,
     });
   }
 

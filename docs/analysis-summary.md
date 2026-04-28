@@ -7,12 +7,11 @@ This project started from investigating slow GHCR cleanup runs in two existing r
 - `aicage/aicage-image-base`
 - `aicage/aicage-image`
 
-Both use `dataaxiom/ghcr-cleanup-action`. The smaller package took more than 30 minutes. The larger package
-timed out after more than 6 hours.
+Both use `dataaxiom/ghcr-cleanup-action`. The smaller package took more than 30 minutes. The larger package timed out
+after more than 6 hours.
 
-The pain point is not just cleanup policy. Large GHCR packages are also hard to inspect and understand with the
-GitHub UI alone, so a tool that can ingest package state and support local analysis is useful even outside
-GitHub Actions.
+The pain point is not just cleanup policy. Large GHCR packages are also hard to inspect and understand with the GitHub
+UI alone, so a tool that can ingest package state and support local analysis is useful even outside GitHub Actions.
 
 ## Main Conclusions
 
@@ -35,8 +34,8 @@ implementation becomes inefficient after loading the data.
 
 ### 3. The existing implementation is safety-first but inefficient at scale
 
-`dataaxiom/ghcr-cleanup-action` has the right correctness goal, but its implementation is expensive for very
-large packages:
+`dataaxiom/ghcr-cleanup-action` has the right correctness goal, but its implementation is expensive for very large
+packages:
 
 - it loads all package versions
 - it fetches manifests across the package
@@ -58,8 +57,8 @@ A pure RAM implementation could be fast enough if it is:
 - conservative about logging
 - bounded in concurrent I/O
 
-However, for maintainability and development sanity, a local database is the better choice here. It makes it much
-easier to:
+However, for maintainability and development sanity, a local database is the better choice here. It makes it much easier
+to:
 
 - model package versions, tags, manifests, and graph edges explicitly
 - inspect intermediate state
@@ -92,8 +91,8 @@ behavioral ideas and edge-case knowledge should be reused, not the main implemen
 
 ### Similar action: `jenskeiner/ghcr.io-container-repository-cleanup-action`
 
-This action appears to use a similar manifest-aware approach. It is useful as another behavior reference, but it
-does not solve the main architectural concern if the goal is a cleaner, queryable local model.
+This action appears to use a similar manifest-aware approach. It is useful as another behavior reference, but it does
+not solve the main architectural concern if the goal is a cleaner, queryable local model.
 
 ### Other references
 
@@ -199,8 +198,8 @@ Recommended execution flow:
 5. Execute deletions by package version ID
 6. Emit a compact machine-readable and human-readable summary
 
-This keeps the correctness model from the existing manifest-aware actions while making the implementation much
-easier to reason about and evolve.
+This keeps the correctness model from the existing manifest-aware actions while making the implementation much easier to
+reason about and evolve.
 
 ## Phase 5: Action Packaging
 
@@ -216,8 +215,8 @@ That avoids building an "action-only" implementation that later diverges from th
 
 ## Why Not Just Fork the Existing Action
 
-Forking `dataaxiom/ghcr-cleanup-action` would make sense for a small tactical patch, but it is not the right
-shape for the current plan because:
+Forking `dataaxiom/ghcr-cleanup-action` would make sense for a small tactical patch, but it is not the right shape for
+the current plan because:
 
 - the implementation model is the thing being questioned
 - a DB-first design leaves little of the original structure intact

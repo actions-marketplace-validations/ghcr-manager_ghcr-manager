@@ -1,13 +1,11 @@
 # Implementation Notes
 
-This document tracks the current implementation plan, decisions, and completed increments for
-`ghcr-manager`.
+This document tracks the current implementation plan, decisions, and completed increments for `ghcr-manager`.
 
 ## Current Direction
 
 - Runtime and implementation language: TypeScript on Node.js.
-- Repository shape: one project containing shared core logic, a local CLI, and a thin GitHub
-  Action wrapper.
+- Repository shape: one project containing shared core logic, a local CLI, and a thin GitHub Action wrapper.
 - Storage model: local SQLite database per run.
 - Scope for the first usable increment: read-only package import and planning summary.
 
@@ -20,8 +18,7 @@ This document tracks the current implementation plan, decisions, and completed i
 ## Narrow V1 Plan
 
 1. Add a TypeScript project skeleton with build, lint, and test commands.
-2. Add a SQLite schema plus a small repository layer for package versions, tags, manifests, and
-   manifest edges.
+2. Add a SQLite schema plus a small repository layer for package versions, tags, manifests, and manifest edges.
 3. Add a CLI with these initial commands:
    - `init-db`
    - `scan` using a local JSON snapshot file as the initial input source
@@ -48,11 +45,11 @@ This document tracks the current implementation plan, decisions, and completed i
 - Added the first CLI commands: `init-db`, `scan`, and `plan-summary`.
 - Added a composite GitHub Action wrapper that invokes the shared CLI code.
 - Added one representative package snapshot fixture and a planner test.
+- Replaced Python-based Markdown and YAML linting with Node-native linting and formatting tools.
 
 ## Next Increment
 
-1. Replace or complement the snapshot-file scan path with a real GitHub Packages and GHCR ingest
-   adapter.
+1. Replace or complement the snapshot-file scan path with a real GitHub Packages and GHCR ingest adapter.
 2. Improve planner output so it explains why versions are protected or deletable.
 3. Add more planner tests for multi-arch images, referrers, and explicit tag exclusion cases.
 4. Revisit action packaging after the live ingest path exists.
