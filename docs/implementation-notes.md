@@ -2,6 +2,42 @@
 
 This document tracks the current implementation plan, decisions, and completed increments for `ghcr-manager`.
 
+## Session Handoff
+
+This section is the canonical place for session-to-session continuity.
+
+### Completed Checkpoints
+
+- ☑ `6899876` Add GHCR manager analysis and roadmap.
+- ☑ `bc651cb` Add initial TypeScript project scaffold.
+- ☑ `2483a75` Replace Python linting with Node-native tooling.
+
+### Completed Plan
+
+- ☑ Inspect current repo state and existing workflow assumptions for a TypeScript-based scaffold.
+- ☑ Add lightweight project tracking docs for decisions, scope, and next increments.
+- ☑ Scaffold minimal TypeScript project structure for shared core, CLI, and action entrypoint.
+- ☑ Add initial SQLite schema/repository, fixture-backed scan flow, and planner summary.
+- ☑ Add focused tests and update CI/lint configuration for the new stack.
+- ☑ Run validation commands and summarize completed work plus next steps.
+
+### Current Next Plan
+
+- ☐ Add a real GitHub Packages and GHCR ingest adapter beside the fixture loader.
+- ☐ Normalize live package, version, tag, manifest, and edge data into the existing SQLite schema.
+- ☐ Expand planner output so it explains why versions are protected or deletable.
+- ☐ Add tests for multi-arch images, referrers, and explicit tag exclusion behavior.
+- ☐ Revisit action packaging after the live ingest path exists.
+
+### Current State Summary
+
+- Runtime: Node.js and TypeScript.
+- Linting: ESLint, `eslint-plugin-yml`, `markdownlint-cli2`, and Prettier.
+- Persistence model: local SQLite database per run.
+- Current ingest source: local JSON snapshot fixture only.
+- Current action shape: thin composite wrapper that invokes the shared CLI.
+- Working tree expectation at the end of the last session: clean after `2483a75`.
+
 ## Current Direction
 
 - Runtime and implementation language: TypeScript on Node.js.

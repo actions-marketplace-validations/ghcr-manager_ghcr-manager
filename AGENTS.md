@@ -14,9 +14,21 @@ Audience: AI coding agents working in this repo.
 - Summarize code changes briefly and rely on commit hashes, file paths, and test results instead.
 - The repository uses Node.js and TypeScript for build, test, and lint tasks.
 - Disabling linters via comments is a last resort; fix first and only suppress with explicit approval.
+- For any substantial work, update [docs/implementation-notes.md](docs/implementation-notes.md) before ending the
+  session.
+- Do not create commits unless the user explicitly asks for a commit after review.
 
 ## Linting and tests
 
 - Lint: `./scripts/lint.sh`
 - Tests: `npm test`
 - Typecheck: `npm run typecheck`
+
+## Session Continuity
+
+- Treat [docs/implementation-notes.md](docs/implementation-notes.md) as the canonical handoff document.
+- Keep a checkbox-based checklist there for completed work and the current next plan.
+- Record important decisions there when they affect architecture, tooling, or workflow shape.
+- When creating a clean checkpoint commit, add the commit hash to the handoff doc.
+- Treat commits as user-approved checkpoints, not agent-owned defaults.
+- Before starting new implementation work, read the handoff doc and align with its current next plan.
