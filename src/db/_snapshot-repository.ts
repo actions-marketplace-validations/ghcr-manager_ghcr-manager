@@ -1,6 +1,5 @@
 import type Database from "better-sqlite3";
-import type { PackageSnapshot, PlanSummary } from "../core/index.js";
-import { writeSnapshot } from "./_write-snapshot.js";
+import type { PlanSummary } from "../core/index.js";
 
 interface _ScanRow {
   package_name: string;
@@ -18,10 +17,6 @@ export class SnapshotRepository {
 
   constructor(database: Database.Database) {
     this.#database = database;
-  }
-
-  replaceSnapshot(snapshot: PackageSnapshot): void {
-    writeSnapshot(this.#database, snapshot);
   }
 
   getPackageMetadata(): { packageName: string; scannedAt: string } {
@@ -101,6 +96,25 @@ export class SnapshotRepository {
 
   countTaggedVersions(): number {
     return _count(this.#database, "SELECT COUNT(DISTINCT version_id) AS total FROM tags", "total");
+  }
+
+  countTags(): number {
+    return _count(this.#database, "SELECT COUNT(*) AS total FROM tags", "total");
+  }
+
+  countManifests(): number {
+    return _count(this.#database, "SELECT COUNT(*) AS total FROM manifests", "total");
+  }
+
+  countManifestEdges(): number {
+    return _count(this.#database, "SELECT COUNT(*) AS total FROM manifest_edges", "total");
+  }
+
+  listPackageVersionDigests(): string[] {
+    const rows = this.#database.prepare("SELECT digest FROM package_versions ORDER BY version_id").all() as Array<{
+      digest: string;
+    }>;
+    return rows.map((row) => row.digest);
   }
 
   buildPlanSummary(protectedVersionIds: number[], deletableVersionIds: number[]): PlanSummary {

@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import { initializeSchema } from "./_schema.js";
 
+export { ScanWriter } from "./_scan-writer.js";
 export { SnapshotRepository } from "./_snapshot-repository.js";
 
 export function openDatabase(databasePath: string): Database.Database {

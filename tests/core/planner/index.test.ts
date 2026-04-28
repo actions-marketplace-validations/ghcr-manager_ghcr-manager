@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { buildPlanSummary } from "../../../src/core/planner/index.js";
-import { SnapshotRepository, openDatabase } from "../../../src/db/index.js";
-import { loadSnapshotFromFile } from "../../../src/ingest/file/index.js";
+import { openDatabase, ScanWriter, SnapshotRepository } from "../../../src/db/index.js";
+import { importFileScan } from "../../../src/ingest/file/index.js";
 
 test("planner keeps tagged graph while exposing old untagged versions", async () => {
   const tempDirectory = mkdtempSync(join(tmpdir(), "ghcr-manager-"));
@@ -14,9 +14,7 @@ test("planner keeps tagged graph while exposing old untagged versions", async ()
   try {
     const database = openDatabase(databasePath);
     const repository = new SnapshotRepository(database);
-    const snapshot = await loadSnapshotFromFile("tests/fixtures/sample-package.json");
-
-    repository.replaceSnapshot(snapshot);
+    await importFileScan("tests/fixtures/sample-package.json", new ScanWriter(database));
 
     const summary = buildPlanSummary(repository, {
       olderThanDays: 30,

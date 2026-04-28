@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { loadSnapshotFromGitHub } from "../../../src/ingest/github/index.js";
+import { openDatabase, ScanWriter, SnapshotRepository } from "../../../src/db/index.js";
+import { importGitHubScan } from "../../../src/ingest/github/index.js";
 
-test("GitHub ingest builds snapshot from package and manifest responses", async () => {
+test("GitHub ingest writes package and manifest data directly into SQLite", async () => {
   const responses = new Map<
     string,
     {
@@ -79,34 +80,44 @@ test("GitHub ingest builds snapshot from package and manifest responses", async 
     ],
   ]);
 
-  const snapshot = await loadSnapshotFromGitHub({
-    owner: "acme",
-    packageName: "example",
-    token: "test-token",
-    githubApiBaseUrl: "https://api.github.test",
-    registryBaseUrl: "https://ghcr.test",
-    fetchImpl: async (input, init) => {
-      const response = responses.get(input);
-      if (!response) {
-        throw new Error(`unexpected request: ${input}`);
-      }
+  const database = openDatabase(":memory:");
+  const writer = new ScanWriter(database);
+  const repository = new SnapshotRepository(database);
 
-      assert.ok(init?.headers);
+  await importGitHubScan(
+    {
+      owner: "acme",
+      packageName: "example",
+      token: "test-token",
+      githubApiBaseUrl: "https://api.github.test",
+      registryBaseUrl: "https://ghcr.test",
+      fetchImpl: async (input, init) => {
+        const response = responses.get(input);
+        if (!response) {
+          throw new Error(`unexpected request: ${input}`);
+        }
 
-      return {
-        ok: true,
-        status: 200,
-        headers: new Headers(response.contentType ? { "content-type": response.contentType } : {}),
-        async json() {
-          return response.body;
-        },
-      };
+        assert.ok(init?.headers);
+
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers(response.contentType ? { "content-type": response.contentType } : {}),
+          async json() {
+            return response.body;
+          },
+        };
+      },
     },
-  });
-
-  assert.equal(snapshot.packageName, "acme/example");
-  assert.deepEqual(
-    snapshot.packageVersions.map((version) => version.versionId),
-    [101, 102],
+    writer,
+    repository,
   );
+
+  assert.equal(repository.getPackageMetadata().packageName, "acme/example");
+  assert.deepEqual(repository.listPackageVersionDigests(), ["sha256:index", "sha256:attestation"]);
+  assert.equal(repository.countTags(), 1);
+  assert.equal(repository.countManifests(), 3);
+  assert.equal(repository.countManifestEdges(), 2);
+
+  database.close();
 });
