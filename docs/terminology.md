@@ -12,6 +12,8 @@ Short glossary for developers working on `ghcr-manager`.
 
 ## Main Terms
 
+<!-- markdownlint-disable MD013 -->
+<!-- prettier-ignore -->
 | Term              | Short meaning here                                                | Where it shows up                                                                 |
 |-------------------|-------------------------------------------------------------------|-----------------------------------------------------------------------------------|
 | package           | One GHCR package, for example `acme/example`                      | `package_scans.package_name`                                                      |
@@ -24,8 +26,11 @@ Short glossary for developers working on `ghcr-manager`.
 | referrer          | Artifact manifest that points back to some subject digest         | stored in `manifest_edges` with `edge_kind = 'referrer'`                          |
 | subject           | The digest that an artifact refers to                             | source field from GHCR manifest JSON, becomes `parent_digest` for `referrer` rows |
 
+<!-- markdownlint-enable MD013 -->
+
 ## GHCR / OCI Terms To Repo Terms
 
+<!-- prettier-ignore -->
 | GHCR / OCI term                              | Repo meaning                                                        |
 |----------------------------------------------|---------------------------------------------------------------------|
 | `manifests[]` inside an image index          | child rows in `manifest_edges` with `edge_kind = 'image-child'`     |
@@ -113,6 +118,7 @@ Using the fixture in `tests/fixtures/sample-package.json`:
 
 Rows in `manifest_edges`:
 
+<!-- prettier-ignore -->
 | parent_digest          | child_digest             | edge_kind     |
 |------------------------|--------------------------|---------------|
 | `sha256:index-old`     | `sha256:child-old`       | `image-child` |
@@ -127,6 +133,7 @@ Read those rows as:
 
 If you think in Docker terms, translate repo terms like this:
 
+<!-- prettier-ignore -->
 | Repo term    | Read it as                                                    |
 |--------------|---------------------------------------------------------------|
 | manifest     | registry document addressed by digest                         |
