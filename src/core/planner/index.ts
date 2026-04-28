@@ -1,7 +1,7 @@
-import type { Repository } from "./repository.js";
-import type { PlanOptions, PlanSummary } from "./types.js";
+import type { PlanOptions, PlanSummary } from "../_types.js";
+import type { SnapshotRepository } from "../../db/index.js";
 
-export function buildPlanSummary(repository: Repository, options: PlanOptions): PlanSummary {
+export function buildPlanSummary(repository: SnapshotRepository, options: PlanOptions): PlanSummary {
   const protectedDigests = _collectProtectedDigests(repository, options.excludeTags);
   const protectedVersionIds = new Set<number>();
   const deletableVersionIds = new Set<number>();
@@ -33,7 +33,7 @@ export function buildPlanSummary(repository: Repository, options: PlanOptions): 
   return repository.buildPlanSummary([...protectedVersionIds], [...deletableVersionIds]);
 }
 
-function _collectProtectedDigests(repository: Repository, excludeTags: string[]): Set<string> {
+function _collectProtectedDigests(repository: SnapshotRepository, excludeTags: string[]): Set<string> {
   const protectedDigests = repository.getTaggedDigests();
   for (const digest of repository.getDigestsForTags(excludeTags)) {
     protectedDigests.add(digest);

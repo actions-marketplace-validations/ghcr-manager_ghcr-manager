@@ -3,6 +3,7 @@ import { defineConfig } from "eslint/config";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 import yml from "eslint-plugin-yml";
+import { onlyIndexCrossFolderRule } from "./tools/eslint-rules/only-index-cross-folder.mjs";
 
 export default defineConfig(
   {
@@ -16,6 +17,16 @@ export default defineConfig(
       globals: {
         ...globals.node,
       },
+    },
+    plugins: {
+      architecture: {
+        rules: {
+          "only-index-cross-folder": onlyIndexCrossFolderRule,
+        },
+      },
+    },
+    rules: {
+      "architecture/only-index-cross-folder": "error",
     },
   },
   ...yml.configs["flat/recommended"],

@@ -65,4 +65,4 @@ runs:
         INPUT_OLDER_THAN_DAYS: ${{ inputs.older-than-days }}
         INPUT_DELETE_UNTAGGED: ${{ inputs.delete-untagged }}
         INPUT_EXCLUDE_TAGS: ${{ inputs.exclude-tags }}
-      run: node dist/action.js
+      run: node dist/action/_main.js

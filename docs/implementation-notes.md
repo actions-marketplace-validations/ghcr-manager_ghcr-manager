@@ -45,6 +45,27 @@ This section is the canonical place for session-to-session continuity.
   - above about 100 to 160 lines, strongly consider splitting
   - above about 160 to 220 lines, split unless cohesion is unusually strong
   - above about 220 lines is generally not acceptable outside repetitive or low-risk code
+- Cross-folder import rule: imports from outside a folder must go through that folder's `index.ts`.
+- Enforcement: the cross-folder `index.ts` rule is mechanically enforced by a local ESLint rule.
+- File naming rule in `src/`: every non-public implementation file must be named `_*.ts`.
+- Test mapping rule: `tests/` mirrors `src/` one-to-one, with `src/.../*.ts` mapped to `tests/.../*.test.ts`.
+
+### Current Module Layout
+
+```text
+src/
+  action/
+  cli/
+  core/
+  db/
+  ingest/
+```
+
+- `action/` contains the GitHub Action entrypoint only.
+- `cli/` contains command dispatch and command-specific argument handling.
+- `core/` contains stable shared types and planner logic.
+- `db/` contains SQLite schema, database opening, and snapshot persistence/query code.
+- `ingest/` contains input-source adapters, currently `file/` and `github/`.
 
 ## Current Direction
 
@@ -98,6 +119,9 @@ This section is the canonical place for session-to-session continuity.
 - Normalized live package versions, tags, manifests, and edges into the existing SQLite-backed snapshot model.
 - Added a focused ingest test covering tagged indexes, image child manifests, and referrer edges.
 - Extended the planner fixture coverage so a tagged manifest graph now protects both child manifests and referrers.
+- Refactored the flat `src/` layout into explicit `action`, `cli`, `core`, `db`, and `ingest` boundaries.
+- Added ESLint enforcement for the rule that cross-folder imports must target folder `index.ts` entrypoints.
+- Standardized internal source file names in `src/` so non-public implementation files use the `_*.ts` prefix.
 
 ## Next Increment
 

@@ -24,6 +24,11 @@ Audience: AI coding agents working in this repo.
   - above about 220 lines is generally not acceptable outside repetitive or low-risk code
 - Test files may exceed those sizes when scenario readability or fixture-heavy structure benefits from it.
 - Evaluate file size together with cohesion, abstraction level, and testability, not line count alone.
+- Cross-folder TypeScript imports must go through the target folder's `index.ts`.
+- Non-`index.ts` files are internal to their folder and must not be imported from outside that folder.
+- In `src/`, every non-public TypeScript implementation file must be named `_*.ts`.
+- The `tests/` tree must mirror the `src/` tree with a one-to-one file mapping: `src/foo/bar.ts` ->
+  `tests/foo/bar.test.ts`.
 
 ## Linting and tests
 

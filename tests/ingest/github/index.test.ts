@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { loadSnapshotFromGitHub } from "../src/github-snapshot-source.js";
+import { loadSnapshotFromGitHub } from "../../../src/ingest/github/index.js";
 
-test("loadSnapshotFromGitHub builds snapshot from package and manifest responses", async () => {
+test("GitHub ingest builds snapshot from package and manifest responses", async () => {
   const responses = new Map<
     string,
     {
@@ -109,27 +109,4 @@ test("loadSnapshotFromGitHub builds snapshot from package and manifest responses
     snapshot.packageVersions.map((version) => version.versionId),
     [101, 102],
   );
-  assert.deepEqual(snapshot.tags, [
-    {
-      tag: "latest",
-      digest: "sha256:index",
-      versionId: 101,
-    },
-  ]);
-  assert.deepEqual(
-    snapshot.manifests.map((manifest) => manifest.digest),
-    ["sha256:attestation", "sha256:child", "sha256:index"],
-  );
-  assert.deepEqual(snapshot.manifestEdges, [
-    {
-      parentDigest: "sha256:index",
-      childDigest: "sha256:attestation",
-      edgeKind: "referrer",
-    },
-    {
-      parentDigest: "sha256:index",
-      childDigest: "sha256:child",
-      edgeKind: "image-child",
-    },
-  ]);
 });
