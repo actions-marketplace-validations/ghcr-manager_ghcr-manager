@@ -1,0 +1,51 @@
+name: ghcr-manager
+description: Inspect, analyze, and manage GitHub Container Registry packages.
+
+inputs:
+  command:
+    description: CLI command to run.
+    required: true
+  db-path:
+    description: SQLite database path used by the command.
+    required: true
+  snapshot:
+    description: Local JSON snapshot path for the initial read-only scan flow.
+    required: false
+  older-than-days:
+    description: Age threshold used by the planning command.
+    required: false
+  delete-untagged:
+    description: Whether planning should consider only untagged versions deletable.
+    required: false
+    default: "true"
+  exclude-tags:
+    description: Comma-separated tag names to protect explicitly.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+      with:
+        node-version: "24"
+
+    - name: Install dependencies
+      shell: bash
+      run: npm ci
+
+    - name: Build
+      shell: bash
+      run: npm run build
+
+    - name: Run ghcr-manager
+      shell: bash
+      env:
+        INPUT_COMMAND: ${{ inputs.command }}
+        INPUT_DB_PATH: ${{ inputs.db-path }}
+        INPUT_SNAPSHOT: ${{ inputs.snapshot }}
+        INPUT_OLDER_THAN_DAYS: ${{ inputs.older-than-days }}
+        INPUT_DELETE_UNTAGGED: ${{ inputs.delete-untagged }}
+        INPUT_EXCLUDE_TAGS: ${{ inputs.exclude-tags }}
+      run: node dist/action.js

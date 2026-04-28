@@ -1,0 +1,29 @@
+{
+  "name": "ghcr-manager",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Inspect, analyze, and manage GitHub Container Registry packages.",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "bin": {
+    "ghcr-manager": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "ghcr-manager": "tsx src/cli.ts",
+    "lint": "tsc --noEmit --project tsconfig.json",
+    "test": "node --import tsx --test"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.10.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.8.3"
+  }
+}
+
