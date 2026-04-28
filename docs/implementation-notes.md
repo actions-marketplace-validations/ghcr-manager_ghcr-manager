@@ -14,6 +14,7 @@ This section is the canonical place for session-to-session continuity.
 - ☑ `b902eda` Strengthen session handoff documentation.
 - ☑ `9d2eb23` Add live GHCR package scan support.
 - ☑ `e33d011` Restructure modules and enforce source-test boundaries.
+- ☑ `38159a1` Add scan logging and auth debug helper.
 
 ### Completed Plan
 
@@ -30,6 +31,8 @@ This section is the canonical place for session-to-session continuity.
 - ☑ Normalize live package, version, tag, manifest, and edge data into the existing SQLite schema.
 - ☑ Refactor ingest so GitHub and fixture input write incrementally into SQLite instead of assembling package-level
   in-memory snapshots.
+- ☑ Introduce a generic paginated ingest pipeline for request -> normalize -> write and move package version/tag
+  enumeration onto it.
 - ☐ Expand planner output so it explains why versions are protected or deletable.
 - ☐ Add tests for multi-arch images, referrers, and explicit tag exclusion behavior.
 - ☐ Revisit action packaging after the live ingest path exists.
@@ -46,10 +49,14 @@ This section is the canonical place for session-to-session continuity.
   - writes fixture and live GitHub/GHCR results incrementally into SQLite
   - uses a dedicated GHCR registry token client for bearer-token acquisition
   - supports anonymous GHCR manifest reads for public registries and optional GitHub auth for better access
+  - uses a shared paginated ingest helper for GitHub Packages version/tag enumeration, writing each page directly to
+    SQLite
 - Ingest architecture direction:
   - full remote traversal may still be required for correctness
   - SQLite is the integration surface between ingest stages
   - avoid package-level in-memory aggregate models as the ingest contract
+  - repeated paginated API ingestion should use one generic request -> normalize -> write pipeline, with per-endpoint
+    hooks only where necessary
 - Current action shape: thin composite wrapper that invokes the shared CLI.
 - Scan logging:
   - progress logs go to stderr
@@ -148,6 +155,10 @@ src/
   client so public registries work without GitHub auth while authenticated reads remain available.
 - Added CLI logging with explicit levels and periodic scan progress so long GitHub/GHCR imports are observable without
   corrupting stdout JSON output.
+- Identified a remaining architectural inconsistency: package version pagination still buffers full result sets before
+  writing, while manifest ingestion writes incrementally.
+- Replaced the buffered package version path with a generic paginated ingest helper so version/tag enumeration now
+  follows the same request -> normalize -> write shape as the rest of the DB-first ingest flow.
 
 ## Next Increment
 

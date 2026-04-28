@@ -1,4 +1,6 @@
 import type { PackageVersionRecord, TagRecord } from "../../core/index.js";
+import type { ScanWriter } from "../../db/index.js";
+import { ingestPaginated } from "./_paginated-ingest.js";
 import type { FetchLike, GitHubScanOptions } from "./_shared.js";
 
 interface _GitHubPackageVersion {
@@ -13,54 +15,47 @@ interface _GitHubPackageVersion {
   };
 }
 
-export async function loadPackageVersions(
+export async function ingestPackageVersions(
   fetchImpl: FetchLike,
   githubApiBaseUrl: string,
   options: GitHubScanOptions,
-): Promise<PackageVersionRecord[]> {
-  const versions: PackageVersionRecord[] = [];
+  writer: ScanWriter,
+): Promise<{ packageVersions: number; tags: number }> {
+  let tagCount = 0;
 
-  for (let page = 1; ; page += 1) {
-    const url = new URL(
-      `/orgs/${encodeURIComponent(options.owner)}/packages/container/${encodeURIComponent(options.packageName)}/versions`,
-      githubApiBaseUrl,
-    );
-    url.searchParams.set("per_page", "100");
-    url.searchParams.set("page", String(page));
-
-    const response = await fetchImpl(url.toString(), {
-      headers: {
-        Accept: "application/vnd.github+json",
-        Authorization: `Bearer ${options.token}`,
-        "User-Agent": "ghcr-manager",
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`GitHub Packages request failed with status ${response.status}`);
-    }
-
-    const pageData = (await response.json()) as _GitHubPackageVersion[];
-    if (pageData.length === 0) {
-      break;
-    }
-
-    for (const version of pageData) {
-      versions.push({
-        versionId: version.id,
-        digest: version.name,
-        createdAt: version.created_at,
-        updatedAt: version.updated_at,
-        metadata: version.metadata as Record<string, unknown> | undefined,
+  const result = await ingestPaginated<_GitHubPackageVersion>({
+    logger: options.logger,
+    progressLabel: "GitHub package-version pages",
+    async loadPage(page) {
+      const response = await fetchImpl(_buildPageUrl(githubApiBaseUrl, options, page), {
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: `Bearer ${options.token}`,
+          "User-Agent": "ghcr-manager",
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
       });
-    }
+      if (!response.ok) {
+        throw new Error(`GitHub Packages request failed with status ${response.status}`);
+      }
 
-    if (pageData.length < 100) {
-      break;
-    }
-  }
+      return (await response.json()) as _GitHubPackageVersion[];
+    },
+    writePage(pageItems) {
+      const versions = normalizePackageVersions(pageItems);
+      for (const version of versions) {
+        writer.insertPackageVersion(version);
+      }
 
-  return versions.sort((left, right) => left.versionId - right.versionId);
+      const tags = buildTags(versions);
+      for (const tag of tags) {
+        writer.insertTag(tag);
+      }
+      tagCount += tags.length;
+    },
+  });
+
+  return { packageVersions: result.items, tags: tagCount };
 }
 
 export function buildTags(packageVersions: PackageVersionRecord[]): TagRecord[] {
@@ -82,4 +77,26 @@ export function buildTags(packageVersions: PackageVersionRecord[]): TagRecord[] 
   }
 
   return tags.sort((left, right) => left.tag.localeCompare(right.tag));
+}
+
+export function normalizePackageVersions(packageVersions: _GitHubPackageVersion[]): PackageVersionRecord[] {
+  return packageVersions
+    .map((version) => ({
+      versionId: version.id,
+      digest: version.name,
+      createdAt: version.created_at,
+      updatedAt: version.updated_at,
+      metadata: version.metadata as Record<string, unknown> | undefined,
+    }))
+    .sort((left, right) => left.versionId - right.versionId);
+}
+
+function _buildPageUrl(githubApiBaseUrl: string, options: GitHubScanOptions, page: number): string {
+  const url = new URL(
+    `/orgs/${encodeURIComponent(options.owner)}/packages/container/${encodeURIComponent(options.packageName)}/versions`,
+    githubApiBaseUrl,
+  );
+  url.searchParams.set("per_page", "100");
+  url.searchParams.set("page", String(page));
+  return url.toString();
 }

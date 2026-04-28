@@ -148,6 +148,7 @@ test("GitHub ingest writes package and manifest data directly into SQLite", asyn
     progressMessages.filter((message) => message.startsWith("info:")),
     [
       "info:Starting GitHub package scan for acme/example",
+      "info:Loaded GitHub package-version pages 1 (2 items total)",
       "info:Loaded 2 package versions and 1 tags",
       "info:Fetching manifests for 2 package versions",
       "info:Fetched manifests 2/2",
