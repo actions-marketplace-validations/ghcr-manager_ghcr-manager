@@ -267,6 +267,11 @@ src/
 - Moved transport/base-url overrides into an internal runtime argument on `importGitHubScan(...)` so tests can still
   inject fake HTTP without polluting the scan input contract.
 - Required logger usage across ingest internals (removed optional logger chaining), matching CLI behavior.
+
+### 2026-04-29 (missing-manifest query recipes)
+
+- Operationally, GHCR scans can complete with missing manifests (HTTP 404). Ingest skips these and continues.
+- Query recipes are documented in [docs/missing-manifests-queries.md](missing-manifests-queries.md).
 - Rationale:
   - CLI should stay platform-agnostic and usable outside GitHub Actions.
   - GitHub-specific concerns (artifact retention, upload policy, conditional publish flags) belong to action wiring.
