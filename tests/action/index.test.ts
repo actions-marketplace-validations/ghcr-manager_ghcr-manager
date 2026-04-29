@@ -12,7 +12,7 @@ test("runAction forwards action inputs to the CLI", async () => {
   await runAction(
     {
       INPUT_COMMAND: "scan",
-      INPUT_DB_PATH: "scan.sqlite",
+      RUNNER_TEMP: "/tmp/runner",
       INPUT_OWNER: "acme",
       INPUT_PACKAGE: "example",
       INPUT_TOKEN: "token",
@@ -27,7 +27,7 @@ test("runAction forwards action inputs to the CLI", async () => {
   assert.deepEqual(receivedArgv, [
     "scan",
     "--db",
-    "scan.sqlite",
+    "/tmp/runner/ghcr-manager/acme__example.sqlite",
     "--owner",
     "acme",
     "--package",

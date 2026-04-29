@@ -9,16 +9,16 @@ export async function runAction(
     throw new Error("missing action input: command");
   }
 
-  const argv = [command, ..._buildActionArgs(environment)];
+  const argv = [command, ..._buildActionArgs(environment, command)];
   const exitCode = await runCli(argv);
   if (exitCode !== 0) {
     process.exitCode = exitCode;
   }
 }
 
-function _buildActionArgs(environment: NodeJS.ProcessEnv): string[] {
+function _buildActionArgs(environment: NodeJS.ProcessEnv, command: string): string[] {
   const args: string[] = [];
-  _pushOption(args, "--db", environment.INPUT_DB_PATH);
+  _pushOption(args, "--db", _resolveDbPath(environment, command));
   _pushOption(args, "--owner", environment.INPUT_OWNER);
   _pushOption(args, "--package", environment.INPUT_PACKAGE);
   _pushOption(args, "--token", environment.INPUT_TOKEN);
@@ -33,6 +33,27 @@ function _buildActionArgs(environment: NodeJS.ProcessEnv): string[] {
   }
 
   return args;
+}
+
+function _resolveDbPath(environment: NodeJS.ProcessEnv, command: string): string | undefined {
+  if (command !== "scan") {
+    return undefined;
+  }
+
+  const owner = environment.INPUT_OWNER;
+  const packageName = environment.INPUT_PACKAGE;
+  if (!owner || !packageName) {
+    return undefined;
+  }
+
+  const runnerTemp = environment.RUNNER_TEMP ?? "/tmp";
+  const safeOwner = _sanitizeSegment(owner);
+  const safePackageName = _sanitizeSegment(packageName);
+  return `${runnerTemp}/ghcr-manager/${safeOwner}__${safePackageName}.sqlite`;
+}
+
+function _sanitizeSegment(value: string): string {
+  return value.replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
 function _pushOption(args: string[], name: string, value: string | undefined): void {

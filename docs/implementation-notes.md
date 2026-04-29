@@ -264,6 +264,9 @@ src/
   - GitHub-specific concerns (artifact retention, upload policy, conditional publish flags) belong to action wiring.
   - Composite action steps are a natural place for optional artifact upload; jobs are workflow-level, not action-level.
 - Planned action shape:
-  - Add optional action inputs (for example `upload-db-artifact`, `db-artifact-name`,
-    `db-artifact-retention-days`, optional compression mode).
+  - Add optional action inputs (`upload-db-artifact`, `db-artifact-name`, `db-artifact-retention-days`).
   - Keep default behavior unchanged unless upload is explicitly enabled.
+- Implemented in `action.yml`:
+  - optional in-action DB artifact upload (off by default)
+  - optional retention override (otherwise GitHub policy default is used)
+  - scan DB path is derived internally from owner/package under runner temp storage (no `db-path` action input)
