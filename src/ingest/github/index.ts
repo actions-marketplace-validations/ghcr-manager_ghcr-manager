@@ -19,9 +19,14 @@ export async function importGitHubScan(
 
   writer.resetScan(packageName, scannedAt);
   logger?.info(`Starting GitHub package scan for ${packageName}`);
-
-  const counts = await ingestPackageVersions(fetchImpl, githubApiBaseUrl, options, writer);
-  logger?.info(`Loaded ${counts.packageVersions} package versions and ${counts.tags} tags`);
-  await ingestManifests(fetchImpl, registryBaseUrl, options, writer, repository);
-  logger?.info(`Completed GitHub package scan for ${packageName}`);
+  try {
+    const counts = await ingestPackageVersions(fetchImpl, githubApiBaseUrl, options, writer);
+    logger?.info(`Loaded ${counts.packageVersions} package versions and ${counts.tags} tags`);
+    await ingestManifests(fetchImpl, registryBaseUrl, options, writer, repository);
+    writer.markScanCompleted(new Date().toISOString());
+    logger?.info(`Completed GitHub package scan for ${packageName}`);
+  } catch (error) {
+    writer.markScanFailed(new Date().toISOString());
+    throw error;
+  }
 }

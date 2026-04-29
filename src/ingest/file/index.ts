@@ -16,17 +16,23 @@ export async function importFileScan(snapshotPath: string, writer: ScanWriter): 
   const document = JSON.parse(rawSnapshot) as _FixtureScanDocument;
 
   writer.resetScan(document.packageName, document.scannedAt);
-  for (const version of document.packageVersions) {
-    writer.insertPackageVersion(version);
+  try {
+    for (const version of document.packageVersions) {
+      writer.insertPackageVersion(version);
+    }
+    for (const tag of document.tags) {
+      writer.insertTag(tag);
+    }
+    for (const manifest of document.manifests) {
+      writer.insertManifest(manifest);
+    }
+    for (const edge of document.manifestEdges) {
+      writer.insertManifestEdge(edge);
+    }
+    writer.rebuildManifestReachability();
+    writer.markScanCompleted(document.scannedAt);
+  } catch (error) {
+    writer.markScanFailed(new Date().toISOString());
+    throw error;
   }
-  for (const tag of document.tags) {
-    writer.insertTag(tag);
-  }
-  for (const manifest of document.manifests) {
-    writer.insertManifest(manifest);
-  }
-  for (const edge of document.manifestEdges) {
-    writer.insertManifestEdge(edge);
-  }
-  writer.rebuildManifestReachability();
 }

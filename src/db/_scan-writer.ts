@@ -10,39 +10,63 @@ import { rebuildManifestReachability } from "./_manifest-reachability.js";
 
 export class ScanWriter {
   readonly #database: Database.Database;
+  #activeScanId: number | null = null;
 
   constructor(database: Database.Database) {
     this.#database = database;
   }
 
-  resetScan(packageName: string, scannedAt: string): void {
-    this.#database.exec(`
-      DELETE FROM package_scans;
-      DELETE FROM tags;
-      DELETE FROM package_version_payloads;
-      DELETE FROM package_version_metadata;
-      DELETE FROM manifest_reachability;
-      DELETE FROM manifest_payloads;
-      DELETE FROM manifest_descriptors;
-      DELETE FROM manifest_edges;
-      DELETE FROM manifests;
-      DELETE FROM package_versions;
-    `);
+  resetScan(packageName: string, scanStartedAt: string): void {
+    const result = this.#database
+      .prepare(
+        `
+        INSERT INTO package_scans(package_name, scan_started_at, scan_completed_at, status)
+        VALUES(?, ?, NULL, 'running')
+      `,
+      )
+      .run(packageName, scanStartedAt);
 
+    if (typeof result.lastInsertRowid !== "number" && typeof result.lastInsertRowid !== "bigint") {
+      throw new Error("unable to create scan row");
+    }
+
+    this.#activeScanId = Number(result.lastInsertRowid);
+  }
+
+  markScanCompleted(scanCompletedAt: string): void {
     this.#database
-      .prepare("INSERT INTO package_scans(package_name, scanned_at) VALUES(?, ?)")
-      .run(packageName, scannedAt);
+      .prepare(
+        `
+        UPDATE package_scans
+        SET scan_completed_at = ?, status = 'completed'
+        WHERE scan_id = ?
+      `,
+      )
+      .run(scanCompletedAt, this.#requireScanId());
+  }
+
+  markScanFailed(scanCompletedAt: string): void {
+    this.#database
+      .prepare(
+        `
+        UPDATE package_scans
+        SET scan_completed_at = ?, status = 'failed'
+        WHERE scan_id = ?
+      `,
+      )
+      .run(scanCompletedAt, this.#requireScanId());
   }
 
   insertPackageVersion(version: PackageVersionRecord): void {
     this.#database
       .prepare(
         `
-        INSERT OR REPLACE INTO package_versions(version_id, digest, created_at, updated_at)
-        VALUES(@versionId, @digest, @createdAt, @updatedAt)
+        INSERT OR REPLACE INTO package_versions(scan_id, version_id, digest, created_at, updated_at)
+        VALUES(@scanId, @versionId, @digest, @createdAt, @updatedAt)
       `,
       )
       .run({
+        scanId: this.#requireScanId(),
         versionId: version.versionId,
         digest: version.digest,
         createdAt: version.createdAt,
@@ -52,11 +76,12 @@ export class ScanWriter {
     this.#database
       .prepare(
         `
-        INSERT OR REPLACE INTO package_version_metadata(version_id, metadata_json)
-        VALUES(@versionId, @metadataJson)
+        INSERT OR REPLACE INTO package_version_metadata(scan_id, version_id, metadata_json)
+        VALUES(@scanId, @versionId, @metadataJson)
       `,
       )
       .run({
+        scanId: this.#requireScanId(),
         versionId: version.versionId,
         metadataJson: JSON.stringify(version.metadata ?? {}),
       });
@@ -66,22 +91,25 @@ export class ScanWriter {
     this.#database
       .prepare(
         `
-        INSERT OR REPLACE INTO package_version_payloads(version_id, raw_json)
-        VALUES(?, ?)
+        INSERT OR REPLACE INTO package_version_payloads(scan_id, version_id, raw_json)
+        VALUES(?, ?, ?)
       `,
       )
-      .run(versionId, rawJson);
+      .run(this.#requireScanId(), versionId, rawJson);
   }
 
   insertTag(tag: TagRecord): void {
     this.#database
       .prepare(
         `
-        INSERT OR REPLACE INTO tags(tag, digest, version_id)
-        VALUES(@tag, @digest, @versionId)
+        INSERT OR REPLACE INTO tags(scan_id, tag, digest, version_id)
+        VALUES(@scanId, @tag, @digest, @versionId)
       `,
       )
-      .run(tag);
+      .run({
+        scanId: this.#requireScanId(),
+        ...tag,
+      });
   }
 
   insertManifest(manifest: ManifestRecord): void {
@@ -89,6 +117,7 @@ export class ScanWriter {
       .prepare(
         `
         INSERT OR REPLACE INTO manifests(
+          scan_id,
           digest,
           media_type,
           artifact_type,
@@ -100,6 +129,7 @@ export class ScanWriter {
           platform_variant
         )
         VALUES(
+          @scanId,
           @digest,
           @mediaType,
           @artifactType,
@@ -113,6 +143,7 @@ export class ScanWriter {
       `,
       )
       .run({
+        scanId: this.#requireScanId(),
         digest: manifest.digest,
         mediaType: manifest.mediaType,
         artifactType: manifest.artifactType ?? null,
@@ -129,11 +160,11 @@ export class ScanWriter {
     this.#database
       .prepare(
         `
-        INSERT OR REPLACE INTO manifest_payloads(digest, raw_json)
-        VALUES(?, ?)
+        INSERT OR REPLACE INTO manifest_payloads(scan_id, digest, raw_json)
+        VALUES(?, ?, ?)
       `,
       )
-      .run(digest, rawJson);
+      .run(this.#requireScanId(), digest, rawJson);
   }
 
   insertManifestDescriptor(descriptor: ManifestDescriptorRecord): void {
@@ -141,6 +172,7 @@ export class ScanWriter {
       .prepare(
         `
         INSERT OR REPLACE INTO manifest_descriptors(
+          scan_id,
           parent_digest,
           child_digest,
           media_type,
@@ -150,6 +182,7 @@ export class ScanWriter {
           platform_variant
         )
         VALUES(
+          @scanId,
           @parentDigest,
           @childDigest,
           @mediaType,
@@ -161,6 +194,7 @@ export class ScanWriter {
       `,
       )
       .run({
+        scanId: this.#requireScanId(),
         parentDigest: descriptor.parentDigest,
         childDigest: descriptor.childDigest,
         mediaType: descriptor.mediaType,
@@ -175,14 +209,25 @@ export class ScanWriter {
     this.#database
       .prepare(
         `
-        INSERT OR IGNORE INTO manifest_edges(parent_digest, child_digest, edge_kind)
-        VALUES(@parentDigest, @childDigest, @edgeKind)
+        INSERT OR IGNORE INTO manifest_edges(scan_id, parent_digest, child_digest, edge_kind)
+        VALUES(@scanId, @parentDigest, @childDigest, @edgeKind)
       `,
       )
-      .run(edge);
+      .run({
+        scanId: this.#requireScanId(),
+        ...edge,
+      });
   }
 
   rebuildManifestReachability(): void {
-    rebuildManifestReachability(this.#database);
+    rebuildManifestReachability(this.#database, this.#requireScanId());
+  }
+
+  #requireScanId(): number {
+    if (this.#activeScanId === null) {
+      throw new Error("package not initialized; call resetScan(packageName, scannedAt) first");
+    }
+
+    return this.#activeScanId;
   }
 }

@@ -2,8 +2,11 @@ import type Database from "better-sqlite3";
 import type { PlanSummary } from "../core/index.js";
 
 interface _ScanRow {
+  scan_id: number;
   package_name: string;
-  scanned_at: string;
+  scan_started_at: string;
+  scan_completed_at: string | null;
+  status: string;
 }
 
 interface _VersionRow {
@@ -20,35 +23,37 @@ export class SnapshotRepository {
   }
 
   getPackageMetadata(): { packageName: string; scannedAt: string } {
-    const row = this.#database.prepare("SELECT package_name, scanned_at FROM package_scans LIMIT 1").get() as
-      | _ScanRow
-      | undefined;
+    const row = this.#getActivePackageRow();
     if (!row) {
       throw new Error("database does not contain a package scan");
     }
 
     return {
       packageName: row.package_name,
-      scannedAt: row.scanned_at,
+      scannedAt: row.scan_completed_at ?? row.scan_started_at,
     };
   }
 
   getTaggedDigests(): Set<string> {
+    const scanId = this.#requireActiveScanId();
     return _getDigestSet(
-      this.#database.prepare("SELECT DISTINCT digest FROM tags").all() as Array<{ digest: string }>,
+      this.#database.prepare("SELECT DISTINCT digest FROM tags WHERE scan_id = ?").all(scanId) as Array<{
+        digest: string;
+      }>,
       "digest",
     );
   }
 
   getDigestsForTags(tags: string[]): Set<string> {
+    const scanId = this.#requireActiveScanId();
     if (tags.length === 0) {
       return new Set();
     }
 
     const placeholders = tags.map(() => "?").join(", ");
     const rows = this.#database
-      .prepare(`SELECT DISTINCT digest FROM tags WHERE tag IN (${placeholders})`)
-      .all(...tags) as Array<{ digest: string }>;
+      .prepare(`SELECT DISTINCT digest FROM tags WHERE scan_id = ? AND tag IN (${placeholders})`)
+      .all(scanId, ...tags) as Array<{ digest: string }>;
     return _getDigestSet(rows, "digest");
   }
 
@@ -59,23 +64,25 @@ export class SnapshotRepository {
     }
 
     const placeholders = digestList.map(() => "?").join(", ");
+    const scanId = this.#requireActiveScanId();
     const rows = this.#database
-      .prepare(`SELECT child_digest FROM manifest_edges WHERE parent_digest IN (${placeholders})`)
-      .all(...digestList) as Array<{ child_digest: string }>;
+      .prepare(`SELECT child_digest FROM manifest_edges WHERE scan_id = ? AND parent_digest IN (${placeholders})`)
+      .all(scanId, ...digestList) as Array<{ child_digest: string }>;
     return rows.map((row) => row.child_digest);
   }
 
   getVersionsCreatedBefore(cutoffTimestamp: string): Array<{ versionId: number; digest: string }> {
+    const scanId = this.#requireActiveScanId();
     const rows = this.#database
       .prepare(
         `
           SELECT version_id, digest
           FROM package_versions
-          WHERE created_at < ?
+          WHERE scan_id = ? AND created_at < ?
           ORDER BY version_id
         `,
       )
-      .all(cutoffTimestamp) as _VersionRow[];
+      .all(scanId, cutoffTimestamp) as _VersionRow[];
 
     return rows.map((row) => ({
       versionId: row.version_id,
@@ -84,36 +91,62 @@ export class SnapshotRepository {
   }
 
   getTaggedVersionIds(): number[] {
-    const rows = this.#database.prepare("SELECT DISTINCT version_id FROM tags ORDER BY version_id").all() as Array<{
-      version_id: number;
-    }>;
+    const scanId = this.#requireActiveScanId();
+    const rows = this.#database
+      .prepare("SELECT DISTINCT version_id FROM tags WHERE scan_id = ? ORDER BY version_id")
+      .all(scanId) as Array<{ version_id: number }>;
     return rows.map((row) => row.version_id);
   }
 
   countPackageVersions(): number {
-    return _count(this.#database, "SELECT COUNT(*) AS total FROM package_versions", "total");
+    return _count(
+      this.#database,
+      "SELECT COUNT(*) AS total FROM package_versions WHERE scan_id = ?",
+      "total",
+      this.#requireActiveScanId(),
+    );
   }
 
   countTaggedVersions(): number {
-    return _count(this.#database, "SELECT COUNT(DISTINCT version_id) AS total FROM tags", "total");
+    return _count(
+      this.#database,
+      "SELECT COUNT(DISTINCT version_id) AS total FROM tags WHERE scan_id = ?",
+      "total",
+      this.#requireActiveScanId(),
+    );
   }
 
   countTags(): number {
-    return _count(this.#database, "SELECT COUNT(*) AS total FROM tags", "total");
+    return _count(
+      this.#database,
+      "SELECT COUNT(*) AS total FROM tags WHERE scan_id = ?",
+      "total",
+      this.#requireActiveScanId(),
+    );
   }
 
   countManifests(): number {
-    return _count(this.#database, "SELECT COUNT(*) AS total FROM manifests", "total");
+    return _count(
+      this.#database,
+      "SELECT COUNT(*) AS total FROM manifests WHERE scan_id = ?",
+      "total",
+      this.#requireActiveScanId(),
+    );
   }
 
   countManifestEdges(): number {
-    return _count(this.#database, "SELECT COUNT(*) AS total FROM manifest_edges", "total");
+    return _count(
+      this.#database,
+      "SELECT COUNT(*) AS total FROM manifest_edges WHERE scan_id = ?",
+      "total",
+      this.#requireActiveScanId(),
+    );
   }
 
   listPackageVersionDigests(): string[] {
-    const rows = this.#database.prepare("SELECT digest FROM package_versions ORDER BY version_id").all() as Array<{
-      digest: string;
-    }>;
+    const rows = this.#database
+      .prepare("SELECT digest FROM package_versions WHERE scan_id = ? ORDER BY version_id")
+      .all(this.#requireActiveScanId()) as Array<{ digest: string }>;
     return rows.map((row) => row.digest);
   }
 
@@ -128,13 +161,35 @@ export class SnapshotRepository {
       deletableVersionIds: [...deletableVersionIds].sort((left, right) => left - right),
     };
   }
+
+  #getActivePackageRow(): _ScanRow | undefined {
+    return this.#database
+      .prepare(
+        `
+          SELECT scan_id, package_name, scan_started_at, scan_completed_at, status
+          FROM package_scans
+          ORDER BY scan_started_at DESC, scan_id DESC
+          LIMIT 1
+        `,
+      )
+      .get() as _ScanRow | undefined;
+  }
+
+  #requireActiveScanId(): number {
+    const row = this.#getActivePackageRow();
+    if (!row) {
+      throw new Error("database does not contain a package scan");
+    }
+
+    return row.scan_id;
+  }
 }
 
 function _getDigestSet(rows: Array<Record<string, string>>, key: string): Set<string> {
   return new Set(rows.map((row) => row[key] as string));
 }
 
-function _count(database: Database.Database, sql: string, field: string): number {
-  const row = database.prepare(sql).get() as Record<string, number>;
+function _count(database: Database.Database, sql: string, field: string, ...params: unknown[]): number {
+  const row = database.prepare(sql).get(...params) as Record<string, number>;
   return row[field] as number;
 }

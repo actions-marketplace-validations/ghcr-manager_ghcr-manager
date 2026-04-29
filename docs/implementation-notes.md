@@ -33,6 +33,7 @@ This section is the canonical place for session-to-session continuity.
 
 ### Current Next Plan
 
+- ☑ Add package scopes to the DB schema so one SQLite database can store multiple owner/package scans.
 - ☑ Add a real GitHub Packages and GHCR ingest adapter beside the fixture loader.
 - ☑ Normalize live package, version, tag, manifest, and edge data into the existing SQLite schema.
 - ☑ Refactor ingest so GitHub and fixture input write incrementally into SQLite instead of assembling package-level
@@ -225,3 +226,29 @@ src/
    referrer relations.
 2. Improve planner output so it explains why versions are protected or deletable.
 3. Add more planner tests for multi-arch images, referrers, and explicit tag exclusion cases.
+
+### 2026-04-29 (multi-package schema layer)
+
+- Added `package_scopes(scope_id, owner, package_name, last_scanned_at)` as the new package-level scope anchor.
+- Scoped package-bound tables by `scope_id`: `package_versions`, `package_version_metadata`, `package_version_payloads`,
+  and `tags`.
+- Added `scope_manifests(scope_id, digest)` to associate globally deduplicated manifest rows with specific package
+  scopes.
+- Updated `ScanWriter` so `resetScan(packageName, scannedAt)` now clears and rewrites only the targeted scope instead of
+  truncating all scan data in the DB.
+- Updated `SnapshotRepository` queries to read from the latest scanned scope and apply `scope_id` filters to
+  package-level counts and plan inputs.
+- Follow-up needed: add a first-class scope selector API (explicit owner/package query target) so CLI and planner can
+  choose among multiple stored scopes instead of always using the latest scan timestamp.
+
+### 2026-04-29 (scan-history schema refactor)
+
+- Replaced package-anchored tenancy with scan-anchored tenancy:
+  - `package_scans(scan_id, package_name, scan_started_at, scan_completed_at, status)`
+  - all snapshot tables now key and reference by `scan_id`.
+- Updated writer persistence so `resetScan(...)` creates a new `running` scan row instead of truncating prior data.
+- Added scan lifecycle updates in writer:
+  - `markScanCompleted(...)`
+  - `markScanFailed(...)`
+- Updated GitHub and fixture ingest entrypoints to mark scan status transitions (`running -> completed|failed`).
+- Updated snapshot repository and reachability rebuild logic to read/write by active/latest `scan_id`.

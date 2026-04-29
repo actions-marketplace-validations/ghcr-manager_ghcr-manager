@@ -4,44 +4,58 @@ const _schemaStatements = [
   `PRAGMA foreign_keys = ON`,
   `
     CREATE TABLE IF NOT EXISTS package_scans (
+      scan_id INTEGER PRIMARY KEY,
       package_name TEXT NOT NULL,
-      scanned_at TEXT NOT NULL
+      scan_started_at TEXT NOT NULL,
+      scan_completed_at TEXT,
+      status TEXT NOT NULL,
+      CHECK(status IN ('running', 'completed', 'failed'))
     )
   `,
   `
     CREATE TABLE IF NOT EXISTS package_versions (
-      version_id INTEGER PRIMARY KEY,
-      digest TEXT NOT NULL UNIQUE,
+      scan_id INTEGER NOT NULL,
+      version_id INTEGER NOT NULL,
+      digest TEXT NOT NULL,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
-      UNIQUE(version_id, digest)
+      PRIMARY KEY(scan_id, version_id),
+      UNIQUE(scan_id, version_id, digest),
+      FOREIGN KEY(scan_id) REFERENCES package_scans(scan_id)
     )
   `,
   `
     CREATE TABLE IF NOT EXISTS package_version_metadata (
-      version_id INTEGER PRIMARY KEY,
+      scan_id INTEGER NOT NULL,
+      version_id INTEGER NOT NULL,
       metadata_json TEXT NOT NULL,
-      FOREIGN KEY(version_id) REFERENCES package_versions(version_id)
+      PRIMARY KEY(scan_id, version_id),
+      FOREIGN KEY(scan_id, version_id) REFERENCES package_versions(scan_id, version_id)
     )
   `,
   `
     CREATE TABLE IF NOT EXISTS package_version_payloads (
-      version_id INTEGER PRIMARY KEY,
+      scan_id INTEGER NOT NULL,
+      version_id INTEGER NOT NULL,
       raw_json TEXT NOT NULL,
-      FOREIGN KEY(version_id) REFERENCES package_versions(version_id)
+      PRIMARY KEY(scan_id, version_id),
+      FOREIGN KEY(scan_id, version_id) REFERENCES package_versions(scan_id, version_id)
     )
   `,
   `
     CREATE TABLE IF NOT EXISTS tags (
-      tag TEXT PRIMARY KEY,
+      scan_id INTEGER NOT NULL,
+      tag TEXT NOT NULL,
       digest TEXT NOT NULL,
       version_id INTEGER NOT NULL,
-      FOREIGN KEY(version_id, digest) REFERENCES package_versions(version_id, digest)
+      PRIMARY KEY(scan_id, tag),
+      FOREIGN KEY(scan_id, version_id, digest) REFERENCES package_versions(scan_id, version_id, digest)
     )
   `,
   `
     CREATE TABLE IF NOT EXISTS manifests (
-      digest TEXT PRIMARY KEY,
+      scan_id INTEGER NOT NULL,
+      digest TEXT NOT NULL,
       media_type TEXT NOT NULL,
       artifact_type TEXT,
       config_media_type TEXT,
@@ -49,11 +63,14 @@ const _schemaStatements = [
       annotations_json TEXT,
       platform_os TEXT,
       platform_architecture TEXT,
-      platform_variant TEXT
+      platform_variant TEXT,
+      PRIMARY KEY(scan_id, digest),
+      FOREIGN KEY(scan_id) REFERENCES package_scans(scan_id)
     )
   `,
   `
     CREATE TABLE IF NOT EXISTS manifest_descriptors (
+      scan_id INTEGER NOT NULL,
       parent_digest TEXT NOT NULL,
       child_digest TEXT NOT NULL,
       media_type TEXT NOT NULL,
@@ -61,44 +78,50 @@ const _schemaStatements = [
       platform_os TEXT,
       platform_architecture TEXT,
       platform_variant TEXT,
-      PRIMARY KEY(parent_digest, child_digest),
-      FOREIGN KEY(parent_digest) REFERENCES manifests(digest)
+      PRIMARY KEY(scan_id, parent_digest, child_digest),
+      FOREIGN KEY(scan_id, parent_digest) REFERENCES manifests(scan_id, digest)
     )
   `,
   `
     CREATE TABLE IF NOT EXISTS manifest_payloads (
-      digest TEXT PRIMARY KEY,
+      scan_id INTEGER NOT NULL,
+      digest TEXT NOT NULL,
       raw_json TEXT NOT NULL,
-      FOREIGN KEY(digest) REFERENCES manifests(digest)
+      PRIMARY KEY(scan_id, digest),
+      FOREIGN KEY(scan_id, digest) REFERENCES manifests(scan_id, digest)
     )
   `,
   `
     CREATE TABLE IF NOT EXISTS manifest_edges (
+      scan_id INTEGER NOT NULL,
       parent_digest TEXT NOT NULL,
       child_digest TEXT NOT NULL,
       edge_kind TEXT NOT NULL,
-      PRIMARY KEY(parent_digest, child_digest, edge_kind),
-      FOREIGN KEY(parent_digest) REFERENCES manifests(digest),
-      FOREIGN KEY(child_digest) REFERENCES manifests(digest)
+      PRIMARY KEY(scan_id, parent_digest, child_digest, edge_kind),
+      FOREIGN KEY(scan_id, parent_digest) REFERENCES manifests(scan_id, digest),
+      FOREIGN KEY(scan_id, child_digest) REFERENCES manifests(scan_id, digest)
     )
   `,
   `
     CREATE TABLE IF NOT EXISTS manifest_reachability (
+      scan_id INTEGER NOT NULL,
       ancestor_digest TEXT NOT NULL,
       descendant_digest TEXT NOT NULL,
       min_distance INTEGER NOT NULL,
-      PRIMARY KEY(ancestor_digest, descendant_digest),
-      FOREIGN KEY(ancestor_digest) REFERENCES manifests(digest),
-      FOREIGN KEY(descendant_digest) REFERENCES manifests(digest),
+      PRIMARY KEY(scan_id, ancestor_digest, descendant_digest),
+      FOREIGN KEY(scan_id, ancestor_digest) REFERENCES manifests(scan_id, digest),
+      FOREIGN KEY(scan_id, descendant_digest) REFERENCES manifests(scan_id, digest),
       CHECK(min_distance >= 0)
     )
   `,
-  `CREATE INDEX IF NOT EXISTS idx_package_versions_created_at ON package_versions(created_at)`,
-  `CREATE INDEX IF NOT EXISTS idx_tags_digest ON tags(digest)`,
-  `CREATE INDEX IF NOT EXISTS idx_manifest_descriptors_child ON manifest_descriptors(child_digest)`,
-  `CREATE INDEX IF NOT EXISTS idx_manifest_edges_parent ON manifest_edges(parent_digest)`,
-  `CREATE INDEX IF NOT EXISTS idx_manifest_edges_child ON manifest_edges(child_digest)`,
-  `CREATE INDEX IF NOT EXISTS idx_manifest_reachability_descendant ON manifest_reachability(descendant_digest)`,
+  `CREATE INDEX IF NOT EXISTS idx_package_versions_scan_created_at ON package_versions(scan_id, created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_package_versions_scan_digest ON package_versions(scan_id, digest)`,
+  `CREATE INDEX IF NOT EXISTS idx_package_scans_name_started_at ON package_scans(package_name, scan_started_at DESC)`,
+  `CREATE INDEX IF NOT EXISTS idx_tags_scan_digest ON tags(scan_id, digest)`,
+  `CREATE INDEX IF NOT EXISTS idx_manifest_descriptors_scan_child ON manifest_descriptors(scan_id, child_digest)`,
+  `CREATE INDEX IF NOT EXISTS idx_manifest_edges_scan_parent ON manifest_edges(scan_id, parent_digest)`,
+  `CREATE INDEX IF NOT EXISTS idx_manifest_edges_scan_child ON manifest_edges(scan_id, child_digest)`,
+  `CREATE INDEX IF NOT EXISTS idx_manifest_reachability_scan_descendant ON manifest_reachability(scan_id, descendant_digest)`,
 ];
 
 export function initializeSchema(database: Database.Database): void {

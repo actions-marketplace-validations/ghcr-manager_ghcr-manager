@@ -9,8 +9,9 @@ interface _ManifestEdgeRow {
   child_digest: string;
 }
 
-export function rebuildManifestReachability(database: Database.Database): void {
-  const manifestDigests = _loadManifestDigests(database);
+export function rebuildManifestReachability(database: Database.Database, scanId?: number): void {
+  const resolvedScanId = scanId ?? _loadLatestScanId(database);
+  const manifestDigests = _loadManifestDigests(database, resolvedScanId);
   const childDigestsByParent = new Map<string, Set<string>>();
   const parentDigestsByChild = new Map<string, Set<string>>();
 
@@ -19,7 +20,7 @@ export function rebuildManifestReachability(database: Database.Database): void {
     parentDigestsByChild.set(digest, new Set());
   }
 
-  for (const manifestEdge of _loadManifestEdges(database)) {
+  for (const manifestEdge of _loadManifestEdges(database, resolvedScanId)) {
     childDigestsByParent.get(manifestEdge.parent_digest)?.add(manifestEdge.child_digest);
     parentDigestsByChild.get(manifestEdge.child_digest)?.add(manifestEdge.parent_digest);
   }
@@ -76,17 +77,22 @@ export function rebuildManifestReachability(database: Database.Database): void {
 
   const insertRow = database.prepare(
     `
-      INSERT OR REPLACE INTO manifest_reachability(ancestor_digest, descendant_digest, min_distance)
-      VALUES(?, ?, ?)
+      INSERT OR REPLACE INTO manifest_reachability(
+        scan_id,
+        ancestor_digest,
+        descendant_digest,
+        min_distance
+      )
+      VALUES(?, ?, ?, ?)
     `,
   );
 
   const rebuild = database.transaction(() => {
-    database.exec("DELETE FROM manifest_reachability");
+    database.prepare("DELETE FROM manifest_reachability WHERE scan_id = ?").run(resolvedScanId);
 
     for (const digest of manifestDigests) {
       for (const [descendantDigest, distance] of descendantDistancesByDigest.get(digest) ?? []) {
-        insertRow.run(digest, descendantDigest, distance);
+        insertRow.run(resolvedScanId, digest, descendantDigest, distance);
       }
     }
   });
@@ -94,21 +100,43 @@ export function rebuildManifestReachability(database: Database.Database): void {
   rebuild();
 }
 
-function _loadManifestDigests(database: Database.Database): string[] {
-  const rows = database.prepare("SELECT digest FROM manifests ORDER BY digest").all() as _DigestRow[];
+function _loadManifestDigests(database: Database.Database, scanId: number): string[] {
+  const rows = database
+    .prepare("SELECT digest FROM manifests WHERE scan_id = ? ORDER BY digest")
+    .all(scanId) as _DigestRow[];
   return rows.map((row) => row.digest);
 }
 
-function _loadManifestEdges(database: Database.Database): _ManifestEdgeRow[] {
+function _loadManifestEdges(database: Database.Database, scanId: number): _ManifestEdgeRow[] {
   return database
     .prepare(
       `
         SELECT DISTINCT parent_digest, child_digest
         FROM manifest_edges
+        WHERE scan_id = ?
         ORDER BY parent_digest, child_digest
       `,
     )
-    .all() as _ManifestEdgeRow[];
+    .all(scanId) as _ManifestEdgeRow[];
+}
+
+function _loadLatestScanId(database: Database.Database): number {
+  const row = database
+    .prepare(
+      `
+        SELECT scan_id
+        FROM package_scans
+        ORDER BY scan_started_at DESC, scan_id DESC
+        LIMIT 1
+      `,
+    )
+    .get() as { scan_id: number } | undefined;
+
+  if (!row) {
+    throw new Error("database does not contain a package scan");
+  }
+
+  return row.scan_id;
 }
 
 function _setMinDistance(distances: Map<string, number>, digest: string, distance: number): void {
