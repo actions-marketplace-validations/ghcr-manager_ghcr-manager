@@ -68,19 +68,6 @@ export class ScanWriter {
         createdAt: version.createdAt,
         updatedAt: version.updatedAt
       });
-
-    this.#database
-      .prepare(
-        `
-        INSERT OR REPLACE INTO package_version_metadata(scan_id, version_id, metadata_json)
-        VALUES(@scanId, @versionId, @metadataJson)
-      `
-      )
-      .run({
-        scanId: this.#requireScanId(),
-        versionId: version.versionId,
-        metadataJson: JSON.stringify(version.metadata ?? {})
-      });
   }
 
   insertPackageVersionPayload(versionId: number, rawJson: string): void {

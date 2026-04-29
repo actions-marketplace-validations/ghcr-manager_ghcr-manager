@@ -26,7 +26,7 @@ One scan of one package does this:
 
 - `tags`
   - Tag -> version/digest mapping.
-  - Built from `package_versions.metadata.container.tags` in GitHub package-version items.
+  - Built from GitHub package-version metadata (`metadata.container.tags`) during ingest.
 
 ## Manifest Content Tables
 
@@ -75,7 +75,5 @@ Sometimes GHCR returns `404` for referenced digests.
 
 ## Raw JSON Side Tables
 
-- `package_version_metadata`: metadata JSON object from each GitHub package-version item
-  (includes container tag data used for `tags`).
 - `package_version_payloads`: full raw GitHub package-version JSON items.
 - `manifest_payloads`: full raw GHCR manifest JSON items.

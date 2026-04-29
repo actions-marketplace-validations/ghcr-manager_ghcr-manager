@@ -25,15 +25,6 @@ const _schemaStatements = [
     )
   `,
   `
-    CREATE TABLE IF NOT EXISTS package_version_metadata (
-      scan_id INTEGER NOT NULL,
-      version_id INTEGER NOT NULL,
-      metadata_json TEXT NOT NULL,
-      PRIMARY KEY(scan_id, version_id),
-      FOREIGN KEY(scan_id, version_id) REFERENCES package_versions(scan_id, version_id)
-    )
-  `,
-  `
     CREATE TABLE IF NOT EXISTS package_version_payloads (
       scan_id INTEGER NOT NULL,
       version_id INTEGER NOT NULL,
