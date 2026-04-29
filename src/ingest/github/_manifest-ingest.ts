@@ -23,6 +23,7 @@ export async function ingestManifests(
   const progressStep = Math.max(1, Math.ceil(initialDigestCount * manifestIngestProgressStepRatio));
   const queuedDigests = new Set(pendingDigests);
   const fetchedDigests = new Set<string>();
+  const persistedDigests = new Set<string>();
   const registryPullTokenState: _RegistryPullTokenState = {};
   options.logger.info(`Fetching manifests for ${pendingDigests.length} package versions`);
   let completed = 0;
@@ -45,6 +46,7 @@ export async function ingestManifests(
         pendingDigests,
         queuedDigests,
         fetchedDigests,
+        persistedDigests,
         edgeRecords,
         completed,
         async () => (await _getRegistryPullToken(fetchImpl, registryBaseUrl, options, registryPullTokenState)).token,
@@ -66,6 +68,9 @@ export async function ingestManifests(
   }
 
   for (const edge of edgeRecords) {
+    if (!persistedDigests.has(edge.parentDigest) || !persistedDigests.has(edge.childDigest)) {
+      continue;
+    }
     writer.insertManifestEdge(edge);
   }
   writer.rebuildManifestReachability();
@@ -80,6 +85,7 @@ async function _loadQueuedManifest(
   pendingDigests: string[],
   queuedDigests: Set<string>,
   fetchedDigests: Set<string>,
+  persistedDigests: Set<string>,
   edgeRecords: ManifestEdgeRecord[],
   completed: number,
   getRegistryToken: () => Promise<string>,
@@ -100,6 +106,7 @@ async function _loadQueuedManifest(
     throw error;
   }
   writer.insertManifest(manifest.record);
+  persistedDigests.add(manifest.record.digest);
   writer.insertManifestPayload(manifest.record.digest, manifest.rawJson);
   for (const descriptor of manifest.descriptorRecords) {
     writer.insertManifestDescriptor(descriptor);

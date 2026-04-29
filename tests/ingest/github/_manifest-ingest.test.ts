@@ -91,6 +91,7 @@ test("manifest ingest skips missing manifests (404) and continues", async () => 
   const fetchedManifestDigests: string[] = [];
   const warnings: string[] = [];
   const insertedManifests: string[] = [];
+  const insertedEdges: Array<{ parentDigest: string; childDigest: string; edgeKind: string }> = [];
 
   const writer = {
     insertManifest(record: { digest: string }) {
@@ -98,7 +99,9 @@ test("manifest ingest skips missing manifests (404) and continues", async () => 
     },
     insertManifestPayload() {},
     insertManifestDescriptor() {},
-    insertManifestEdge() {},
+    insertManifestEdge(edge: { parentDigest: string; childDigest: string; edgeKind: string }) {
+      insertedEdges.push(edge);
+    },
     rebuildManifestReachability() {},
   } as unknown as ScanWriter;
 
@@ -139,9 +142,12 @@ test("manifest ingest skips missing manifests (404) and continues", async () => 
         return {
           ok: true,
           status: 200,
-          headers: new Headers({ "content-type": "application/vnd.oci.image.manifest.v1+json" }),
+          headers: new Headers({ "content-type": "application/vnd.oci.image.index.v1+json" }),
           async json() {
-            return { mediaType: "application/vnd.oci.image.manifest.v1+json" };
+            return {
+              mediaType: "application/vnd.oci.image.index.v1+json",
+              manifests: [{ digest: "sha256:index-2", mediaType: "application/vnd.oci.image.manifest.v1+json" }],
+            };
           },
         };
       }
@@ -169,5 +175,6 @@ test("manifest ingest skips missing manifests (404) and continues", async () => 
 
   assert.deepEqual(fetchedManifestDigests.sort(), [...manifestDigests].sort());
   assert.deepEqual(insertedManifests.sort(), ["sha256:index-1", "sha256:index-3"]);
+  assert.deepEqual(insertedEdges, []);
   assert.ok(warnings.some((warning) => warning.includes("Skipping missing GHCR manifest sha256:index-2")));
 });
