@@ -33,7 +33,7 @@ async function handleInitDb(args: string[]): Promise<number> {
 function printUsage(): void {
   console.error(`Usage:
   ghcr-manager init-db --db <path>
-  ghcr-manager scan --db <path> [--log-level <debug|info|warn|error|silent>] --owner <org> --package <name> [--token <token>]`);
+  ghcr-manager scan --db <path> [--log-level <debug|info|warn|error|silent>] --owner <org> --package <name> --token <token>`);
 }
 
 const _entryPath = process.argv[1];

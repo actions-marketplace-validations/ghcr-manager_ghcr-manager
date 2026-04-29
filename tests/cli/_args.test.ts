@@ -20,13 +20,11 @@ test("collectRepeatedOption reads repeated options in order", () => {
 });
 
 test("resolveGitHubToken prefers CLI input over the environment", () => {
-  process.env.GITHUB_TOKEN = "env-token";
   assert.equal(resolveGitHubToken(["--token", "cli-token"]), "cli-token");
 });
 
-test("resolveGitHubToken falls back to the environment", () => {
-  process.env.GITHUB_TOKEN = "env-token";
-  assert.equal(resolveGitHubToken([]), "env-token");
+test("resolveGitHubToken requires a CLI token", () => {
+  assert.throws(() => resolveGitHubToken([]), /missing required option: --token/);
 });
 
 test("requireOption throws for a missing value", () => {

@@ -34,21 +34,11 @@ export function resolveGitHubToken(args: string[]): string {
     return cliToken;
   }
 
-  const envToken = process.env.GITHUB_TOKEN;
-  if (envToken) {
-    return envToken;
-  }
-
-  throw new Error("missing GitHub token: pass --token or set GITHUB_TOKEN");
+  throw new Error("missing required option: --token");
 }
 
 export function resolveOptionalGitHubToken(args: string[]): string | undefined {
-  const cliToken = findOption(args, "--token");
-  if (cliToken) {
-    return cliToken;
-  }
-
-  return process.env.GITHUB_TOKEN;
+  return findOption(args, "--token");
 }
 
 export function resolveLogLevel(args: string[]): LogLevel {

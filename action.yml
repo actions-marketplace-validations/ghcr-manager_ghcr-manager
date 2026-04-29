@@ -2,6 +2,10 @@ name: ghcr-manager
 description: Inspect, analyze, and manage GitHub Container Registry packages.
 
 inputs:
+  github-token:
+    description: GitHub token used for GitHub/GHCR API calls.
+    required: true
+    default: ${{ github.token }}
   owner:
     description: GitHub organization that owns the container package for live scans.
     required: true
@@ -61,7 +65,8 @@ runs:
         node dist/cli/index.js scan \
           --db "${{ steps.prepare-db.outputs.db_path }}" \
           --owner "${{ inputs.owner }}" \
-          --package "${{ inputs.package }}"
+          --package "${{ inputs.package }}" \
+          --token "${{ inputs.github-token }}"
 
     - name: Upload DB artifact
       if: ${{ inputs.upload-db-artifact == 'true' }}

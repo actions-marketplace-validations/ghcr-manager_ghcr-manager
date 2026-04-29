@@ -1,6 +1,6 @@
 import { ScanWriter, SnapshotRepository, openDatabase } from "../db/index.js";
 import { importGitHubScan } from "../ingest/github/index.js";
-import { requireOption, resolveLogLevel, resolveOptionalGitHubToken } from "./_args.js";
+import { requireOption, resolveGitHubToken, resolveLogLevel } from "./_args.js";
 import { createLogger } from "./_logger.js";
 
 export async function handleScan(args: string[]): Promise<number> {
@@ -15,7 +15,7 @@ export async function handleScan(args: string[]): Promise<number> {
     {
       owner,
       packageName,
-      token: resolveOptionalGitHubToken(args),
+      token: resolveGitHubToken(args),
       logger,
     },
     writer,
