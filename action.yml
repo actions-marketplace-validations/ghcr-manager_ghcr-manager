@@ -2,9 +2,6 @@ name: ghcr-manager
 description: Inspect, analyze, and manage GitHub Container Registry packages.
 
 inputs:
-  command:
-    description: CLI command to run.
-    required: true
   owner:
     description: GitHub organization that owns the container package for live scans.
     required: false
@@ -67,7 +64,6 @@ runs:
 
     - name: Derive DB path
       id: derive-db-path
-      if: ${{ inputs.command == 'scan' }}
       shell: bash
       env:
         INPUT_OWNER: ${{ inputs.owner }}
@@ -87,10 +83,7 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        args=("${{ inputs.command }}")
-        if [[ "${{ inputs.command }}" == "scan" ]]; then
-          args+=("--db" "${{ steps.derive-db-path.outputs.db_path }}")
-        fi
+        args=("scan" "--db" "${{ steps.derive-db-path.outputs.db_path }}")
         if [[ -n "${{ inputs.owner }}" ]]; then
           args+=("--owner" "${{ inputs.owner }}")
         fi
