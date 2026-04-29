@@ -255,3 +255,15 @@ src/
 - Updated metadata naming and selection semantics:
   - code and outputs now use `scanCompletedAt` instead of `scannedAt`
   - repository metadata queries now select only completed scans (`status='completed'` with non-null completion time)
+
+### 2026-04-29 (action vs CLI responsibility split)
+
+- Decision: keep artifact upload behavior in the GitHub Action layer, not in the CLI/tool layer.
+- Rationale:
+  - CLI should stay platform-agnostic and usable outside GitHub Actions.
+  - GitHub-specific concerns (artifact retention, upload policy, conditional publish flags) belong to action wiring.
+  - Composite action steps are a natural place for optional artifact upload; jobs are workflow-level, not action-level.
+- Planned action shape:
+  - Add optional action inputs (for example `upload-db-artifact`, `db-artifact-name`,
+    `db-artifact-retention-days`, optional compression mode).
+  - Keep default behavior unchanged unless upload is explicitly enabled.
