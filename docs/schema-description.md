@@ -25,7 +25,8 @@ One scan of one package does this:
   - Think: "starting points for manifest crawling."
 
 - `tags`
-  - Tag -> version/digest mapping from GitHub metadata.
+  - Tag -> version/digest mapping.
+  - Built from `package_versions.metadata.container.tags` in GitHub package-version items.
 
 ## Manifest Content Tables
 
@@ -71,3 +72,10 @@ Sometimes GHCR returns `404` for referenced digests.
 - Ingest currently skips those missing manifests and continues.
 - Missing digests can still be analyzed later from DB state.
 - Query recipes: [missing-manifests-queries.md](missing-manifests-queries.md)
+
+## Raw JSON Side Tables
+
+- `package_version_metadata`: metadata JSON object from each GitHub package-version item
+  (includes container tag data used for `tags`).
+- `package_version_payloads`: full raw GitHub package-version JSON items.
+- `manifest_payloads`: full raw GHCR manifest JSON items.
