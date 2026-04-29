@@ -69,5 +69,5 @@ runs:
       with:
         name: ${{ steps.prepare-db.outputs.db_file }}
         path: ${{ steps.prepare-db.outputs.db_path }}
-        retention-days: ${{ inputs.db-artifact-retention-days != '' && inputs.db-artifact-retention-days || github.retention_days }}
-
+        retention-days:
+          ${{ inputs.db-artifact-retention-days != '' && inputs.db-artifact-retention-days || github.retention_days }}

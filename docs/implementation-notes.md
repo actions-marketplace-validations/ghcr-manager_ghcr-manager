@@ -270,3 +270,7 @@ src/
   - optional in-action DB artifact upload (off by default)
   - optional retention override (otherwise GitHub policy default is used)
   - scan DB path is derived internally from owner/package under runner temp storage (no `db-path` action input)
+- Added `.github/workflows/manual-scan-test.yml` as a `workflow_dispatch` validation workflow that:
+  - accepts explicit `owner` and `package` inputs
+  - runs `uses: ./` against the local action implementation
+  - optionally uploads DB artifact via action inputs
