@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { openDatabase, ScanWriter, SnapshotRepository } from "../../../src/db/index.js";
-import { importFileScan } from "../../../src/ingest/file/index.js";
+import { importFileScan } from "../../helpers/index.js";
 
 test("file ingest writes fixture data directly into SQLite", async () => {
   const database = openDatabase(":memory:");

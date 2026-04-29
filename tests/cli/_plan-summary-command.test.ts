@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { handlePlanSummary } from "../../src/cli/_plan-summary-command.js";
 import { openDatabase, ScanWriter } from "../../src/db/index.js";
-import { importFileScan } from "../../src/ingest/file/index.js";
+import { importFileScan } from "../helpers/index.js";
 
 test("handlePlanSummary prints a JSON summary for a prepared database", async () => {
   const tempDirectory = mkdtempSync(join(tmpdir(), "ghcr-manager-"));

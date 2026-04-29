@@ -66,7 +66,7 @@ This section is the canonical place for session-to-session continuity.
 - Persistence model: local SQLite database per run.
 - Current ingest sources:
   - live GitHub Packages plus GHCR manifest scan for one org-owned container package
-  - local JSON snapshot fixture as an internal test helper only
+  - local JSON snapshot fixture in `tests/helpers` as a test helper only
 - Current ingest implementation:
   - writes fixture and live GitHub/GHCR results incrementally into SQLite
   - uses a dedicated GHCR registry token client for bearer-token acquisition
@@ -218,7 +218,7 @@ src/
 - GitHub package pages, GHCR manifest fetches, and GHCR token fetches now retry a small bounded number of times for
   transport failures and selected transient HTTP statuses before failing the scan.
 - Removed the public `--source` / `--snapshot` scan mode split; the app now exposes only the real GitHub/GHCR scan path
-  while keeping the file fixture loader as an internal test helper.
+  while keeping fixture loading in test-only helpers.
 
 ## Next Increment
 

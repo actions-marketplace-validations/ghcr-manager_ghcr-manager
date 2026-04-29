@@ -1,11 +1,10 @@
 import { readFile } from "node:fs/promises";
-import type { ManifestEdgeRecord, ManifestRecord, PackageVersionRecord, TagRecord } from "../../core/index.js";
-import { ScanWriter } from "../../db/index.js";
+import type { ManifestEdgeRecord, ManifestRecord, PackageVersionRecord, TagRecord } from "../../src/core/index.js";
+import { ScanWriter } from "../../src/db/index.js";
 
 interface _FixtureScanDocument {
   packageName: string;
-  scanCompletedAt?: string;
-  scannedAt?: string;
+  scanCompletedAt: string;
   packageVersions: PackageVersionRecord[];
   tags: TagRecord[];
   manifests: ManifestRecord[];
@@ -15,10 +14,7 @@ interface _FixtureScanDocument {
 export async function importFileScan(snapshotPath: string, writer: ScanWriter): Promise<void> {
   const rawSnapshot = await readFile(snapshotPath, "utf8");
   const document = JSON.parse(rawSnapshot) as _FixtureScanDocument;
-  const scanCompletedAt = document.scanCompletedAt ?? document.scannedAt;
-  if (!scanCompletedAt) {
-    throw new Error("fixture scan document is missing scanCompletedAt");
-  }
+  const scanCompletedAt = document.scanCompletedAt;
 
   writer.resetScan(document.packageName, scanCompletedAt);
   try {

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { buildPlanSummary } from "../../../src/core/planner/index.js";
 import { openDatabase, ScanWriter, SnapshotRepository } from "../../../src/db/index.js";
-import { importFileScan } from "../../../src/ingest/file/index.js";
+import { importFileScan } from "../../helpers/index.js";
 
 test("planner keeps tagged graph while exposing old untagged versions", async () => {
   const tempDirectory = mkdtempSync(join(tmpdir(), "ghcr-manager-"));

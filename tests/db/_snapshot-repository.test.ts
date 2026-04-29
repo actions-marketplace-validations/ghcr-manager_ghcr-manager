@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { openDatabase, ScanWriter, SnapshotRepository } from "../../src/db/index.js";
-import { importFileScan } from "../../src/ingest/file/index.js";
+import { importFileScan } from "../helpers/index.js";
 
 test("snapshot repository exposes counts and metadata after import", async () => {
   const tempDirectory = mkdtempSync(join(tmpdir(), "ghcr-manager-"));
