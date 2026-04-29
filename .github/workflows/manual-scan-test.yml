@@ -37,7 +37,7 @@ jobs:
         id: ghcr-manager
         uses: ./
         env:
-          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           owner: ${{ inputs.owner }}
           package: ${{ inputs.package }}
