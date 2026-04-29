@@ -84,3 +84,90 @@ test("manifest ingest fetches manifests with shared token reuse", async () => {
   assert.ok(maxManifestRequests > 1);
   assert.equal(insertedEdges.length, 0);
 });
+
+test("manifest ingest skips missing manifests (404) and continues", async () => {
+  const scanId = 123;
+  const manifestDigests = ["sha256:index-1", "sha256:index-2", "sha256:index-3"];
+  const fetchedManifestDigests: string[] = [];
+  const warnings: string[] = [];
+  const insertedManifests: string[] = [];
+
+  const writer = {
+    insertManifest(record: { digest: string }) {
+      insertedManifests.push(record.digest);
+    },
+    insertManifestPayload() {},
+    insertManifestDescriptor() {},
+    insertManifestEdge() {},
+    rebuildManifestReachability() {},
+  } as unknown as ScanWriter;
+
+  const repository = {
+    listPackageVersionDigests() {
+      return [...manifestDigests];
+    },
+  } as unknown as SnapshotRepository;
+
+  await ingestManifests(
+    async (input) => {
+      if (input.includes("/token?")) {
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          async json() {
+            return { token: "registry-token", expires_in: 3600 };
+          },
+        };
+      }
+
+      if (input.includes("/manifests/")) {
+        const digest = input.split("/").at(-1);
+        assert.ok(digest);
+        fetchedManifestDigests.push(digest);
+        if (digest === "sha256:index-2") {
+          return {
+            ok: false,
+            status: 404,
+            headers: new Headers({ "content-type": "application/json" }),
+            async json() {
+              return { message: "manifest unknown" };
+            },
+          };
+        }
+
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers({ "content-type": "application/vnd.oci.image.manifest.v1+json" }),
+          async json() {
+            return { mediaType: "application/vnd.oci.image.manifest.v1+json" };
+          },
+        };
+      }
+
+      throw new Error(`unexpected request: ${input}`);
+    },
+    "https://ghcr.test",
+    {
+      owner: "acme",
+      packageName: "example",
+      token: "secret-token",
+      logger: {
+        debug() {},
+        info() {},
+        warn(message) {
+          warnings.push(message);
+        },
+        error() {},
+      },
+    },
+    writer,
+    repository,
+    scanId,
+  );
+
+  assert.deepEqual(fetchedManifestDigests.sort(), [...manifestDigests].sort());
+  assert.deepEqual(insertedManifests.sort(), ["sha256:index-1", "sha256:index-3"]);
+  assert.ok(warnings.some((warning) => warning.includes("Skipping missing GHCR manifest sha256:index-2")));
+});

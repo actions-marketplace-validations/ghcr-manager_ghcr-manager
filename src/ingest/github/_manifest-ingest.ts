@@ -86,7 +86,19 @@ async function _loadQueuedManifest(
   onComplete: () => void
 ): Promise<void> {
   options.logger.debug(`Fetching manifest ${completed + 1}/${queuedDigests.size}: ${digest}`);
-  const manifest = await loadManifestGraph(fetchImpl, registryBaseUrl, digest, await getRegistryToken(), options);
+  let manifest;
+  try {
+    manifest = await loadManifestGraph(fetchImpl, registryBaseUrl, digest, await getRegistryToken(), options);
+  } catch (error) {
+    if (_isMissingManifestError(error)) {
+      options.logger.warn(`Skipping missing GHCR manifest ${digest}`);
+      fetchedDigests.add(digest);
+      onComplete();
+      return;
+    }
+
+    throw error;
+  }
   writer.insertManifest(manifest.record);
   writer.insertManifestPayload(manifest.record.digest, manifest.rawJson);
   for (const descriptor of manifest.descriptorRecords) {
@@ -100,6 +112,14 @@ async function _loadQueuedManifest(
   }
   fetchedDigests.add(digest);
   onComplete();
+}
+
+function _isMissingManifestError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return /GHCR manifest request .* failed - status 404/.test(error.message);
 }
 
 async function _getRegistryPullToken(
