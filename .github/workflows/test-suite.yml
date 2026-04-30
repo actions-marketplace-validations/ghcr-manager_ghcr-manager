@@ -4,6 +4,9 @@ name: Test Suite
   workflow_call:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   test-suite:
     runs-on: ubuntu-latest
