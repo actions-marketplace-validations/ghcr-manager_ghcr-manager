@@ -38,13 +38,19 @@ runs:
       with:
         node-version: "24"
 
-    - name: Install dependencies
+    - name: Install ghcr-manager
       shell: bash
-      run: npm ci
-
-    - name: Build
-      shell: bash
-      run: npm run build
+      run: |
+        set -euo pipefail
+        if test -n "${{ github.action_ref }}"; then
+          echo "Install ghcr-manager@${{ github.action_ref }}" >&2
+          npm install -g "ghcr-manager@${{ github.action_ref }}"
+        else
+          echo "Build and install ghcr-manager from source" >&2
+          npm ci
+          npm run build
+          npm install -g .
+        fi
 
     - name: Prepare scan DB path
       id: prepare-db
@@ -66,7 +72,7 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        node dist/cli/index.js scan \
+        ghcr-manager scan \
           --db "${{ steps.prepare-db.outputs.db_path }}" \
           --owner "${{ inputs.owner }}" \
           --package "${{ inputs.package }}" \

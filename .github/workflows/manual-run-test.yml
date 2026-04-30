@@ -1,4 +1,4 @@
-name: Manual Run
+name: Manual Run Test
 
 "on":
   workflow_dispatch:
@@ -37,7 +37,7 @@ jobs:
 
       - name: Run ghcr-manager action
         id: ghcr-manager
-        uses: gh-workflow/ghcr-manager@0.0.5
+        uses: ./
         with:
           github-token: ${{ github.token }}
           owner: ${{ inputs.owner }}
