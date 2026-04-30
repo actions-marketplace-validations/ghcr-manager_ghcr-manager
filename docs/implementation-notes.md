@@ -299,3 +299,17 @@ src/
       initialization.
 - [x] Added `v_missing_digests_related_manifests` as DB view SQL file under `resources/sql/views/`.
 - [x] Added schema test coverage that the view is created by `initializeSchema(...)`.
+
+### 2026-04-30 (npm publish with provenance)
+
+- [x] Added project-local npm versioning defaults in `.npmrc`:
+  - `tag-version-prefix=` so release tags are plain semver (no `v` prefix).
+  - `message=Release %s` for clearer npm-managed release commit messages.
+- [x] Added a package publish allowlist in `package.json` via `files` to ship only runtime artifacts and core docs.
+- [x] Extended `.github/workflows/release.yml` with a `publish-npm` job that:
+  - runs on semver tag pushes after existing validation checks
+  - uses Node 24 with npm cache
+  - runs `npm ci`, `npm test`, and `npm run build`
+  - publishes with `npm publish --provenance --access public`
+  - grants `id-token: write` for npm provenance/trusted publishing OIDC flow.
+- [x] Wired GitHub release creation to depend on successful npm publish.

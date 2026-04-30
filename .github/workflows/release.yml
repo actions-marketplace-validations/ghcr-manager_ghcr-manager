@@ -38,16 +38,51 @@ jobs:
       - name: Verify package.json uses current tag version
         run: |
           set -euo pipefail
-          expected_version="${GITHUB_REF_NAME#v}"
-          if ! grep -q "\"version\": \"${expected_version}\"" package.json; then
+          if ! grep -q "\"version\": \"${GITHUB_REF_NAME}\"" package.json; then
             echo "package.json version must match tag ${GITHUB_REF_NAME}" >&2
             exit 1
           fi
 
+  publish-npm:
+    name: Publish npm package
+    needs: [change-validation, verify-release-refs]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: |
+          npm ci
+
+      - name: Run tests
+        run: |
+          npm test
+
+      - name: Build package
+        run: |
+          npm run build
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm publish --provenance --access public
 
   release:
-    name: Publish release
-    needs: [change-validation, verify-release-refs]
+    name: Publish GitHub release
+    needs: [change-validation, verify-release-refs, publish-npm]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:

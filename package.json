@@ -3,10 +3,16 @@
   "description": "Inspect, analyze, and manage GitHub Container Registry packages.",
   "version": "0.0.0",
   "type": "module",
-  "private": true,
   "engines": {
     "node": ">=20.0.0"
   },
+  "files": [
+    "dist",
+    "resources/sql",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
   "bin": {
     "ghcr-manager": "./dist/cli/index.js"
   },
