@@ -12,6 +12,34 @@ WITH source_manifests AS (
   JOIN v_latest_scan_per_package lsp
     ON lsp.scan_id = m.scan_id
 ),
+manifest_seen_window AS (
+  SELECT
+    md.scan_id,
+    md.manifest_digest,
+    MIN(md.created_at) AS first_seen_at,
+    MAX(md.created_at) AS last_seen_at
+  FROM (
+    SELECT m.scan_id, m.digest AS manifest_digest, pv.created_at
+    FROM manifests m
+    JOIN package_versions pv
+      ON pv.scan_id = m.scan_id
+     AND pv.digest = m.digest
+
+    UNION
+
+    SELECT m.scan_id, m.digest AS manifest_digest, pv.created_at
+    FROM manifests m
+    JOIN package_versions pv
+      ON pv.scan_id = m.scan_id
+    JOIN manifest_reachability r
+      ON r.scan_id = m.scan_id
+     AND r.ancestor_digest = pv.digest
+     AND r.descendant_digest = m.digest
+  ) md
+  GROUP BY
+    md.scan_id,
+    md.manifest_digest
+),
 related_manifests AS (
   SELECT
     sm.scan_id,
@@ -88,17 +116,27 @@ SELECT
   crm.package_name,
   crm.source_manifest_digest,
   crm.source_media_type,
+  ssw.first_seen_at AS source_first_seen_at,
+  ssw.last_seen_at AS source_last_seen_at,
   st.tag AS source_tag,
   st.version_id AS source_version_id,
   crm.related_manifest_digest,
   crm.related_media_type,
+  rsw.first_seen_at AS related_first_seen_at,
+  rsw.last_seen_at AS related_last_seen_at,
   crm.hops_manifest_to_related_manifest,
   rt.tag AS related_tag,
   rt.version_id AS related_version_id
 FROM closest_related_manifests crm
+LEFT JOIN manifest_seen_window ssw
+  ON ssw.scan_id = crm.scan_id
+ AND ssw.manifest_digest = crm.source_manifest_digest
 LEFT JOIN tags st
   ON st.scan_id = crm.scan_id
  AND st.digest = crm.source_manifest_digest
+LEFT JOIN manifest_seen_window rsw
+  ON rsw.scan_id = crm.scan_id
+ AND rsw.manifest_digest = crm.related_manifest_digest
 LEFT JOIN tags rt
   ON rt.scan_id = crm.scan_id
  AND rt.digest = crm.related_manifest_digest;
