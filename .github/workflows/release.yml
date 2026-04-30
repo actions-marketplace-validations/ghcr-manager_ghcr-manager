@@ -35,6 +35,16 @@ jobs:
             exit 1
           fi
 
+      - name: Verify package.json uses current tag version
+        run: |
+          set -euo pipefail
+          expected_version="${GITHUB_REF_NAME#v}"
+          if ! grep -q "\"version\": \"${expected_version}\"" package.json; then
+            echo "package.json version must match tag ${GITHUB_REF_NAME}" >&2
+            exit 1
+          fi
+
+
   release:
     name: Publish release
     needs: [change-validation, verify-release-refs]
