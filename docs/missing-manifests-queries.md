@@ -519,3 +519,148 @@ Notes:
 
 - This is cross-package by digest identity and graph relations in each package's latest completed scan.
 - For larger DBs, restrict `latest_scan_per_package` to a subset of package names to keep runtime bounded.
+
+## From Missing Digest To Related Manifests (+ Optional Tags, + Hops)
+
+One row per related manifest. Tags are optional (`NULL` when a related manifest is not directly tagged).
+
+`hops_missing_to_related_manifest` meaning:
+
+- `1` means `anchor -> missing` and related manifest is the anchor itself.
+- Greater values mean additional graph edges between anchor and related manifest.
+
+```sql
+WITH source_scan AS (
+  SELECT scan_id
+  FROM package_scans
+  WHERE package_name = 'aicage/aicage' AND status = 'completed'
+  ORDER BY scan_started_at DESC
+  LIMIT 1
+),
+missing_refs AS (
+  SELECT DISTINCT
+    d.child_digest AS missing_digest,
+    d.parent_digest AS anchor_digest
+  FROM manifest_descriptors d
+  JOIN source_scan ss ON ss.scan_id = d.scan_id
+  LEFT JOIN manifests m
+    ON m.scan_id = d.scan_id
+   AND m.digest = d.child_digest
+  WHERE m.digest IS NULL
+
+  UNION
+
+  SELECT DISTINCT
+    mf.subject_digest AS missing_digest,
+    mf.digest AS anchor_digest
+  FROM manifests mf
+  JOIN source_scan ss ON ss.scan_id = mf.scan_id
+  LEFT JOIN manifests m
+    ON m.scan_id = mf.scan_id
+   AND m.digest = mf.subject_digest
+  WHERE mf.subject_digest IS NOT NULL
+    AND m.digest IS NULL
+),
+latest_scan_per_package AS (
+  SELECT scan_id, package_name
+  FROM (
+    SELECT
+      ps.scan_id,
+      ps.package_name,
+      ROW_NUMBER() OVER (
+        PARTITION BY ps.package_name
+        ORDER BY ps.scan_started_at DESC
+      ) AS rn
+    FROM package_scans ps
+    WHERE ps.status = 'completed'
+  )
+  WHERE rn = 1
+),
+related_manifests AS (
+  -- related digest equals anchor
+  SELECT DISTINCT
+    mr.missing_digest,
+    lsp.package_name,
+    m.scan_id,
+    m.digest AS related_manifest_digest,
+    m.media_type,
+    1 AS hops_missing_to_related_manifest
+  FROM missing_refs mr
+  JOIN latest_scan_per_package lsp ON 1 = 1
+  JOIN manifests m
+    ON m.scan_id = lsp.scan_id
+   AND m.digest = mr.anchor_digest
+
+  UNION
+
+  -- related digest can reach anchor
+  SELECT DISTINCT
+    mr.missing_digest,
+    lsp.package_name,
+    m.scan_id,
+    m.digest AS related_manifest_digest,
+    m.media_type,
+    r.min_distance + 1 AS hops_missing_to_related_manifest
+  FROM missing_refs mr
+  JOIN latest_scan_per_package lsp ON 1 = 1
+  JOIN manifests m
+    ON m.scan_id = lsp.scan_id
+  JOIN manifest_reachability r
+    ON r.scan_id = m.scan_id
+   AND r.ancestor_digest = m.digest
+   AND r.descendant_digest = mr.anchor_digest
+
+  UNION
+
+  -- anchor can reach related digest
+  SELECT DISTINCT
+    mr.missing_digest,
+    lsp.package_name,
+    m.scan_id,
+    m.digest AS related_manifest_digest,
+    m.media_type,
+    r.min_distance + 1 AS hops_missing_to_related_manifest
+  FROM missing_refs mr
+  JOIN latest_scan_per_package lsp ON 1 = 1
+  JOIN manifests m
+    ON m.scan_id = lsp.scan_id
+  JOIN manifest_reachability r
+    ON r.scan_id = m.scan_id
+   AND r.ancestor_digest = mr.anchor_digest
+   AND r.descendant_digest = m.digest
+),
+closest_related_manifests AS (
+  SELECT
+    missing_digest,
+    package_name,
+    scan_id,
+    related_manifest_digest,
+    media_type,
+    MIN(hops_missing_to_related_manifest) AS hops_missing_to_related_manifest
+  FROM related_manifests
+  GROUP BY
+    missing_digest,
+    package_name,
+    scan_id,
+    related_manifest_digest,
+    media_type
+)
+SELECT
+  crm.missing_digest,
+  crm.package_name,
+  crm.related_manifest_digest,
+  crm.media_type,
+  crm.hops_missing_to_related_manifest,
+  t.tag,
+  t.version_id
+FROM closest_related_manifests crm
+LEFT JOIN tags t
+  ON t.scan_id = crm.scan_id
+ AND t.digest = crm.related_manifest_digest
+ORDER BY
+  crm.missing_digest,
+  crm.package_name,
+  crm.hops_missing_to_related_manifest,
+  crm.related_manifest_digest,
+  t.tag;
+```
