@@ -36,3 +36,8 @@ jobs:
       - name: Run linters
         run: |
           scripts/lint.sh
+
+      - name: Check links in markdown
+        uses: tcort/github-action-markdown-link-check@e7c7a18363c842693fadde5d41a3bd3573a7a225 # v1.1.2
+        with:
+          use-verbose-mode: true
