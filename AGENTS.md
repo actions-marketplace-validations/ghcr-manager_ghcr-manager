@@ -8,6 +8,8 @@ Audience: AI coding agents working in this repo.
 - Keep [README.md](README.md) user-only.
 - KISS: default to minimal changes; avoid optional parameters/configs or extra result objects unless explicitly
   requested.
+- Backward compatibility changes are never implicit: do not add migration/backfill/legacy-support behavior unless the
+  user explicitly requests it, or you first propose it and receive explicit approval.
 - Visibility first: new modules default to private (`_`); keep constants private unless used outside the module.
 - Do not invent new public APIs or config fields unless explicitly requested.
 - Do not print `git diff` output or patch hunks in normal progress updates unless explicitly requested.

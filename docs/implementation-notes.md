@@ -291,5 +291,4 @@ src/
 ### 2026-04-30 (scan UUID for merge-safe dedupe)
 
 - [x] Added immutable `scan_uuid` on `package_scans` and started writing it on scan insert.
-- [x] Added schema initialization backfill for older DBs missing `scan_uuid` values.
 - [x] Added a scan-writer test assertion that new scan rows include UUID-formatted `scan_uuid`.

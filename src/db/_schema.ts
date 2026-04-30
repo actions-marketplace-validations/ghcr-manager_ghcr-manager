@@ -121,30 +121,4 @@ export function initializeSchema(database: Database.Database): void {
   for (const statement of _schemaStatements) {
     database.exec(statement);
   }
-
-  _ensurePackageScanUuidColumn(database);
-}
-
-function _ensurePackageScanUuidColumn(database: Database.Database): void {
-  const hasScanUuid = (
-    database.prepare("SELECT name FROM pragma_table_info('package_scans') WHERE name = 'scan_uuid' LIMIT 1").get() as
-      | { name: string }
-      | undefined
-  ) !== undefined;
-
-  if (!hasScanUuid) {
-    database.exec("ALTER TABLE package_scans ADD COLUMN scan_uuid TEXT");
-  }
-
-  database.exec(`
-    UPDATE package_scans
-    SET scan_uuid = (
-      lower(hex(randomblob(4))) || '-' ||
-      lower(hex(randomblob(2))) || '-' ||
-      lower(hex(randomblob(2))) || '-' ||
-      lower(hex(randomblob(2))) || '-' ||
-      lower(hex(randomblob(6)))
-    )
-    WHERE scan_uuid IS NULL OR scan_uuid = ''
-  `);
 }
