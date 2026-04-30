@@ -1,6 +1,10 @@
 name: ghcr-manager
 description: Inspect, analyze, and manage GitHub Container Registry packages.
 
+branding:
+  icon: package
+  color: blue
+
 inputs:
   github-token:
     description: GitHub token used for GitHub/GHCR API calls
