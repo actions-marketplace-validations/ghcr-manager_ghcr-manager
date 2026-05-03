@@ -84,14 +84,6 @@ CREATE TABLE IF NOT EXISTS manifest_edges (
   FOREIGN KEY(scan_id, child_digest) REFERENCES manifests(scan_id, digest)
 );
 
-CREATE TABLE IF NOT EXISTS missing_manifest_references (
-  scan_id INTEGER NOT NULL,
-  source_digest TEXT NOT NULL,
-  missing_digest TEXT NOT NULL,
-  PRIMARY KEY(scan_id, source_digest, missing_digest),
-  FOREIGN KEY(scan_id, source_digest) REFERENCES manifests(scan_id, digest)
-);
-
 CREATE TABLE IF NOT EXISTS manifest_reachability (
   scan_id INTEGER NOT NULL,
   ancestor_digest TEXT NOT NULL,
@@ -111,7 +103,5 @@ CREATE INDEX IF NOT EXISTS idx_tags_scan_version ON tags(scan_id, version_id);
 CREATE INDEX IF NOT EXISTS idx_manifest_descriptors_scan_child ON manifest_descriptors(scan_id, child_digest);
 CREATE INDEX IF NOT EXISTS idx_manifest_edges_scan_parent ON manifest_edges(scan_id, parent_digest);
 CREATE INDEX IF NOT EXISTS idx_manifest_edges_scan_child ON manifest_edges(scan_id, child_digest);
-CREATE INDEX IF NOT EXISTS idx_missing_manifest_references_scan_missing
-  ON missing_manifest_references(scan_id, missing_digest);
 CREATE INDEX IF NOT EXISTS idx_manifest_reachability_scan_descendant
   ON manifest_reachability(scan_id, descendant_digest);
