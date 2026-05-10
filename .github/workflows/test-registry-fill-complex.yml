@@ -113,6 +113,7 @@ jobs:
   publish_beta:
     name: Publish beta multi-arch image
     needs:
+      - build_alpha_arm64
       - publish_alpha
       - build_beta_amd64
     runs-on: ubuntu-latest
@@ -144,6 +145,8 @@ jobs:
   publish_gamma:
     name: Publish gamma multi-arch image
     needs:
+      - build_alpha_arm64
+      - build_beta_amd64
       - publish_beta
     runs-on: ubuntu-latest
     steps:
