@@ -1,0 +1,54 @@
+name: Test Registry Build Image
+description: Build, push, and smoke-test one architecture image.
+
+inputs:
+  image_ref:
+    description: Image reference to push the temporary architecture image to.
+    required: true
+  arch:
+    description: Architecture label used in the temporary image tag.
+    required: true
+  platform:
+    description: Docker platform to build.
+    required: true
+
+outputs:
+  digest:
+    description: Pushed image digest.
+    value: ${{ steps.build.outputs.digest }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Buildx
+      uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+    - name: Log in to GHCR
+      uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+
+    - name: Build image
+      id: build
+      uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+      with:
+        context: .
+        file: >-
+          https://raw.githubusercontent.com/gh-workflow/multiarch-image-publish/main/tests/build/Dockerfile
+        push: true
+        provenance: true
+        platforms: ${{ inputs.platform }}
+        # Temporary image tag for build/test; final tags are published later.
+        tags: ${{ inputs.image_ref }}:${{ github.run_id }}-${{ inputs.arch }}-test
+
+    - name: Test image
+      # Dummy smoke test: run the image and assert simple output.
+      shell: bash
+      run: |
+        docker run --rm \
+          --entrypoint /bin/sh \
+          "${{ inputs.image_ref }}@${{ steps.build.outputs.digest }}" \
+          -ec 'echo hello-world' \
+          | grep -q '^hello-world$'

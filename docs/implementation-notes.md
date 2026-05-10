@@ -332,3 +332,9 @@ src/
 - [x] Kept missing-digest views derived from descriptor and subject payload fields.
 - [x] Simplified manifest timestamp windows to the exact package-version timestamps for the same digest.
 - [x] Updated GitHub ingest and DB writer code to match the new `package_versions -> manifests` version-id relation.
+
+### 2026-05-10 (test registry image build reuse)
+
+- [x] Extracted the test-registry architecture image build and smoke test into a local composite action.
+- [x] Kept separate amd64 and arm64 build jobs so each architecture digest remains a deterministic job output for later
+      manifest-combination jobs.

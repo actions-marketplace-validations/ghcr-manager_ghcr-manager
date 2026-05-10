@@ -14,70 +14,45 @@ env:
   LATEST_TAG: latest
 
 jobs:
-  build:
-    name: Build image (${{ matrix.arch }})
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      matrix:
-        include:
-          - arch: amd64
-            platform: linux/amd64
-            runner: ubuntu-latest
-          - arch: arm64
-            platform: linux/arm64
-            runner: ubuntu-24.04-arm
+  build_amd64:
+    name: Build image (amd64)
+    runs-on: ubuntu-latest
     outputs:
-      digest_amd64: ${{ steps.out-amd64.outputs.digest }}
-      digest_arm64: ${{ steps.out-arm64.outputs.digest }}
+      digest: ${{ steps.build.outputs.digest }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
-
-      - name: Log in to GHCR
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build image
+      - name: Build and test image
         id: build
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        uses: ./.github/actions/test-registry-build-image
         with:
-          context: .
-          file: >-
-            https://raw.githubusercontent.com/gh-workflow/multiarch-image-publish/main/tests/build/Dockerfile
-          push: true
-          provenance: true
-          platforms: ${{ matrix.platform }}
-          # Temporary image tag for build/test; final tags are published later.
-          tags: ${{ env.IMAGE_REF }}:${{ github.run_id }}-${{ matrix.arch }}-test
+          image_ref: ${{ env.IMAGE_REF }}
+          arch: amd64
+          platform: linux/amd64
 
-      - name: Test image
-        # Dummy smoke test: run the image and assert simple output.
-        run: |
-          docker run --rm \
-            --entrypoint /bin/sh \
-            "${{ env.IMAGE_REF }}@${{ steps.build.outputs.digest }}" \
-            -ec 'echo hello-world' \
-            | grep -q '^hello-world$'
+  build_arm64:
+    name: Build image (arm64)
+    runs-on: ubuntu-24.04-arm
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Export digest (amd64)
-        id: out-amd64
-        if: matrix.arch == 'amd64'
-        run: echo "digest=${{ steps.build.outputs.digest }}" >> "$GITHUB_OUTPUT"
-
-      - name: Export digest (arm64)
-        id: out-arm64
-        if: matrix.arch == 'arm64'
-        run: echo "digest=${{ steps.build.outputs.digest }}" >> "$GITHUB_OUTPUT"
+      - name: Build and test image
+        id: build
+        uses: ./.github/actions/test-registry-build-image
+        with:
+          image_ref: ${{ env.IMAGE_REF }}
+          arch: arm64
+          platform: linux/arm64
 
   publish:
     name: Publish multi-arch image
-    needs: build
+    needs:
+      - build_amd64
+      - build_arm64
     runs-on: ubuntu-latest
     steps:
       - name: Log in to GHCR
@@ -85,7 +60,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ github.token }}
 
       - name: Publish multi-arch image
         uses: gh-workflow/multiarch-image-publish@0.1.11
@@ -101,8 +76,8 @@ jobs:
             ${{ github.ref_name }}
             ${{ env.LATEST_TAG }}
           platform_digests: |
-            linux/amd64=${{ needs.build.outputs.digest_amd64 }}
-            linux/arm64=${{ needs.build.outputs.digest_arm64 }}
+            linux/amd64=${{ needs.build_amd64.outputs.digest }}
+            linux/arm64=${{ needs.build_arm64.outputs.digest }}
           annotations: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.version=${{ github.ref_name }}
