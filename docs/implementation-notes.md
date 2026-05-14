@@ -33,6 +33,16 @@ This section is the canonical place for session-to-session continuity.
 
 ### Current Next Plan
 
+- ☑ Add an initial cleanup roadmap that breaks the broad reimplementation goal into session-sized subtasks and defines
+  how planning state is documented across sessions.
+- ☐ Write the cleanup semantics note: define the deletion unit, supported inputs, and explicit non-goals relative to
+  `dataaxiom/ghcr-cleanup-action`.
+- ☐ Define planner outputs around manifest closures and tag overlap, including direct targets, blocked manifests, and
+  collateral tags.
+- ☐ Add read-only deletion-plan output that explains why versions or manifests are retained versus deletable.
+- ☐ Add tests for multi-arch images, sibling wrapper indexes, referrers, and explicit tag exclusion behavior.
+- ☐ Prototype registry execution against the test registry only after the plan output is stable and test-covered.
+- ☐ Revisit action packaging after the live ingest path and cleanup execution path are both stable.
 - ☑ Add package scopes to the DB schema so one SQLite database can store multiple owner/package scans.
 - ☑ Add a real GitHub Packages and GHCR ingest adapter beside the fixture loader.
 - ☑ Normalize live package, version, tag, manifest, and edge data into the existing SQLite schema.
@@ -58,14 +68,6 @@ This section is the canonical place for session-to-session continuity.
 - ☐ Expand planner output so it explains why versions are protected or deletable.
 - ☑ Add manifest kind classification so image indexes, image manifests, signatures, and attestations are queryable
   without ad-hoc JSON inspection.
-- ☐ Add tests for multi-arch images, referrers, and explicit tag exclusion behavior.
-- ☐ Document and codify the cleanup semantics for tags that point at sibling wrapper indexes rather than descendant
-  image manifests.
-- ☐ Define deletion planning around manifest closures and tag overlap, not around tag-name expectations.
-- ☐ Add queryable deletion-plan outputs that separate direct target tags, closure manifests, blocked manifests, and
-  collateral tags.
-- ☐ Prototype registry execution against the test registry only after the plan output is stable and test-covered.
-- ☐ Revisit action packaging after the live ingest path exists.
 
 ### Current State Summary
 
@@ -114,6 +116,7 @@ This section is the canonical place for session-to-session continuity.
 - Enforcement: the cross-folder `index.ts` rule is mechanically enforced by a local ESLint rule.
 - File naming rule in `src/`: every non-public implementation file must be named `_*.ts`.
 - Test mapping rule: `tests/` mirrors `src/` one-to-one, with `src/.../*.ts` mapped to `tests/.../*.test.ts`.
+- Cleanup planning roadmap: [docs/cleanup-roadmap.md](cleanup-roadmap.md)
 
 ### Current Module Layout
 
@@ -227,6 +230,12 @@ src/
 
 ### 2026-05-14
 
+- Added [docs/cleanup-roadmap.md](cleanup-roadmap.md) to turn the broad cleanup reimplementation goal into ordered,
+  session-sized subtasks with explicit deliverables and acceptance focus.
+- Chosen documentation shape for the cleanup track:
+  - `docs/implementation-notes.md` remains the canonical handoff checklist
+  - `docs/cleanup-roadmap.md` holds the stable cross-session roadmap
+  - `docs/ai/tasks/` should hold session-scoped task briefs that reference the roadmap
 - Investigated the `single` / `single-amd64` / `single-arm64` test-registry shape using
   `artifacts/gh-workflow__ghcr-manager-test--single.sqlite`.
 - Confirmed that `single-amd64` and `single-arm64` are tagged on separate per-arch `image_index` wrapper manifests, not
