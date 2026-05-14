@@ -40,6 +40,34 @@ test("planner repository returns a delete-untagged plan for top-level untagged r
   database.close();
 });
 
+test("planner repository logs raw SQL statements and params at trace level", async () => {
+  const database = openDatabase(":memory:");
+  const writer = new ScanWriter(database);
+  const traceMessages: string[] = [];
+  const debugMessages: string[] = [];
+  const repository = new PlannerRepository(database, {
+    trace(message: string) {
+      traceMessages.push(message);
+    },
+    debug(message: string) {
+      debugMessages.push(message);
+    }
+  });
+
+  await importFileScan("tests/fixtures/sample-package.json", writer);
+
+  const plan = repository.getDeleteUntaggedPlan("acme", "example");
+
+  assert.equal(plan.directTargetRoots.length, 1);
+  assert.ok(
+    traceMessages.some((message) => message.includes("SELECT scan_id, owner, package_name, scan_completed_at"))
+  );
+  assert.ok(traceMessages.some((message) => message.includes('PARAMS: ["acme","example"]')));
+  assert.ok(debugMessages.some((message) => message.includes("SQL returned")));
+
+  database.close();
+});
+
 test("planner repository keeps the newest eligible untagged roots and selects only overflow roots", () => {
   const database = openDatabase(":memory:");
   const writer = new ScanWriter(database);

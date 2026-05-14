@@ -1,6 +1,7 @@
-export type LogLevel = "debug" | "info" | "warn" | "error" | "silent";
+export type LogLevel = "trace" | "debug" | "info" | "warn" | "error" | "silent";
 
 export interface Logger {
+  trace(message: string): void;
   debug(message: string): void;
   info(message: string): void;
   warn(message: string): void;
@@ -8,6 +9,7 @@ export interface Logger {
 }
 
 const _logLevelPriority: Record<LogLevel, number> = {
+  trace: 0,
   debug: 10,
   info: 20,
   warn: 30,
@@ -21,6 +23,7 @@ export function isLogLevel(value: string): value is LogLevel {
 
 export function createLogger(level: LogLevel, sink: NodeJS.WritableStream = process.stderr): Logger {
   return {
+    trace: _write.bind(null, "trace", level, sink),
     debug: _write.bind(null, "debug", level, sink),
     info: _write.bind(null, "info", level, sink),
     warn: _write.bind(null, "warn", level, sink),

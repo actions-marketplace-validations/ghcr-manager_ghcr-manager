@@ -401,8 +401,8 @@ src/
     from the selected plan even though it is old enough
   - `complex-tag-age-window-keep-1` reuses that derived cutoff and verifies that `--keep-n-tagged 1` retains the newer
     matched top-level root while selecting the older matched root for deletion
-  - `complex-shared-platform-tags-keep-1` validates the shared-root case for `beta-*` and `gamma-*` platform tags,
-    where root-level keep ranking retains the newer shared root and the older shared root remains `untag-only` because
+  - `complex-shared-platform-tags-keep-1` validates the shared-root case for `beta-*` and `gamma-*` platform tags, where
+    root-level keep ranking retains the newer shared root and the older shared root remains `untag-only` because
     unmatched tags still exist on it
 - Kept the scope intentionally narrow for now:
   - exact tag matches only, not wildcard or regex selectors

@@ -1,6 +1,11 @@
 import type Database from "better-sqlite3";
 import { buildInClausePlaceholders, buildTuplePlaceholders } from "./_sql-placeholders.js";
 
+interface _PlannerLogger {
+  trace(message: string): void;
+  debug(message: string): void;
+}
+
 interface _ScanRow {
   scan_id: number;
   owner: string;
@@ -91,9 +96,11 @@ export interface DeletePlan {
 
 export class PlannerRepository {
   readonly #database: Database.Database;
+  readonly #logger: _PlannerLogger;
 
-  constructor(database: Database.Database) {
+  constructor(database: Database.Database, logger: _PlannerLogger = _silentPlannerLogger) {
     this.#database = database;
+    this.#logger = logger;
   }
 
   getDeleteUntaggedPlan(owner: string, packageName: string): DeletePlan {
@@ -287,9 +294,7 @@ export class PlannerRepository {
   }
 
   #getLatestCompletedScan(owner: string, packageName: string): _ScanRow {
-    const row = this.#database
-      .prepare(
-        `
+    const sql = `
           SELECT scan_id, owner, package_name, scan_completed_at
           FROM package_scans
           WHERE owner = ?
@@ -298,9 +303,8 @@ export class PlannerRepository {
             AND scan_completed_at IS NOT NULL
           ORDER BY scan_completed_at DESC, scan_id DESC
           LIMIT 1
-        `
-      )
-      .get(owner, packageName) as _ScanRow | undefined;
+        `;
+    const row = this.#get<_ScanRow>(sql, [owner, packageName]);
     if (!row) {
       throw new Error(`database does not contain completed package scan for ${owner}/${packageName}`);
     }
@@ -310,9 +314,7 @@ export class PlannerRepository {
 
   #listDeleteUntaggedDirectTargetRoots(scanId: number, cutoffTimestamp?: string): DeletePlanRoot[] {
     const cutoffSql = cutoffTimestamp ? "AND created_at < ?" : "";
-    const rows = this.#database
-      .prepare(
-        `
+    const sql = `
           SELECT
             root_version_id AS version_id,
             root_digest,
@@ -325,9 +327,8 @@ export class PlannerRepository {
             AND has_ancestor = 0
             ${cutoffSql}
           ORDER BY root_digest
-        `
-      )
-      .all(...[scanId, ...(cutoffTimestamp ? [cutoffTimestamp] : [])]) as _PlanRootRow[];
+        `;
+    const rows = this.#all<_PlanRootRow>(sql, [scanId, ...(cutoffTimestamp ? [cutoffTimestamp] : [])]);
 
     return rows.map((row) => ({
       versionId: row.version_id,
@@ -340,9 +341,7 @@ export class PlannerRepository {
 
   #listKeepNUntaggedDirectTargetRoots(scanId: number, keepCount: number, cutoffTimestamp?: string): DeletePlanRoot[] {
     const cutoffSql = cutoffTimestamp ? "AND pv.created_at < ?" : "";
-    const rows = this.#database
-      .prepare(
-        `
+    const sql = `
           WITH eligible_untagged_roots AS (
             SELECT
               rm.root_version_id AS version_id,
@@ -369,9 +368,8 @@ export class PlannerRepository {
           FROM eligible_untagged_roots
           WHERE recency_rank > ?
           ORDER BY root_digest
-        `
-      )
-      .all(...[scanId, ...(cutoffTimestamp ? [cutoffTimestamp] : []), keepCount]) as _PlanRootRow[];
+        `;
+    const rows = this.#all<_PlanRootRow>(sql, [scanId, ...(cutoffTimestamp ? [cutoffTimestamp] : []), keepCount]);
 
     return rows.map((row) => ({
       versionId: row.version_id,
@@ -413,9 +411,7 @@ export class PlannerRepository {
       params.push(cutoffTimestamp);
     }
 
-    const rows = this.#database
-      .prepare(
-        `
+    const sql = `
           SELECT tag AS target_tag
           FROM tags t
           JOIN package_versions pv
@@ -426,9 +422,8 @@ export class PlannerRepository {
             ${excludedRootSql}
             ${olderThanSql}
           ORDER BY tag
-        `
-      )
-      .all(...params) as _PlanTagRow[];
+        `;
+    const rows = this.#all<_PlanTagRow>(sql, params);
 
     return rows.map((row) => row.target_tag);
   }
@@ -470,9 +465,7 @@ export class PlannerRepository {
       tailParams.push(options.keepCount);
     }
 
-    const rows = this.#database
-      .prepare(
-        `
+    const sql = `
           WITH matched_roots AS (
             SELECT
               rm.root_version_id AS version_id,
@@ -527,9 +520,8 @@ export class PlannerRepository {
           FROM ranked_roots
           ${keepSql}
           ORDER BY root_digest
-        `
-      )
-      .all(...params, ...tailParams) as _PlanRootRow[];
+        `;
+    const rows = this.#all<_PlanRootRow>(sql, [...params, ...tailParams]);
 
     return rows.map((row) => ({
       versionId: row.version_id,
@@ -547,9 +539,7 @@ export class PlannerRepository {
 
     const directTargetRootsSql = buildTuplePlaceholders(directTargetRoots.length, 2);
     const directTargetRootParams = directTargetRoots.flatMap((root) => [root.versionId, root.digest]);
-    const rows = this.#database
-      .prepare(
-        `
+    const sql = `
           WITH direct_target_roots(root_version_id, root_digest) AS (
             VALUES ${directTargetRootsSql}
           )
@@ -567,9 +557,8 @@ export class PlannerRepository {
            AND dtr.root_digest = c.root_digest
           WHERE c.scan_id = ?
           ORDER BY c.root_digest, c.hops_from_root, c.member_digest
-        `
-      )
-      .all(...directTargetRootParams, scanId) as _ClosureManifestRow[];
+        `;
+    const rows = this.#all<_ClosureManifestRow>(sql, [...directTargetRootParams, scanId]);
 
     return rows.map((row) => ({
       sourceVersionId: row.source_version_id,
@@ -589,9 +578,7 @@ export class PlannerRepository {
 
     const directTargetRootsSql = buildTuplePlaceholders(directTargetRoots.length, 2);
     const directTargetRootParams = directTargetRoots.flatMap((root) => [root.versionId, root.digest]);
-    const rows = this.#database
-      .prepare(
-        `
+    const sql = `
           WITH direct_target_roots(root_version_id, root_digest) AS (
             VALUES ${directTargetRootsSql}
           ),
@@ -638,9 +625,8 @@ export class PlannerRepository {
           FROM ranked_blocks
           WHERE rn = 1
           ORDER BY blocked_digest, blocking_digest, overlap_digest
-        `
-      )
-      .all(...directTargetRootParams, scanId, scanId) as _BlockedRootRow[];
+        `;
+    const rows = this.#all<_BlockedRootRow>(sql, [...directTargetRootParams, scanId, scanId]);
 
     return rows.map((row) => ({
       blockedVersionId: row.blocked_version_id,
@@ -656,4 +642,25 @@ export class PlannerRepository {
   #listDeleteRootCandidates(directTargetRoots: DeletePlanRoot[]): DeletePlanRoot[] {
     return directTargetRoots.filter((root) => root.selectionMode === "delete-root");
   }
+
+  #get<T>(sql: string, params: Array<number | string>): T | undefined {
+    this.#traceSql(sql, params);
+    return this.#database.prepare(sql).get(...params) as T | undefined;
+  }
+
+  #all<T>(sql: string, params: Array<number | string>): T[] {
+    this.#traceSql(sql, params);
+    const rows = this.#database.prepare(sql).all(...params) as T[];
+    this.#logger.debug(`SQL returned ${rows.length} row(s)`);
+    return rows;
+  }
+
+  #traceSql(sql: string, params: Array<number | string>): void {
+    this.#logger.trace(`SQL:\n${sql.trim()}\nPARAMS: ${JSON.stringify(params)}`);
+  }
 }
+
+const _silentPlannerLogger: _PlannerLogger = {
+  trace() {},
+  debug() {}
+};

@@ -1,11 +1,13 @@
 import { PlannerRepository, openDatabase } from "../db/index.js";
-import { collectRepeatedOption, hasFlag, requireOption } from "./_args.js";
+import { collectRepeatedOption, hasFlag, requireOption, resolveLogLevel } from "./_args.js";
+import { createLogger } from "./_logger.js";
 import { resolveOlderThan } from "./_older-than.js";
 
 export async function handlePlan(args: string[]): Promise<number> {
   const databasePath = requireOption(args, "--db");
   const owner = requireOption(args, "--owner");
   const packageName = requireOption(args, "--package");
+  const logger = createLogger(resolveLogLevel(args));
   const deleteTags = collectRepeatedOption(args, "--delete-tag");
   const excludeTags = collectRepeatedOption(args, "--exclude-tag");
   const deleteUntagged = hasFlag(args, "--delete-untagged");
@@ -48,7 +50,8 @@ export async function handlePlan(args: string[]): Promise<number> {
   const olderThan = olderThanRaw[0] ? resolveOlderThan(olderThanRaw[0], new Date()) : undefined;
 
   const database = openDatabase(databasePath);
-  const repository = new PlannerRepository(database);
+  const repository = new PlannerRepository(database, logger);
+  logger.debug(`Starting plan for ${owner}/${packageName}`);
   const plan =
     keepNUntagged !== undefined
       ? repository.getKeepNUntaggedPlanWithCutoff(owner, packageName, keepNUntagged, olderThan)
@@ -58,6 +61,7 @@ export async function handlePlan(args: string[]): Promise<number> {
             keepNTagged,
             ...olderThan
           });
+  logger.debug(`Completed plan for ${owner}/${packageName}`);
   console.log(JSON.stringify(plan, null, 2));
   database.close();
   return 0;

@@ -33,6 +33,7 @@ test("requireOption throws for a missing value", () => {
 
 test("resolveLogLevel defaults to info and rejects unknown values", () => {
   assert.equal(resolveLogLevel([]), "info");
+  assert.equal(resolveLogLevel(["--log-level", "trace"]), "trace");
   assert.equal(resolveLogLevel(["--log-level", "debug"]), "debug");
   assert.throws(() => resolveLogLevel(["--log-level", "verbose"]), /invalid log level: verbose/);
 });
