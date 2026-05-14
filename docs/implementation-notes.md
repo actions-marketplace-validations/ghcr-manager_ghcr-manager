@@ -145,6 +145,8 @@ This section is the canonical place for session-to-session continuity.
     `manifest_reachability(scan_id, descendant_digest, min_distance)` index
   - keep-rule selection queries no longer rejoin `package_versions` after `v_scan_root_manifests`; they rank directly
     from the view's `created_at`
+  - `keep-n-untagged` now bypasses `v_scan_root_manifests` entirely and drives from
+    `package_versions(scan_id, created_at)` before probing `tags`, `manifests`, and `manifest_reachability`
 - Debug helpers:
   - `GITHUB_TOKEN="$(gh auth token)" ghcr-manager scan --db <path> --owner <owner> --package <package> [--log-level <level>]`
     runs the live GitHub/GHCR scan directly via the CLI binary
