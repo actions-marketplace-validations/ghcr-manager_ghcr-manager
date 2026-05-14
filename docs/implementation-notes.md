@@ -63,6 +63,8 @@ This section is the canonical place for session-to-session continuity.
   `delete-tag`-driven selection.
 - ☑ Keep large direct-target root sets inside SQLite temp tables for closure/blocking analysis instead of rebinding them
   as giant `VALUES` tuples.
+- ☑ Replace blocked-root validation over the global `v_scan_root_overlap` view with request-scoped joins from selected
+  closure members to retained roots.
 - ☐ Extend the planner beyond `--delete-untagged` to cover tag selectors, exclusions, age filters, and keep rules.
 - ☐ Prototype registry execution against the test registry only after the plan output is stable and test-covered.
 - ☐ Revisit action packaging after the live ingest path and cleanup execution path are both stable.
@@ -156,6 +158,8 @@ This section is the canonical place for session-to-session continuity.
     matched-root set instead of grouping the entire tagged root population first
   - closure and blocked-root analysis now consume direct target roots from a connection-local SQLite temp table, which
     avoids SQL variable-limit failures on very large plans
+  - blocked-root validation no longer uses the global `v_scan_root_overlap` view on the hot path; it joins selected
+    closure members directly against retained roots' reachability for the current plan
 - Debug helpers:
   - `GITHUB_TOKEN="$(gh auth token)" ghcr-manager scan --db <path> --owner <owner> --package <package> [--log-level <level>]`
     runs the live GitHub/GHCR scan directly via the CLI binary

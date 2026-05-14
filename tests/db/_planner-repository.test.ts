@@ -336,53 +336,6 @@ test("planner repository applies older-than before keep-n-tagged recency selecti
   database.close();
 });
 
-test("planner repository skips expensive explanation for very large delete-root sets", () => {
-  const database = openDatabase(":memory:");
-  const writer = new ScanWriter(database);
-  const warningMessages: string[] = [];
-  const repository = new PlannerRepository(database, {
-    trace() {},
-    debug() {},
-    warn(message: string) {
-      warningMessages.push(message);
-    }
-  });
-
-  writer.resetScan("acme", "keep-tagged-large", "2026-05-14T10:00:00.000Z");
-  for (let versionId = 1; versionId <= 20_001; versionId += 1) {
-    writer.insertPackageVersion({
-      versionId,
-      createdAt: `2026-05-${String((versionId % 28) + 1).padStart(2, "0")}T10:00:00.000Z`,
-      updatedAt: `2026-05-${String((versionId % 28) + 1).padStart(2, "0")}T10:00:00.000Z`
-    });
-    writer.insertManifest({
-      versionId,
-      digest: `sha256:tagged-${versionId}`,
-      manifestKind: "image_manifest",
-      mediaType: "application/vnd.oci.image.manifest.v1+json"
-    });
-    writer.insertTag({
-      tag: `tag-${versionId}`,
-      versionId
-    });
-  }
-  writer.markScanCompleted("2026-05-14T10:00:00.000Z");
-
-  const plan = repository.getKeepNTaggedPlan("acme", "keep-tagged-large", 0);
-
-  assert.equal(plan.directTargetRoots.length, 20_001);
-  assert.deepEqual(plan.closureManifests, []);
-  assert.deepEqual(plan.blockedRoots, []);
-  assert.deepEqual(plan.fullyDeletableRoots, []);
-  assert.ok(
-    warningMessages.some((message) =>
-      message.includes("Skipping closure and blocked-root analysis for 20001 delete-root candidates")
-    )
-  );
-
-  database.close();
-});
-
 test("planner repository applies keep-n-tagged within the matched delete-tag subset", () => {
   const database = openDatabase(":memory:");
   const writer = new ScanWriter(database);

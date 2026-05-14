@@ -7,8 +7,6 @@ interface _PlannerLogger {
   warn?(message: string): void;
 }
 
-const _MAX_EXPLANATION_ROOTS = 20_000;
-
 interface _ScanRow {
   scan_id: number;
   owner: string;
@@ -670,18 +668,6 @@ export class PlannerRepository {
       };
     }
 
-    if (deleteRootCandidates.length > _MAX_EXPLANATION_ROOTS) {
-      this.#logger.warn?.(
-        `Skipping closure and blocked-root analysis for ${deleteRootCandidates.length} delete-root candidates ` +
-          `because the planner threshold is ${_MAX_EXPLANATION_ROOTS}`
-      );
-      return {
-        closureManifests: [],
-        blockedRoots: [],
-        fullyDeletableRoots: []
-      };
-    }
-
     return this.#withDirectTargetRootsTempTable(deleteRootCandidates, () => {
       const closureManifests = this.#listClosureManifests(scanId);
       const blockedRoots = this.#listBlockedRoots(scanId);
@@ -698,22 +684,48 @@ export class PlannerRepository {
 
   #listClosureManifests(scanId: number): DeletePlanClosureManifest[] {
     const sql = `
+          WITH direct_target_closure AS (
+            SELECT
+              dtr.root_version_id AS source_version_id,
+              dtr.root_digest AS source_digest,
+              dtr.root_version_id AS member_version_id,
+              dtr.root_digest AS member_digest,
+              dtr.root_manifest_kind AS member_manifest_kind,
+              0 AS hops_from_root,
+              'root' AS member_role
+            FROM temp_direct_target_roots dtr
+
+            UNION ALL
+
+            SELECT
+              dtr.root_version_id AS source_version_id,
+              dtr.root_digest AS source_digest,
+              m.version_id AS member_version_id,
+              m.digest AS member_digest,
+              m.manifest_kind AS member_manifest_kind,
+              mr.min_distance AS hops_from_root,
+              'descendant' AS member_role
+            FROM temp_direct_target_roots dtr
+            JOIN manifest_reachability mr
+              ON mr.scan_id = ?
+             AND mr.ancestor_digest = dtr.root_digest
+             AND mr.min_distance > 0
+            JOIN manifests m
+              ON m.scan_id = ?
+             AND m.digest = mr.descendant_digest
+          )
           SELECT
-            c.root_version_id AS source_version_id,
-            c.root_digest AS source_digest,
-            c.member_version_id,
-            c.member_digest,
-            c.member_manifest_kind,
-            c.hops_from_root,
-            c.member_role
-          FROM v_scan_root_closure c
-          JOIN temp_direct_target_roots dtr
-            ON dtr.root_version_id = c.root_version_id
-           AND dtr.root_digest = c.root_digest
-          WHERE c.scan_id = ?
-          ORDER BY c.root_digest, c.hops_from_root, c.member_digest
+            source_version_id,
+            source_digest,
+            member_version_id,
+            member_digest,
+            member_manifest_kind,
+            hops_from_root,
+            member_role
+          FROM direct_target_closure
+          ORDER BY source_digest, hops_from_root, member_digest
         `;
-    const rows = this.#all<_ClosureManifestRow>(sql, [scanId]);
+    const rows = this.#all<_ClosureManifestRow>(sql, [scanId, scanId]);
 
     return rows.map((row) => ({
       sourceVersionId: row.source_version_id,
@@ -730,35 +742,72 @@ export class PlannerRepository {
     const sql = `
           WITH retained_roots AS (
             SELECT
-              root_version_id,
-              root_digest
-            FROM v_scan_root_manifests
-            WHERE scan_id = ?
-              AND has_ancestor = 0
-              AND root_digest NOT IN (SELECT root_digest FROM temp_direct_target_roots)
+              m.version_id AS root_version_id,
+              m.digest AS root_digest
+            FROM manifests m
+            WHERE m.scan_id = ?
+              AND NOT EXISTS (
+                SELECT 1
+                FROM manifest_reachability mr
+                WHERE mr.scan_id = m.scan_id
+                  AND mr.descendant_digest = m.digest
+                  AND mr.min_distance > 0
+              )
+              AND NOT EXISTS (
+                SELECT 1
+                FROM temp_direct_target_roots dtr
+                WHERE dtr.root_digest = m.digest
+              )
+          ),
+          direct_target_closure AS (
+            SELECT
+              dtr.root_version_id AS root_version_id,
+              dtr.root_digest AS root_digest,
+              dtr.root_manifest_kind AS member_manifest_kind,
+              dtr.root_digest AS member_digest,
+              0 AS hops_from_root
+            FROM temp_direct_target_roots dtr
+
+            UNION ALL
+
+            SELECT
+              dtr.root_version_id AS root_version_id,
+              dtr.root_digest AS root_digest,
+              m.manifest_kind AS member_manifest_kind,
+              m.digest AS member_digest,
+              mr.min_distance AS hops_from_root
+            FROM temp_direct_target_roots dtr
+            JOIN manifest_reachability mr
+              ON mr.scan_id = ?
+             AND mr.ancestor_digest = dtr.root_digest
+             AND mr.min_distance > 0
+            JOIN manifests m
+              ON m.scan_id = ?
+             AND m.digest = mr.descendant_digest
           ),
           ranked_blocks AS (
             SELECT
-              dtr.root_version_id AS blocked_version_id,
-              dtr.root_digest AS blocked_digest,
+              dtc.root_version_id AS blocked_version_id,
+              dtc.root_digest AS blocked_digest,
               rr.root_version_id AS blocking_version_id,
               rr.root_digest AS blocking_digest,
-              overlap.overlap_digest,
-              overlap.overlap_manifest_kind,
+              dtc.member_digest AS overlap_digest,
+              dtc.member_manifest_kind AS overlap_manifest_kind,
               'overlap-with-retained-root' AS block_reason,
               ROW_NUMBER() OVER (
-                PARTITION BY dtr.root_digest, rr.root_digest
+                PARTITION BY dtc.root_digest, rr.root_digest
                 ORDER BY
-                  overlap.hops_source_to_overlap_manifest,
-                  overlap.hops_overlapping_root_to_overlap_manifest,
-                  overlap.overlap_digest
+                  dtc.hops_from_root,
+                  retained_overlap.min_distance,
+                  dtc.member_digest
               ) AS rn
-            FROM temp_direct_target_roots dtr
-            JOIN v_scan_root_overlap overlap
-              ON overlap.scan_id = ?
-             AND overlap.source_digest = dtr.root_digest
+            FROM direct_target_closure dtc
             JOIN retained_roots rr
-              ON rr.root_digest = overlap.overlapping_digest
+              ON rr.root_digest <> dtc.root_digest
+            JOIN manifest_reachability retained_overlap
+              ON retained_overlap.scan_id = ?
+             AND retained_overlap.ancestor_digest = rr.root_digest
+             AND retained_overlap.descendant_digest = dtc.member_digest
           )
           SELECT
             blocked_version_id,
@@ -772,7 +821,7 @@ export class PlannerRepository {
           WHERE rn = 1
           ORDER BY blocked_digest, blocking_digest, overlap_digest
         `;
-    const rows = this.#all<_BlockedRootRow>(sql, [scanId, scanId]);
+    const rows = this.#all<_BlockedRootRow>(sql, [scanId, scanId, scanId, scanId]);
 
     return rows.map((row) => ({
       blockedVersionId: row.blocked_version_id,
@@ -794,6 +843,14 @@ export class PlannerRepository {
         direct_target_reason TEXT NOT NULL,
         selection_mode TEXT NOT NULL
       )
+    `);
+    this.#exec(`
+      CREATE INDEX IF NOT EXISTS idx_temp_direct_target_roots_digest
+        ON temp_direct_target_roots(root_digest)
+    `);
+    this.#exec(`
+      CREATE INDEX IF NOT EXISTS idx_temp_direct_target_roots_version_digest
+        ON temp_direct_target_roots(root_version_id, root_digest)
     `);
     this.#exec("DELETE FROM temp_direct_target_roots");
     this.#insertDirectTargetRoots(directTargetRoots);
