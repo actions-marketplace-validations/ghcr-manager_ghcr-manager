@@ -340,7 +340,7 @@ export class PlannerRepository {
   }
 
   #listKeepNUntaggedDirectTargetRoots(scanId: number, keepCount: number, cutoffTimestamp?: string): DeletePlanRoot[] {
-    const cutoffSql = cutoffTimestamp ? "AND pv.created_at < ?" : "";
+    const cutoffSql = cutoffTimestamp ? "AND rm.created_at < ?" : "";
     const sql = `
           WITH eligible_untagged_roots AS (
             SELECT
@@ -348,12 +348,9 @@ export class PlannerRepository {
               rm.root_digest,
               rm.root_manifest_kind,
               ROW_NUMBER() OVER (
-                ORDER BY pv.created_at DESC, rm.root_version_id DESC, rm.root_digest DESC
+                ORDER BY rm.created_at DESC, rm.root_version_id DESC, rm.root_digest DESC
               ) AS recency_rank
             FROM v_scan_root_manifests rm
-            JOIN package_versions pv
-              ON pv.scan_id = rm.scan_id
-             AND pv.version_id = rm.root_version_id
             WHERE rm.scan_id = ?
               AND rm.is_tagged = 0
               AND rm.has_ancestor = 0
@@ -447,7 +444,7 @@ export class PlannerRepository {
         : "COUNT(t.tag)";
     const excludedTagSelect =
       options.excludeTags.length > 0 ? `SUM(CASE WHEN t.tag IN (${excludedTagPlaceholders}) THEN 1 ELSE 0 END)` : "0";
-    const cutoffSql = options.cutoffTimestamp ? "AND pv.created_at < ?" : "";
+    const cutoffSql = options.cutoffTimestamp ? "AND rm.created_at < ?" : "";
     const keepSql = options.keepCount !== undefined ? "WHERE recency_rank > ?" : "";
     const params: Array<number | string> = [];
     if (options.deleteTags.length > 0) {
@@ -471,13 +468,10 @@ export class PlannerRepository {
               rm.root_version_id AS version_id,
               rm.root_digest,
               rm.root_manifest_kind,
-              pv.created_at,
+              rm.created_at,
               COUNT(t.tag) AS total_tag_count,
               ${deleteMatchSelect} AS matched_tag_count
             FROM v_scan_root_manifests rm
-            JOIN package_versions pv
-              ON pv.scan_id = rm.scan_id
-             AND pv.version_id = rm.root_version_id
             JOIN tags t
               ON t.scan_id = rm.scan_id
              AND t.version_id = rm.root_version_id
@@ -485,7 +479,7 @@ export class PlannerRepository {
               AND rm.is_tagged = 1
               AND rm.has_ancestor = 0
               ${cutoffSql}
-            GROUP BY rm.root_version_id, rm.root_digest, rm.root_manifest_kind, pv.created_at
+            GROUP BY rm.root_version_id, rm.root_digest, rm.root_manifest_kind, rm.created_at
             HAVING matched_tag_count > 0
                AND ${excludedTagSelect} = 0
           ),

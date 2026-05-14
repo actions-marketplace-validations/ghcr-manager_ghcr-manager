@@ -57,6 +57,8 @@ This section is the canonical place for session-to-session continuity.
 - ☑ Add seeded-registry validation scenarios for combined tagged keep rules.
 - ☑ Rewrite root ancestor detection to use reachability distance and add a descendant-distance index for large-plan
   performance.
+- ☑ Remove redundant `package_versions` joins from keep-rule planner queries and rank directly from
+  `v_scan_root_manifests.created_at`.
 - ☐ Extend the planner beyond `--delete-untagged` to cover tag selectors, exclusions, age filters, and keep rules.
 - ☐ Prototype registry execution against the test registry only after the plan output is stable and test-covered.
 - ☐ Revisit action packaging after the live ingest path and cleanup execution path are both stable.
@@ -141,6 +143,8 @@ This section is the canonical place for session-to-session continuity.
     window itself
   - `has_ancestor` now uses `manifest_reachability.min_distance > 0` with a matching
     `manifest_reachability(scan_id, descendant_digest, min_distance)` index
+  - keep-rule selection queries no longer rejoin `package_versions` after `v_scan_root_manifests`; they rank directly
+    from the view's `created_at`
 - Debug helpers:
   - `GITHUB_TOKEN="$(gh auth token)" ghcr-manager scan --db <path> --owner <owner> --package <package> [--log-level <level>]`
     runs the live GitHub/GHCR scan directly via the CLI binary
