@@ -256,12 +256,10 @@ These can be scan-scoped but input-agnostic:
 
 - `v_scan_root_manifests`
 - `v_scan_root_tags`
-- `v_scan_root_closure`
-- `v_scan_root_overlap`
 
 Purpose:
 
-- provide normalized root and closure reads
+- provide normalized root reads
 - avoid rebuilding the same joins in every planner path
 
 ### Tier 2: planner-request CTEs or temporary views
@@ -302,7 +300,7 @@ This split matters because the current `v_tags_delete_*` views hard-code one pol
 
 The next implementation step should be:
 
-1. add scan-scoped root and closure base views
+1. add scan-scoped root base views
 2. add one request-scoped planner query for `direct_target_roots`
 3. add one request-scoped planner query for `blocked_roots`
 4. derive `fully_deletable_roots` and `collateral_tags`

@@ -306,8 +306,6 @@ src/
 - Added the first read-only planner implementation for `plan --delete-untagged`.
 - Added scan-scoped planner base views:
   - `v_scan_root_manifests`
-  - `v_scan_root_closure`
-  - `v_scan_root_overlap`
 - Added `PlannerRepository` as the first DB-backed planner query layer.
 - The current plan output emits:
   - `directTargetTags`
