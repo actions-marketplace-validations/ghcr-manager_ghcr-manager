@@ -1,10 +1,13 @@
 import type Database from "better-sqlite3";
-import { buildInClausePlaceholders, buildTuplePlaceholders } from "./_sql-placeholders.js";
+import { buildInClausePlaceholders } from "./_sql-placeholders.js";
 
 interface _PlannerLogger {
   trace(message: string): void;
   debug(message: string): void;
+  warn?(message: string): void;
 }
+
+const _MAX_EXPLANATION_ROOTS = 20_000;
 
 interface _ScanRow {
   scan_id: number;
@@ -73,6 +76,12 @@ export interface DeletePlanBlockedRoot {
   reason: string;
 }
 
+interface _PlanArtifacts {
+  closureManifests: DeletePlanClosureManifest[];
+  blockedRoots: DeletePlanBlockedRoot[];
+  fullyDeletableRoots: DeletePlanRoot[];
+}
+
 export interface DeletePlan {
   owner: string;
   packageName: string;
@@ -125,10 +134,7 @@ export class PlannerRepository {
   ): DeletePlan {
     const scan = this.#getLatestCompletedScan(owner, packageName);
     const directTargetRoots = this.#listDeleteUntaggedDirectTargetRoots(scan.scan_id, options?.cutoffTimestamp);
-    const deleteRootCandidates = this.#listDeleteRootCandidates(directTargetRoots);
-    const blockedRoots = this.#listBlockedRoots(scan.scan_id, deleteRootCandidates);
-    const blockedVersionIds = new Set(blockedRoots.map((root) => root.blockedVersionId));
-    const fullyDeletableRoots = deleteRootCandidates.filter((root) => !blockedVersionIds.has(root.versionId));
+    const planArtifacts = this.#buildPlanArtifacts(scan.scan_id, directTargetRoots);
 
     return {
       owner: scan.owner,
@@ -145,9 +151,9 @@ export class PlannerRepository {
       },
       directTargetTags: [],
       directTargetRoots,
-      closureManifests: this.#listClosureManifests(scan.scan_id, deleteRootCandidates),
-      blockedRoots,
-      fullyDeletableRoots,
+      closureManifests: planArtifacts.closureManifests,
+      blockedRoots: planArtifacts.blockedRoots,
+      fullyDeletableRoots: planArtifacts.fullyDeletableRoots,
       collateralTags: []
     };
   }
@@ -167,10 +173,7 @@ export class PlannerRepository {
       keepCount,
       options?.cutoffTimestamp
     );
-    const deleteRootCandidates = this.#listDeleteRootCandidates(directTargetRoots);
-    const blockedRoots = this.#listBlockedRoots(scan.scan_id, deleteRootCandidates);
-    const blockedVersionIds = new Set(blockedRoots.map((root) => root.blockedVersionId));
-    const fullyDeletableRoots = deleteRootCandidates.filter((root) => !blockedVersionIds.has(root.versionId));
+    const planArtifacts = this.#buildPlanArtifacts(scan.scan_id, directTargetRoots);
 
     return {
       owner: scan.owner,
@@ -187,9 +190,9 @@ export class PlannerRepository {
       },
       directTargetTags: [],
       directTargetRoots,
-      closureManifests: this.#listClosureManifests(scan.scan_id, deleteRootCandidates),
-      blockedRoots,
-      fullyDeletableRoots,
+      closureManifests: planArtifacts.closureManifests,
+      blockedRoots: planArtifacts.blockedRoots,
+      fullyDeletableRoots: planArtifacts.fullyDeletableRoots,
       collateralTags: []
     };
   }
@@ -211,10 +214,7 @@ export class PlannerRepository {
       keepCount,
       cutoffTimestamp: options?.cutoffTimestamp
     });
-    const deleteRootCandidates = this.#listDeleteRootCandidates(directTargetRoots);
-    const blockedRoots = this.#listBlockedRoots(scan.scan_id, deleteRootCandidates);
-    const blockedVersionIds = new Set(blockedRoots.map((root) => root.blockedVersionId));
-    const fullyDeletableRoots = deleteRootCandidates.filter((root) => !blockedVersionIds.has(root.versionId));
+    const planArtifacts = this.#buildPlanArtifacts(scan.scan_id, directTargetRoots);
 
     return {
       owner: scan.owner,
@@ -231,9 +231,9 @@ export class PlannerRepository {
       },
       directTargetTags: [],
       directTargetRoots,
-      closureManifests: this.#listClosureManifests(scan.scan_id, deleteRootCandidates),
-      blockedRoots,
-      fullyDeletableRoots,
+      closureManifests: planArtifacts.closureManifests,
+      blockedRoots: planArtifacts.blockedRoots,
+      fullyDeletableRoots: planArtifacts.fullyDeletableRoots,
       collateralTags: []
     };
   }
@@ -266,10 +266,7 @@ export class PlannerRepository {
       keepCount: options?.keepNTagged,
       cutoffTimestamp: options?.cutoffTimestamp
     });
-    const deleteRootCandidates = this.#listDeleteRootCandidates(directTargetRoots);
-    const blockedRoots = this.#listBlockedRoots(scan.scan_id, deleteRootCandidates);
-    const blockedVersionIds = new Set(blockedRoots.map((root) => root.blockedVersionId));
-    const fullyDeletableRoots = deleteRootCandidates.filter((root) => !blockedVersionIds.has(root.versionId));
+    const planArtifacts = this.#buildPlanArtifacts(scan.scan_id, directTargetRoots);
 
     return {
       owner: scan.owner,
@@ -286,9 +283,9 @@ export class PlannerRepository {
       },
       directTargetTags,
       directTargetRoots,
-      closureManifests: this.#listClosureManifests(scan.scan_id, deleteRootCandidates),
-      blockedRoots,
-      fullyDeletableRoots,
+      closureManifests: planArtifacts.closureManifests,
+      blockedRoots: planArtifacts.blockedRoots,
+      fullyDeletableRoots: planArtifacts.fullyDeletableRoots,
       collateralTags: []
     };
   }
@@ -663,17 +660,44 @@ export class PlannerRepository {
     }));
   }
 
-  #listClosureManifests(scanId: number, directTargetRoots: DeletePlanRoot[]): DeletePlanClosureManifest[] {
-    if (directTargetRoots.length === 0) {
-      return [];
+  #buildPlanArtifacts(scanId: number, directTargetRoots: DeletePlanRoot[]): _PlanArtifacts {
+    const deleteRootCandidates = this.#listDeleteRootCandidates(directTargetRoots);
+    if (deleteRootCandidates.length === 0) {
+      return {
+        closureManifests: [],
+        blockedRoots: [],
+        fullyDeletableRoots: []
+      };
     }
 
-    const directTargetRootsSql = buildTuplePlaceholders(directTargetRoots.length, 2);
-    const directTargetRootParams = directTargetRoots.flatMap((root) => [root.versionId, root.digest]);
+    if (deleteRootCandidates.length > _MAX_EXPLANATION_ROOTS) {
+      this.#logger.warn?.(
+        `Skipping closure and blocked-root analysis for ${deleteRootCandidates.length} delete-root candidates ` +
+          `because the planner threshold is ${_MAX_EXPLANATION_ROOTS}`
+      );
+      return {
+        closureManifests: [],
+        blockedRoots: [],
+        fullyDeletableRoots: []
+      };
+    }
+
+    return this.#withDirectTargetRootsTempTable(deleteRootCandidates, () => {
+      const closureManifests = this.#listClosureManifests(scanId);
+      const blockedRoots = this.#listBlockedRoots(scanId);
+      const blockedVersionIds = new Set(blockedRoots.map((root) => root.blockedVersionId));
+      const fullyDeletableRoots = deleteRootCandidates.filter((root) => !blockedVersionIds.has(root.versionId));
+
+      return {
+        closureManifests,
+        blockedRoots,
+        fullyDeletableRoots
+      };
+    });
+  }
+
+  #listClosureManifests(scanId: number): DeletePlanClosureManifest[] {
     const sql = `
-          WITH direct_target_roots(root_version_id, root_digest) AS (
-            VALUES ${directTargetRootsSql}
-          )
           SELECT
             c.root_version_id AS source_version_id,
             c.root_digest AS source_digest,
@@ -683,13 +707,13 @@ export class PlannerRepository {
             c.hops_from_root,
             c.member_role
           FROM v_scan_root_closure c
-          JOIN direct_target_roots dtr
+          JOIN temp_direct_target_roots dtr
             ON dtr.root_version_id = c.root_version_id
            AND dtr.root_digest = c.root_digest
           WHERE c.scan_id = ?
           ORDER BY c.root_digest, c.hops_from_root, c.member_digest
         `;
-    const rows = this.#all<_ClosureManifestRow>(sql, [...directTargetRootParams, scanId]);
+    const rows = this.#all<_ClosureManifestRow>(sql, [scanId]);
 
     return rows.map((row) => ({
       sourceVersionId: row.source_version_id,
@@ -702,25 +726,16 @@ export class PlannerRepository {
     }));
   }
 
-  #listBlockedRoots(scanId: number, directTargetRoots: DeletePlanRoot[]): DeletePlanBlockedRoot[] {
-    if (directTargetRoots.length === 0) {
-      return [];
-    }
-
-    const directTargetRootsSql = buildTuplePlaceholders(directTargetRoots.length, 2);
-    const directTargetRootParams = directTargetRoots.flatMap((root) => [root.versionId, root.digest]);
+  #listBlockedRoots(scanId: number): DeletePlanBlockedRoot[] {
     const sql = `
-          WITH direct_target_roots(root_version_id, root_digest) AS (
-            VALUES ${directTargetRootsSql}
-          ),
-          retained_roots AS (
+          WITH retained_roots AS (
             SELECT
               root_version_id,
               root_digest
             FROM v_scan_root_manifests
             WHERE scan_id = ?
               AND has_ancestor = 0
-              AND root_digest NOT IN (SELECT root_digest FROM direct_target_roots)
+              AND root_digest NOT IN (SELECT root_digest FROM temp_direct_target_roots)
           ),
           ranked_blocks AS (
             SELECT
@@ -738,7 +753,7 @@ export class PlannerRepository {
                   overlap.hops_overlapping_root_to_overlap_manifest,
                   overlap.overlap_digest
               ) AS rn
-            FROM direct_target_roots dtr
+            FROM temp_direct_target_roots dtr
             JOIN v_scan_root_overlap overlap
               ON overlap.scan_id = ?
              AND overlap.source_digest = dtr.root_digest
@@ -757,7 +772,7 @@ export class PlannerRepository {
           WHERE rn = 1
           ORDER BY blocked_digest, blocking_digest, overlap_digest
         `;
-    const rows = this.#all<_BlockedRootRow>(sql, [...directTargetRootParams, scanId, scanId]);
+    const rows = this.#all<_BlockedRootRow>(sql, [scanId, scanId]);
 
     return rows.map((row) => ({
       blockedVersionId: row.blocked_version_id,
@@ -770,8 +785,59 @@ export class PlannerRepository {
     }));
   }
 
+  #withDirectTargetRootsTempTable<T>(directTargetRoots: DeletePlanRoot[], callback: () => T): T {
+    this.#exec(`
+      CREATE TEMP TABLE IF NOT EXISTS temp_direct_target_roots (
+        root_version_id INTEGER NOT NULL,
+        root_digest TEXT NOT NULL,
+        root_manifest_kind TEXT,
+        direct_target_reason TEXT NOT NULL,
+        selection_mode TEXT NOT NULL
+      )
+    `);
+    this.#exec("DELETE FROM temp_direct_target_roots");
+    this.#insertDirectTargetRoots(directTargetRoots);
+
+    try {
+      return callback();
+    } finally {
+      this.#exec("DELETE FROM temp_direct_target_roots");
+    }
+  }
+
+  #insertDirectTargetRoots(directTargetRoots: DeletePlanRoot[]): void {
+    const insertSql = `
+      INSERT INTO temp_direct_target_roots (
+        root_version_id,
+        root_digest,
+        root_manifest_kind,
+        direct_target_reason,
+        selection_mode
+      ) VALUES (?, ?, ?, ?, ?)
+    `;
+    this.#traceSql(insertSql, ["<chunked rows omitted>"]);
+    const insert = this.#database.prepare(insertSql);
+    const insertMany = this.#database.transaction((roots: DeletePlanRoot[]) => {
+      for (const root of roots) {
+        insert.run(root.versionId, root.digest, root.manifestKind ?? null, root.reason, root.selectionMode);
+      }
+    });
+
+    const chunkSize = 1000;
+    for (let index = 0; index < directTargetRoots.length; index += chunkSize) {
+      const chunk = directTargetRoots.slice(index, index + chunkSize);
+      insertMany(chunk);
+      this.#logger.debug(`Inserted ${chunk.length} direct target root row(s) into temp_direct_target_roots`);
+    }
+  }
+
   #listDeleteRootCandidates(directTargetRoots: DeletePlanRoot[]): DeletePlanRoot[] {
     return directTargetRoots.filter((root) => root.selectionMode === "delete-root");
+  }
+
+  #exec(sql: string, params: Array<number | string | null> = []): void {
+    this.#traceSql(sql, params);
+    this.#database.prepare(sql).run(...params);
   }
 
   #get<T>(sql: string, params: Array<number | string>): T | undefined {
@@ -786,7 +852,7 @@ export class PlannerRepository {
     return rows;
   }
 
-  #traceSql(sql: string, params: Array<number | string>): void {
+  #traceSql(sql: string, params: Array<number | string | null>): void {
     this.#logger.trace(`SQL:\n${sql.trim()}\nPARAMS: ${JSON.stringify(params)}`);
   }
 }

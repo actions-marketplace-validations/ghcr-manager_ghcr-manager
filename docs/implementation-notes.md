@@ -61,6 +61,8 @@ This section is the canonical place for session-to-session continuity.
   `v_scan_root_manifests.created_at`.
 - ☑ Split tagged selector planning into separate query shapes for standalone `keep-n-tagged` and exact
   `delete-tag`-driven selection.
+- ☑ Keep large direct-target root sets inside SQLite temp tables for closure/blocking analysis instead of rebinding them
+  as giant `VALUES` tuples.
 - ☐ Extend the planner beyond `--delete-untagged` to cover tag selectors, exclusions, age filters, and keep rules.
 - ☐ Prototype registry execution against the test registry only after the plan output is stable and test-covered.
 - ☐ Revisit action packaging after the live ingest path and cleanup execution path are both stable.
@@ -152,6 +154,8 @@ This section is the canonical place for session-to-session continuity.
   - standalone `keep-n-tagged` now also drives from `package_versions(scan_id, created_at)`
   - exact `delete-tag` planning now starts from matched `tags(scan_id, tag)` rows, then aggregates within that reduced
     matched-root set instead of grouping the entire tagged root population first
+  - closure and blocked-root analysis now consume direct target roots from a connection-local SQLite temp table, which
+    avoids SQL variable-limit failures on very large plans
 - Debug helpers:
   - `GITHUB_TOKEN="$(gh auth token)" ghcr-manager scan --db <path> --owner <owner> --package <package> [--log-level <level>]`
     runs the live GitHub/GHCR scan directly via the CLI binary
