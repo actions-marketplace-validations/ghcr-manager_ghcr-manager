@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import { buildInClausePlaceholders, buildTuplePlaceholders } from "./_sql-placeholders.js";
 
 interface _ScanRow {
   scan_id: number;
@@ -199,11 +200,11 @@ export class PlannerRepository {
       return [];
     }
 
-    const selectedTagPlaceholders = deleteTags.map(() => "?").join(", ");
+    const selectedTagPlaceholders = buildInClausePlaceholders(deleteTags.length);
     const params: Array<number | string> = [scanId, ...deleteTags];
     let excludedRootSql = "";
     if (excludeTags.length > 0) {
-      const excludedTagPlaceholders = excludeTags.map(() => "?").join(", ");
+      const excludedTagPlaceholders = buildInClausePlaceholders(excludeTags.length);
       excludedRootSql = `
         AND t.version_id NOT IN (
           SELECT version_id
@@ -236,11 +237,11 @@ export class PlannerRepository {
       return [];
     }
 
-    const selectedTagPlaceholders = deleteTags.map(() => "?").join(", ");
+    const selectedTagPlaceholders = buildInClausePlaceholders(deleteTags.length);
     const params: Array<number | string> = [...deleteTags, ...deleteTags, scanId, ...deleteTags];
     let excludedTagSelect = "0";
     if (excludeTags.length > 0) {
-      const excludedTagPlaceholders = excludeTags.map(() => "?").join(", ");
+      const excludedTagPlaceholders = buildInClausePlaceholders(excludeTags.length);
       excludedTagSelect = `SUM(CASE WHEN t.tag IN (${excludedTagPlaceholders}) THEN 1 ELSE 0 END)`;
       params.push(...excludeTags);
     }
@@ -290,7 +291,7 @@ export class PlannerRepository {
       return [];
     }
 
-    const directTargetRootsSql = directTargetRoots.map(() => "(?, ?)").join(", ");
+    const directTargetRootsSql = buildTuplePlaceholders(directTargetRoots.length, 2);
     const directTargetRootParams = directTargetRoots.flatMap((root) => [root.versionId, root.digest]);
     const rows = this.#database
       .prepare(
@@ -332,7 +333,7 @@ export class PlannerRepository {
       return [];
     }
 
-    const directTargetRootsSql = directTargetRoots.map(() => "(?, ?)").join(", ");
+    const directTargetRootsSql = buildTuplePlaceholders(directTargetRoots.length, 2);
     const directTargetRootParams = directTargetRoots.flatMap((root) => [root.versionId, root.digest]);
     const rows = this.#database
       .prepare(

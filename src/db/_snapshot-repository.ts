@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import { buildInClausePlaceholders } from "./_sql-placeholders.js";
 
 interface _ScanRow {
   scan_id: number;
@@ -77,7 +78,7 @@ export class SnapshotRepository {
       return new Set();
     }
 
-    const placeholders = tags.map(() => "?").join(", ");
+    const placeholders = buildInClausePlaceholders(tags.length);
     const rows = this.#database
       .prepare(
         `
@@ -99,7 +100,7 @@ export class SnapshotRepository {
       return [];
     }
 
-    const placeholders = digestList.map(() => "?").join(", ");
+    const placeholders = buildInClausePlaceholders(digestList.length);
     const rows = this.#database
       .prepare(`SELECT child_digest FROM manifest_edges WHERE scan_id = ? AND parent_digest IN (${placeholders})`)
       .all(scanId, ...digestList) as Array<{ child_digest: string }>;
