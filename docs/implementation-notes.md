@@ -10,6 +10,7 @@ This section is the canonical place for session-to-session continuity.
 
 ### Completed Checkpoints
 
+- ☑ `fe6fd7b` Add planner data model note.
 - ☑ `adde55e` Add cleanup semantics note.
 - ☑ `5c4b0c9` Add cleanup planning roadmap.
 - ☑ `6899876` Add GHCR manager analysis and roadmap.
