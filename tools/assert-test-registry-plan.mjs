@@ -17,6 +17,7 @@ const plan = JSON.parse(readFileSync(planPath, "utf8"));
 assert.match(plan.packageName, new RegExp(`-test--${fixture}$`));
 assert.ok(plan.scanCompletedAt, "scanCompletedAt must be populated");
 assert.deepEqual(plan.collateralTags, []);
+_assertValidationContract(plan);
 
 switch (scenario) {
   case "delete-untagged":
@@ -59,6 +60,8 @@ function _assertDeleteUntaggedPlan(fixture, plan) {
     assert.deepEqual(plan.closureManifests, []);
     assert.deepEqual(plan.blockedRoots, []);
     assert.deepEqual(plan.fullyDeletableRoots, []);
+    assert.deepEqual(plan.rootDecisions, []);
+    assert.deepEqual(plan.protectedRoots, []);
     return;
   }
 
@@ -87,6 +90,8 @@ function _assertDeleteUntaggedPlan(fixture, plan) {
       [...directTargetDigests].sort(),
       "complex direct target roots must all be blocked"
     );
+    assert.equal(plan.validationSummary.blockedDeleteRootCount, plan.directTargetRoots.length);
+    assert.ok(plan.protectedRoots.length > 0, "complex fixture must report protected roots");
 
     for (const blockedRoot of plan.blockedRoots) {
       assert.equal(blockedRoot.reason, "overlap-with-retained-root");
@@ -152,6 +157,7 @@ function _assertComplexAgeWindowPlan(plan, databasePath, excludedTags) {
     [...directTargetDigests].sort(),
     "age-window direct target roots must all be blocked by retained roots"
   );
+  assert.ok(plan.protectedRoots.length > 0, "age-window scenario must expose protected roots");
   assert.deepEqual(plan.fullyDeletableRoots, []);
 }
 
@@ -268,5 +274,57 @@ function _assertCombinedTaggedKeepPlan(plan, databasePath, options) {
   }
   for (const root of plan.fullyDeletableRoots) {
     assert.ok(deleteRootDigests.has(root.digest), "fully deletable root must come from the delete-root set");
+  }
+  assert.equal(plan.validationSummary.fullyDeletableRootCount, plan.fullyDeletableRoots.length);
+}
+
+function _assertValidationContract(plan) {
+  assert.ok(plan.validationSummary, "validationSummary must be present");
+  assert.ok(Array.isArray(plan.rootDecisions), "rootDecisions must be present");
+  assert.ok(Array.isArray(plan.protectedRoots), "protectedRoots must be present");
+
+  assert.equal(plan.validationSummary.directTargetTagCount, plan.directTargetTags.length);
+  assert.equal(plan.validationSummary.directTargetRootCount, plan.directTargetRoots.length);
+  assert.equal(plan.validationSummary.fullyDeletableRootCount, plan.fullyDeletableRoots.length);
+  assert.equal(plan.validationSummary.protectedRootCount, plan.protectedRoots.length);
+
+  const deleteRootCandidateCount = plan.directTargetRoots.filter((root) => root.selectionMode === "delete-root").length;
+  const untagOnlyRootCount = plan.directTargetRoots.filter((root) => root.selectionMode === "untag-only").length;
+  assert.equal(plan.validationSummary.deleteRootCandidateCount, deleteRootCandidateCount);
+  assert.equal(plan.validationSummary.untagOnlyRootCount, untagOnlyRootCount);
+
+  assert.equal(plan.rootDecisions.length, plan.directTargetRoots.length);
+  const directTargetDigestSet = new Set(plan.directTargetRoots.map((root) => root.digest));
+  const fullyDeletableDigestSet = new Set(plan.fullyDeletableRoots.map((root) => root.digest));
+  const blockedDigestSet = new Set(plan.blockedRoots.map((root) => root.blockedDigest));
+
+  let blockedDecisionCount = 0;
+  for (const decision of plan.rootDecisions) {
+    assert.ok(directTargetDigestSet.has(decision.digest), "rootDecisions must only reference direct target roots");
+    if (decision.validationStatus === "fully-deletable") {
+      assert.ok(
+        fullyDeletableDigestSet.has(decision.digest),
+        "fully-deletable root decisions must correspond to fully deletable roots"
+      );
+    }
+    if (decision.validationStatus === "blocked") {
+      blockedDecisionCount += 1;
+      assert.ok(blockedDigestSet.has(decision.digest), "blocked root decisions must correspond to blocked roots");
+    }
+    if (decision.validationStatus === "untag-only") {
+      assert.equal(decision.selectionMode, "untag-only");
+    }
+  }
+  assert.equal(plan.validationSummary.blockedDeleteRootCount, blockedDecisionCount);
+
+  for (const protectedRoot of plan.protectedRoots) {
+    assert.ok(Array.isArray(protectedRoot.blocks));
+    assert.ok(protectedRoot.blocks.length > 0, "protected roots must explain at least one blocked root");
+    for (const block of protectedRoot.blocks) {
+      assert.ok(
+        blockedDigestSet.has(block.blockedDigest),
+        "protected root block entries must correspond to blocked root digests"
+      );
+    }
   }
 }

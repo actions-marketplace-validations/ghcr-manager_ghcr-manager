@@ -65,6 +65,8 @@ This section is the canonical place for session-to-session continuity.
   as giant `VALUES` tuples.
 - ☑ Replace blocked-root validation over the global `v_scan_root_overlap` view with request-scoped joins from selected
   closure members to retained roots.
+- ☑ Expand plan output with explicit validation summaries, per-root decisions, and protected-root explanations.
+- ☑ Extend seeded-registry validation assertions so workflow scenarios verify the new plan validation contract fields.
 - ☐ Extend the planner beyond `--delete-untagged` to cover tag selectors, exclusions, age filters, and keep rules.
 - ☐ Prototype registry execution against the test registry only after the plan output is stable and test-covered.
 - ☐ Revisit action packaging after the live ingest path and cleanup execution path are both stable.
@@ -160,6 +162,11 @@ This section is the canonical place for session-to-session continuity.
     avoids SQL variable-limit failures on very large plans
   - blocked-root validation no longer uses the global `v_scan_root_overlap` view on the hot path; it joins selected
     closure members directly against retained roots' reachability for the current plan
+- Planner output contract:
+  - plans now distinguish policy selection from validated deletion via `validationSummary` and `rootDecisions`
+  - plans now expose `protectedRoots` so retained blockers are visible alongside blocked delete candidates
+  - seeded test-registry scenario assertions now verify those fields for representative delete-untagged, blocked, and
+    combined tagged-keep plans
 - Debug helpers:
   - `GITHUB_TOKEN="$(gh auth token)" ghcr-manager scan --db <path> --owner <owner> --package <package> [--log-level <level>]`
     runs the live GitHub/GHCR scan directly via the CLI binary

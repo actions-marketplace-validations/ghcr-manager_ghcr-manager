@@ -74,6 +74,32 @@ export interface DeletePlanBlockedRoot {
   reason: string;
 }
 
+export interface DeletePlanRootDecision {
+  versionId: number;
+  digest: string;
+  manifestKind?: string;
+  selectionMode: string;
+  selectionReason: string;
+  validationStatus: "fully-deletable" | "blocked" | "untag-only";
+  validationReason: string;
+  blockingVersionId?: number;
+  blockingDigest?: string;
+  overlapDigest?: string;
+  overlapManifestKind?: string;
+}
+
+export interface DeletePlanProtectedRoot {
+  versionId: number;
+  digest: string;
+  reason: string;
+  blocks: Array<{
+    blockedVersionId: number;
+    blockedDigest: string;
+    overlapDigest: string;
+    overlapManifestKind?: string;
+  }>;
+}
+
 interface _PlanArtifacts {
   closureManifests: DeletePlanClosureManifest[];
   blockedRoots: DeletePlanBlockedRoot[];
@@ -93,8 +119,19 @@ export interface DeletePlan {
     olderThan?: string;
     cutoffTimestamp?: string;
   };
+  validationSummary: {
+    directTargetTagCount: number;
+    directTargetRootCount: number;
+    deleteRootCandidateCount: number;
+    untagOnlyRootCount: number;
+    fullyDeletableRootCount: number;
+    blockedDeleteRootCount: number;
+    protectedRootCount: number;
+  };
   directTargetTags: string[];
   directTargetRoots: DeletePlanRoot[];
+  rootDecisions: DeletePlanRootDecision[];
+  protectedRoots: DeletePlanProtectedRoot[];
   closureManifests: DeletePlanClosureManifest[];
   blockedRoots: DeletePlanBlockedRoot[];
   fullyDeletableRoots: DeletePlanRoot[];
@@ -147,12 +184,7 @@ export class PlannerRepository {
         olderThan: options?.olderThan,
         cutoffTimestamp: options?.cutoffTimestamp
       },
-      directTargetTags: [],
-      directTargetRoots,
-      closureManifests: planArtifacts.closureManifests,
-      blockedRoots: planArtifacts.blockedRoots,
-      fullyDeletableRoots: planArtifacts.fullyDeletableRoots,
-      collateralTags: []
+      ...this.#buildPlanOutputs([], directTargetRoots, planArtifacts)
     };
   }
 
@@ -186,12 +218,7 @@ export class PlannerRepository {
         olderThan: options?.olderThan,
         cutoffTimestamp: options?.cutoffTimestamp
       },
-      directTargetTags: [],
-      directTargetRoots,
-      closureManifests: planArtifacts.closureManifests,
-      blockedRoots: planArtifacts.blockedRoots,
-      fullyDeletableRoots: planArtifacts.fullyDeletableRoots,
-      collateralTags: []
+      ...this.#buildPlanOutputs([], directTargetRoots, planArtifacts)
     };
   }
 
@@ -227,12 +254,7 @@ export class PlannerRepository {
         olderThan: options?.olderThan,
         cutoffTimestamp: options?.cutoffTimestamp
       },
-      directTargetTags: [],
-      directTargetRoots,
-      closureManifests: planArtifacts.closureManifests,
-      blockedRoots: planArtifacts.blockedRoots,
-      fullyDeletableRoots: planArtifacts.fullyDeletableRoots,
-      collateralTags: []
+      ...this.#buildPlanOutputs([], directTargetRoots, planArtifacts)
     };
   }
 
@@ -279,13 +301,123 @@ export class PlannerRepository {
         olderThan: options?.olderThan,
         cutoffTimestamp: options?.cutoffTimestamp
       },
+      ...this.#buildPlanOutputs(directTargetTags, directTargetRoots, planArtifacts)
+    };
+  }
+
+  #buildPlanOutputs(
+    directTargetTags: string[],
+    directTargetRoots: DeletePlanRoot[],
+    planArtifacts: _PlanArtifacts
+  ): Pick<
+    DeletePlan,
+    | "validationSummary"
+    | "directTargetTags"
+    | "directTargetRoots"
+    | "rootDecisions"
+    | "protectedRoots"
+    | "closureManifests"
+    | "blockedRoots"
+    | "fullyDeletableRoots"
+    | "collateralTags"
+  > {
+    const rootDecisions = this.#buildRootDecisions(directTargetRoots, planArtifacts);
+    const protectedRoots = this.#buildProtectedRoots(planArtifacts.blockedRoots);
+    const deleteRootCandidateCount = directTargetRoots.filter((root) => root.selectionMode === "delete-root").length;
+    const untagOnlyRootCount = directTargetRoots.length - deleteRootCandidateCount;
+
+    return {
+      validationSummary: {
+        directTargetTagCount: directTargetTags.length,
+        directTargetRootCount: directTargetRoots.length,
+        deleteRootCandidateCount,
+        untagOnlyRootCount,
+        fullyDeletableRootCount: planArtifacts.fullyDeletableRoots.length,
+        blockedDeleteRootCount: rootDecisions.filter((decision) => decision.validationStatus === "blocked").length,
+        protectedRootCount: protectedRoots.length
+      },
       directTargetTags,
       directTargetRoots,
+      rootDecisions,
+      protectedRoots,
       closureManifests: planArtifacts.closureManifests,
       blockedRoots: planArtifacts.blockedRoots,
       fullyDeletableRoots: planArtifacts.fullyDeletableRoots,
       collateralTags: []
     };
+  }
+
+  #buildRootDecisions(directTargetRoots: DeletePlanRoot[], planArtifacts: _PlanArtifacts): DeletePlanRootDecision[] {
+    const fullyDeletableDigests = new Set(planArtifacts.fullyDeletableRoots.map((root) => root.digest));
+    const blockedRootByDigest = new Map<string, DeletePlanBlockedRoot>();
+    for (const blockedRoot of planArtifacts.blockedRoots) {
+      if (!blockedRootByDigest.has(blockedRoot.blockedDigest)) {
+        blockedRootByDigest.set(blockedRoot.blockedDigest, blockedRoot);
+      }
+    }
+
+    return directTargetRoots.map((root) => {
+      if (root.selectionMode === "untag-only") {
+        return {
+          versionId: root.versionId,
+          digest: root.digest,
+          manifestKind: root.manifestKind,
+          selectionMode: root.selectionMode,
+          selectionReason: root.reason,
+          validationStatus: "untag-only",
+          validationReason: "selected tags do not cover every tag on the root"
+        };
+      }
+
+      if (fullyDeletableDigests.has(root.digest)) {
+        return {
+          versionId: root.versionId,
+          digest: root.digest,
+          manifestKind: root.manifestKind,
+          selectionMode: root.selectionMode,
+          selectionReason: root.reason,
+          validationStatus: "fully-deletable",
+          validationReason: "root closure does not overlap any retained root"
+        };
+      }
+
+      const blockedRoot = blockedRootByDigest.get(root.digest);
+      return {
+        versionId: root.versionId,
+        digest: root.digest,
+        manifestKind: root.manifestKind,
+        selectionMode: root.selectionMode,
+        selectionReason: root.reason,
+        validationStatus: "blocked",
+        validationReason: blockedRoot?.reason ?? "root closure overlaps a retained root",
+        blockingVersionId: blockedRoot?.blockingVersionId,
+        blockingDigest: blockedRoot?.blockingDigest,
+        overlapDigest: blockedRoot?.overlapDigest,
+        overlapManifestKind: blockedRoot?.overlapManifestKind
+      };
+    });
+  }
+
+  #buildProtectedRoots(blockedRoots: DeletePlanBlockedRoot[]): DeletePlanProtectedRoot[] {
+    const protectedRoots = new Map<string, DeletePlanProtectedRoot>();
+    for (const blockedRoot of blockedRoots) {
+      const key = `${blockedRoot.blockingVersionId}:${blockedRoot.blockingDigest}`;
+      const current = protectedRoots.get(key) ?? {
+        versionId: blockedRoot.blockingVersionId,
+        digest: blockedRoot.blockingDigest,
+        reason: "retained root required by overlapping selected root closures",
+        blocks: []
+      };
+      current.blocks.push({
+        blockedVersionId: blockedRoot.blockedVersionId,
+        blockedDigest: blockedRoot.blockedDigest,
+        overlapDigest: blockedRoot.overlapDigest,
+        overlapManifestKind: blockedRoot.overlapManifestKind
+      });
+      protectedRoots.set(key, current);
+    }
+
+    return [...protectedRoots.values()].sort((left, right) => left.digest.localeCompare(right.digest));
   }
 
   #getLatestCompletedScan(owner: string, packageName: string): _ScanRow {
@@ -316,6 +448,75 @@ export class PlannerRepository {
             root_manifest_kind,
             'delete-untagged' AS direct_target_reason,
             'delete-root' AS selection_mode
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
           FROM v_scan_root_manifests
           WHERE scan_id = ?
             AND is_tagged = 0

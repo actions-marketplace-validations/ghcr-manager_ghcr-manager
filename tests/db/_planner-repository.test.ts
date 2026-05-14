@@ -548,6 +548,45 @@ test("planner repository blocks delete-untagged roots whose closure overlaps ret
       reason: "overlap-with-retained-root"
     }
   ]);
+  assert.deepEqual(plan.rootDecisions, [
+    {
+      versionId: 2,
+      digest: "sha256:untagged-root",
+      manifestKind: "image_index",
+      selectionMode: "delete-root",
+      selectionReason: "delete-untagged",
+      validationStatus: "blocked",
+      validationReason: "overlap-with-retained-root",
+      blockingVersionId: 1,
+      blockingDigest: "sha256:tagged-root",
+      overlapDigest: "sha256:shared-child",
+      overlapManifestKind: "image_manifest"
+    }
+  ]);
+  assert.deepEqual(plan.protectedRoots, [
+    {
+      versionId: 1,
+      digest: "sha256:tagged-root",
+      reason: "retained root required by overlapping selected root closures",
+      blocks: [
+        {
+          blockedVersionId: 2,
+          blockedDigest: "sha256:untagged-root",
+          overlapDigest: "sha256:shared-child",
+          overlapManifestKind: "image_manifest"
+        }
+      ]
+    }
+  ]);
+  assert.deepEqual(plan.validationSummary, {
+    directTargetTagCount: 0,
+    directTargetRootCount: 1,
+    deleteRootCandidateCount: 1,
+    untagOnlyRootCount: 0,
+    fullyDeletableRootCount: 0,
+    blockedDeleteRootCount: 1,
+    protectedRootCount: 1
+  });
   assert.deepEqual(plan.fullyDeletableRoots, []);
 
   database.close();

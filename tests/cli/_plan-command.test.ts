@@ -228,15 +228,29 @@ test("handlePlan prints a delete-tags plan for the selected package", async () =
 
   assert.equal(writes.length, 1);
   const plan = JSON.parse(writes[0] as string) as {
+    validationSummary: {
+      directTargetTagCount: number;
+      directTargetRootCount: number;
+      deleteRootCandidateCount: number;
+      fullyDeletableRootCount: number;
+      blockedDeleteRootCount: number;
+    };
     plannerInputs: { deleteUntagged: boolean; deleteTags: string[]; excludeTags: string[] };
     directTargetTags: string[];
     directTargetRoots: Array<{ digest: string; selectionMode: string }>;
+    rootDecisions: Array<{ digest: string; validationStatus: string }>;
+    protectedRoots: Array<{ digest: string }>;
     fullyDeletableRoots: Array<{ digest: string }>;
   };
   assert.equal(plan.plannerInputs.deleteUntagged, false);
   assert.deepEqual(plan.plannerInputs.deleteTags, ["latest"]);
   assert.deepEqual(plan.plannerInputs.excludeTags, []);
   assert.deepEqual(plan.directTargetTags, ["latest"]);
+  assert.equal(plan.validationSummary.directTargetTagCount, 1);
+  assert.equal(plan.validationSummary.directTargetRootCount, 1);
+  assert.equal(plan.validationSummary.deleteRootCandidateCount, 1);
+  assert.equal(plan.validationSummary.fullyDeletableRootCount, 1);
+  assert.equal(plan.validationSummary.blockedDeleteRootCount, 0);
   assert.deepEqual(
     plan.directTargetRoots.map((root) => ({ digest: root.digest, selectionMode: root.selectionMode })),
     [
@@ -246,6 +260,23 @@ test("handlePlan prints a delete-tags plan for the selected package", async () =
       }
     ]
   );
+  assert.deepEqual(
+    plan.rootDecisions.map((decision) => ({
+      digest: decision.digest,
+      selectionMode: decision.selectionMode,
+      selectionReason: decision.selectionReason,
+      validationStatus: decision.validationStatus
+    })),
+    [
+      {
+        digest: "sha256:index-current",
+        selectionMode: "delete-root",
+        selectionReason: "delete-tags-all-tags-selected",
+        validationStatus: "fully-deletable"
+      }
+    ]
+  );
+  assert.deepEqual(plan.protectedRoots, []);
   assert.equal(plan.fullyDeletableRoots.length, 1);
   assert.equal(plan.fullyDeletableRoots[0]?.digest, "sha256:index-current");
 });
