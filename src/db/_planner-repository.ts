@@ -76,6 +76,8 @@ export interface DeletePlan {
     deleteUntagged: boolean;
     deleteTags: string[];
     excludeTags: string[];
+    olderThan?: string;
+    cutoffTimestamp?: string;
   };
   directTargetTags: string[];
   directTargetRoots: DeletePlanRoot[];
@@ -93,8 +95,19 @@ export class PlannerRepository {
   }
 
   getDeleteUntaggedPlan(owner: string, packageName: string): DeletePlan {
+    return this.getDeleteUntaggedPlanWithCutoff(owner, packageName);
+  }
+
+  getDeleteUntaggedPlanWithCutoff(
+    owner: string,
+    packageName: string,
+    options?: {
+      olderThan?: string;
+      cutoffTimestamp?: string;
+    }
+  ): DeletePlan {
     const scan = this.#getLatestCompletedScan(owner, packageName);
-    const directTargetRoots = this.#listDeleteUntaggedDirectTargetRoots(scan.scan_id);
+    const directTargetRoots = this.#listDeleteUntaggedDirectTargetRoots(scan.scan_id, options?.cutoffTimestamp);
     const deleteRootCandidates = this.#listDeleteRootCandidates(directTargetRoots);
     const blockedRoots = this.#listBlockedRoots(scan.scan_id, deleteRootCandidates);
     const blockedVersionIds = new Set(blockedRoots.map((root) => root.blockedVersionId));
@@ -107,7 +120,9 @@ export class PlannerRepository {
       plannerInputs: {
         deleteUntagged: true,
         deleteTags: [],
-        excludeTags: []
+        excludeTags: [],
+        olderThan: options?.olderThan,
+        cutoffTimestamp: options?.cutoffTimestamp
       },
       directTargetTags: [],
       directTargetRoots,
@@ -119,9 +134,32 @@ export class PlannerRepository {
   }
 
   getDeleteTagsPlan(owner: string, packageName: string, deleteTags: string[], excludeTags: string[]): DeletePlan {
+    return this.getDeleteTagsPlanWithCutoff(owner, packageName, deleteTags, excludeTags);
+  }
+
+  getDeleteTagsPlanWithCutoff(
+    owner: string,
+    packageName: string,
+    deleteTags: string[],
+    excludeTags: string[],
+    options?: {
+      olderThan?: string;
+      cutoffTimestamp?: string;
+    }
+  ): DeletePlan {
     const scan = this.#getLatestCompletedScan(owner, packageName);
-    const directTargetTags = this.#listDeleteTagDirectTargetTags(scan.scan_id, deleteTags, excludeTags);
-    const directTargetRoots = this.#listDeleteTagDirectTargetRoots(scan.scan_id, deleteTags, excludeTags);
+    const directTargetTags = this.#listDeleteTagDirectTargetTags(
+      scan.scan_id,
+      deleteTags,
+      excludeTags,
+      options?.cutoffTimestamp
+    );
+    const directTargetRoots = this.#listDeleteTagDirectTargetRoots(
+      scan.scan_id,
+      deleteTags,
+      excludeTags,
+      options?.cutoffTimestamp
+    );
     const deleteRootCandidates = this.#listDeleteRootCandidates(directTargetRoots);
     const blockedRoots = this.#listBlockedRoots(scan.scan_id, deleteRootCandidates);
     const blockedVersionIds = new Set(blockedRoots.map((root) => root.blockedVersionId));
@@ -134,7 +172,9 @@ export class PlannerRepository {
       plannerInputs: {
         deleteUntagged: false,
         deleteTags,
-        excludeTags
+        excludeTags,
+        olderThan: options?.olderThan,
+        cutoffTimestamp: options?.cutoffTimestamp
       },
       directTargetTags,
       directTargetRoots,
@@ -167,7 +207,8 @@ export class PlannerRepository {
     return row;
   }
 
-  #listDeleteUntaggedDirectTargetRoots(scanId: number): DeletePlanRoot[] {
+  #listDeleteUntaggedDirectTargetRoots(scanId: number, cutoffTimestamp?: string): DeletePlanRoot[] {
+    const cutoffSql = cutoffTimestamp ? "AND created_at < ?" : "";
     const rows = this.#database
       .prepare(
         `
@@ -181,10 +222,11 @@ export class PlannerRepository {
           WHERE scan_id = ?
             AND is_tagged = 0
             AND has_ancestor = 0
+            ${cutoffSql}
           ORDER BY root_digest
         `
       )
-      .all(scanId) as _PlanRootRow[];
+      .all(...[scanId, ...(cutoffTimestamp ? [cutoffTimestamp] : [])]) as _PlanRootRow[];
 
     return rows.map((row) => ({
       versionId: row.version_id,
@@ -195,7 +237,12 @@ export class PlannerRepository {
     }));
   }
 
-  #listDeleteTagDirectTargetTags(scanId: number, deleteTags: string[], excludeTags: string[]): string[] {
+  #listDeleteTagDirectTargetTags(
+    scanId: number,
+    deleteTags: string[],
+    excludeTags: string[],
+    cutoffTimestamp?: string
+  ): string[] {
     if (deleteTags.length === 0) {
       return [];
     }
@@ -203,6 +250,7 @@ export class PlannerRepository {
     const selectedTagPlaceholders = buildInClausePlaceholders(deleteTags.length);
     const params: Array<number | string> = [scanId, ...deleteTags];
     let excludedRootSql = "";
+    let olderThanSql = "";
     if (excludeTags.length > 0) {
       const excludedTagPlaceholders = buildInClausePlaceholders(excludeTags.length);
       excludedRootSql = `
@@ -215,15 +263,23 @@ export class PlannerRepository {
       `;
       params.push(scanId, ...excludeTags);
     }
+    if (cutoffTimestamp) {
+      olderThanSql = "AND pv.created_at < ?";
+      params.push(cutoffTimestamp);
+    }
 
     const rows = this.#database
       .prepare(
         `
           SELECT tag AS target_tag
           FROM tags t
+          JOIN package_versions pv
+            ON pv.scan_id = t.scan_id
+           AND pv.version_id = t.version_id
           WHERE t.scan_id = ?
             AND t.tag IN (${selectedTagPlaceholders})
             ${excludedRootSql}
+            ${olderThanSql}
           ORDER BY tag
         `
       )
@@ -232,17 +288,30 @@ export class PlannerRepository {
     return rows.map((row) => row.target_tag);
   }
 
-  #listDeleteTagDirectTargetRoots(scanId: number, deleteTags: string[], excludeTags: string[]): DeletePlanRoot[] {
+  #listDeleteTagDirectTargetRoots(
+    scanId: number,
+    deleteTags: string[],
+    excludeTags: string[],
+    cutoffTimestamp?: string
+  ): DeletePlanRoot[] {
     if (deleteTags.length === 0) {
       return [];
     }
 
     const selectedTagPlaceholders = buildInClausePlaceholders(deleteTags.length);
-    const params: Array<number | string> = [...deleteTags, ...deleteTags, scanId, ...deleteTags];
+    const params: Array<number | string> = [...deleteTags, ...deleteTags, scanId];
     let excludedTagSelect = "0";
+    let olderThanSql = "";
     if (excludeTags.length > 0) {
       const excludedTagPlaceholders = buildInClausePlaceholders(excludeTags.length);
       excludedTagSelect = `SUM(CASE WHEN t.tag IN (${excludedTagPlaceholders}) THEN 1 ELSE 0 END)`;
+    }
+    if (cutoffTimestamp) {
+      olderThanSql = "AND pv.created_at < ?";
+      params.push(cutoffTimestamp);
+    }
+    params.push(...deleteTags);
+    if (excludeTags.length > 0) {
       params.push(...excludeTags);
     }
 
@@ -264,11 +333,15 @@ export class PlannerRepository {
               ELSE 'untag-only'
             END AS selection_mode
           FROM v_scan_root_manifests rm
+          JOIN package_versions pv
+            ON pv.scan_id = rm.scan_id
+           AND pv.version_id = rm.root_version_id
           JOIN tags t
             ON t.scan_id = rm.scan_id
            AND t.version_id = rm.root_version_id
           WHERE rm.scan_id = ?
             AND rm.has_ancestor = 0
+            ${olderThanSql}
           GROUP BY rm.root_version_id, rm.root_digest, rm.root_manifest_kind
           HAVING SUM(CASE WHEN t.tag IN (${selectedTagPlaceholders}) THEN 1 ELSE 0 END) > 0
              AND ${excludedTagSelect} = 0

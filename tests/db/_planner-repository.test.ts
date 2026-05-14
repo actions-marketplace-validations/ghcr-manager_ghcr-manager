@@ -573,3 +573,245 @@ test("planner repository blocks fully selected tagged roots whose closure overla
 
   database.close();
 });
+
+test("planner repository applies older-than to delete-untagged root selection", () => {
+  const database = openDatabase(":memory:");
+  const writer = new ScanWriter(database);
+  const repository = new PlannerRepository(database);
+
+  writer.resetScan("acme", "older-untagged", "2026-05-14T10:00:00.000Z");
+  writer.insertPackageVersion({
+    versionId: 1,
+    createdAt: "2026-05-01T10:00:00.000Z",
+    updatedAt: "2026-05-01T10:00:00.000Z"
+  });
+  writer.insertManifest({
+    versionId: 1,
+    digest: "sha256:young-untagged",
+    manifestKind: "image_manifest",
+    mediaType: "application/vnd.oci.image.manifest.v1+json"
+  });
+  writer.insertPackageVersion({
+    versionId: 2,
+    createdAt: "2026-01-01T10:00:00.000Z",
+    updatedAt: "2026-01-01T10:00:00.000Z"
+  });
+  writer.insertManifest({
+    versionId: 2,
+    digest: "sha256:old-untagged",
+    manifestKind: "image_manifest",
+    mediaType: "application/vnd.oci.image.manifest.v1+json"
+  });
+  writer.markScanCompleted("2026-05-14T10:00:00.000Z");
+
+  const plan = repository.getDeleteUntaggedPlanWithCutoff("acme", "older-untagged", {
+    olderThan: "30 days",
+    cutoffTimestamp: "2026-04-14T10:00:00.000Z"
+  });
+
+  assert.equal(plan.plannerInputs.olderThan, "30 days");
+  assert.equal(plan.plannerInputs.cutoffTimestamp, "2026-04-14T10:00:00.000Z");
+  assert.deepEqual(plan.directTargetRoots, [
+    {
+      versionId: 2,
+      digest: "sha256:old-untagged",
+      manifestKind: "image_manifest",
+      reason: "delete-untagged",
+      selectionMode: "delete-root"
+    }
+  ]);
+
+  database.close();
+});
+
+test("planner repository applies older-than to exact tag matches", () => {
+  const database = openDatabase(":memory:");
+  const writer = new ScanWriter(database);
+  const repository = new PlannerRepository(database);
+
+  writer.resetScan("acme", "older-tags", "2026-05-14T10:00:00.000Z");
+  writer.insertPackageVersion({
+    versionId: 1,
+    createdAt: "2026-05-01T10:00:00.000Z",
+    updatedAt: "2026-05-01T10:00:00.000Z"
+  });
+  writer.insertManifest({
+    versionId: 1,
+    digest: "sha256:young-tagged",
+    manifestKind: "image_manifest",
+    mediaType: "application/vnd.oci.image.manifest.v1+json"
+  });
+  writer.insertTag({
+    tag: "latest",
+    versionId: 1
+  });
+  writer.insertPackageVersion({
+    versionId: 2,
+    createdAt: "2026-01-01T10:00:00.000Z",
+    updatedAt: "2026-01-01T10:00:00.000Z"
+  });
+  writer.insertManifest({
+    versionId: 2,
+    digest: "sha256:old-tagged",
+    manifestKind: "image_manifest",
+    mediaType: "application/vnd.oci.image.manifest.v1+json"
+  });
+  writer.insertTag({
+    tag: "latest",
+    versionId: 2
+  });
+  writer.markScanCompleted("2026-05-14T10:00:00.000Z");
+
+  const plan = repository.getDeleteTagsPlanWithCutoff("acme", "older-tags", ["latest"], [], {
+    olderThan: "30 days",
+    cutoffTimestamp: "2026-04-14T10:00:00.000Z"
+  });
+
+  assert.deepEqual(plan.directTargetTags, ["latest"]);
+  assert.deepEqual(plan.directTargetRoots, [
+    {
+      versionId: 2,
+      digest: "sha256:old-tagged",
+      manifestKind: "image_manifest",
+      reason: "delete-tags-all-tags-selected",
+      selectionMode: "delete-root"
+    }
+  ]);
+
+  database.close();
+});
+
+test("planner repository keeps older-than partial tag matches as untag-only", () => {
+  const database = openDatabase(":memory:");
+  const writer = new ScanWriter(database);
+  const repository = new PlannerRepository(database);
+
+  writer.resetScan("acme", "older-partial", "2026-05-14T10:00:00.000Z");
+  writer.insertPackageVersion({
+    versionId: 1,
+    createdAt: "2026-01-01T10:00:00.000Z",
+    updatedAt: "2026-01-01T10:00:00.000Z"
+  });
+  writer.insertManifest({
+    versionId: 1,
+    digest: "sha256:old-multi-tag",
+    manifestKind: "image_manifest",
+    mediaType: "application/vnd.oci.image.manifest.v1+json"
+  });
+  writer.insertTag({
+    tag: "latest",
+    versionId: 1
+  });
+  writer.insertTag({
+    tag: "stable",
+    versionId: 1
+  });
+  writer.markScanCompleted("2026-05-14T10:00:00.000Z");
+
+  const plan = repository.getDeleteTagsPlanWithCutoff("acme", "older-partial", ["latest"], [], {
+    olderThan: "30 days",
+    cutoffTimestamp: "2026-04-14T10:00:00.000Z"
+  });
+
+  assert.deepEqual(plan.directTargetRoots, [
+    {
+      versionId: 1,
+      digest: "sha256:old-multi-tag",
+      manifestKind: "image_manifest",
+      reason: "delete-tags-partial-tag-match",
+      selectionMode: "untag-only"
+    }
+  ]);
+  assert.deepEqual(plan.fullyDeletableRoots, []);
+
+  database.close();
+});
+
+test("planner repository lets younger retained roots still block older-than delete candidates", () => {
+  const database = openDatabase(":memory:");
+  const writer = new ScanWriter(database);
+  const repository = new PlannerRepository(database);
+
+  writer.resetScan("acme", "older-blocked", "2026-05-14T10:00:00.000Z");
+  writer.insertPackageVersion({
+    versionId: 1,
+    createdAt: "2026-01-01T10:00:00.000Z",
+    updatedAt: "2026-01-01T10:00:00.000Z"
+  });
+  writer.insertManifest({
+    versionId: 1,
+    digest: "sha256:old-delete-root",
+    manifestKind: "image_index",
+    mediaType: "application/vnd.oci.image.index.v1+json"
+  });
+  writer.insertTag({
+    tag: "pr-123",
+    versionId: 1
+  });
+  writer.insertPackageVersion({
+    versionId: 2,
+    createdAt: "2026-05-01T10:00:00.000Z",
+    updatedAt: "2026-05-01T10:00:00.000Z"
+  });
+  writer.insertManifest({
+    versionId: 2,
+    digest: "sha256:young-retained-root",
+    manifestKind: "image_index",
+    mediaType: "application/vnd.oci.image.index.v1+json"
+  });
+  writer.insertTag({
+    tag: "latest",
+    versionId: 2
+  });
+  writer.insertPackageVersion({
+    versionId: 3,
+    createdAt: "2026-05-03T10:00:00.000Z",
+    updatedAt: "2026-05-03T10:00:00.000Z"
+  });
+  writer.insertManifest({
+    versionId: 3,
+    digest: "sha256:shared-child",
+    manifestKind: "image_manifest",
+    mediaType: "application/vnd.oci.image.manifest.v1+json"
+  });
+  writer.insertManifestEdge({
+    parentDigest: "sha256:old-delete-root",
+    childDigest: "sha256:shared-child",
+    edgeKind: "image-child"
+  });
+  writer.insertManifestEdge({
+    parentDigest: "sha256:young-retained-root",
+    childDigest: "sha256:shared-child",
+    edgeKind: "image-child"
+  });
+  writer.rebuildManifestReachability();
+  writer.markScanCompleted("2026-05-14T10:00:00.000Z");
+
+  const plan = repository.getDeleteTagsPlanWithCutoff("acme", "older-blocked", ["pr-123"], [], {
+    olderThan: "30 days",
+    cutoffTimestamp: "2026-04-14T10:00:00.000Z"
+  });
+
+  assert.deepEqual(plan.directTargetRoots, [
+    {
+      versionId: 1,
+      digest: "sha256:old-delete-root",
+      manifestKind: "image_index",
+      reason: "delete-tags-all-tags-selected",
+      selectionMode: "delete-root"
+    }
+  ]);
+  assert.deepEqual(plan.blockedRoots, [
+    {
+      blockedVersionId: 1,
+      blockedDigest: "sha256:old-delete-root",
+      blockingVersionId: 2,
+      blockingDigest: "sha256:young-retained-root",
+      overlapDigest: "sha256:shared-child",
+      overlapManifestKind: "image_manifest",
+      reason: "overlap-with-retained-root"
+    }
+  ]);
+
+  database.close();
+});

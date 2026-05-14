@@ -24,8 +24,8 @@ export async function main(argv: string[]): Promise<number> {
 
 function printUsage(): void {
   console.error(`Usage:
-  ghcr-manager plan --db <path> --owner <org> --package <name> --delete-untagged
-  ghcr-manager plan --db <path> --owner <org> --package <name> --delete-tag <tag> [--delete-tag <tag> ...] [--exclude-tag <tag> ...]
+  ghcr-manager plan --db <path> --owner <org> --package <name> --delete-untagged [--older-than <interval>]
+  ghcr-manager plan --db <path> --owner <org> --package <name> --delete-tag <tag> [--delete-tag <tag> ...] [--exclude-tag <tag> ...] [--older-than <interval>]
   ghcr-manager scan --db <path> [--log-level <debug|info|warn|error|silent>] --owner <org> --package <name> --token <token>`);
 }
 
