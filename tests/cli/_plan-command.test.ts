@@ -10,7 +10,7 @@ import { importFileScan } from "../helpers/index.js";
 test("handlePlan requires the delete-untagged selector", async () => {
   await assert.rejects(
     () => handlePlan(["--db", "scan.sqlite", "--owner", "acme", "--package", "example"]),
-    /missing required cleanup selector: --delete-untagged or --delete-tag/
+    /missing required cleanup selector: --delete-untagged, --delete-tag, or --keep-n-untagged/
   );
 });
 
@@ -28,7 +28,7 @@ test("handlePlan rejects mixed selector families", async () => {
         "--delete-tag",
         "latest"
       ]),
-    /either --delete-untagged or --delete-tag, not both/
+    /exactly one selector family: --delete-untagged, --delete-tag, or --keep-n-untagged/
   );
 });
 
@@ -49,6 +49,32 @@ test("handlePlan rejects repeated older-than options", async () => {
         "1 day"
       ]),
     /--older-than may only be provided once/
+  );
+});
+
+test("handlePlan rejects repeated keep-n-untagged options", async () => {
+  await assert.rejects(
+    () =>
+      handlePlan([
+        "--db",
+        "scan.sqlite",
+        "--owner",
+        "acme",
+        "--package",
+        "example",
+        "--keep-n-untagged",
+        "1",
+        "--keep-n-untagged",
+        "2"
+      ]),
+    /--keep-n-untagged may only be provided once/
+  );
+});
+
+test("handlePlan rejects invalid keep-n-untagged values", async () => {
+  await assert.rejects(
+    () => handlePlan(["--db", "scan.sqlite", "--owner", "acme", "--package", "example", "--keep-n-untagged", "-1"]),
+    /--keep-n-untagged must be a non-negative integer/
   );
 });
 
@@ -132,6 +158,57 @@ test("handlePlan prints a delete-tags plan for the selected package", async () =
   );
   assert.equal(plan.fullyDeletableRoots.length, 1);
   assert.equal(plan.fullyDeletableRoots[0]?.digest, "sha256:index-current");
+});
+
+test("handlePlan prints a keep-n-untagged plan for the selected package", async () => {
+  const tempDirectory = mkdtempSync(join(tmpdir(), "ghcr-manager-"));
+  const databasePath = join(tempDirectory, "scan.sqlite");
+  const database = openDatabase(databasePath);
+  const writer = new ScanWriter(database);
+  await importFileScan("tests/fixtures/sample-package.json", writer);
+  database.close();
+
+  const originalLog = console.log;
+  const writes: string[] = [];
+  console.log = (message?: unknown) => {
+    writes.push(String(message));
+  };
+
+  try {
+    assert.equal(
+      await handlePlan(["--db", databasePath, "--owner", "acme", "--package", "example", "--keep-n-untagged", "0"]),
+      0
+    );
+  } finally {
+    console.log = originalLog;
+    rmSync(tempDirectory, { recursive: true, force: true });
+  }
+
+  assert.equal(writes.length, 1);
+  const plan = JSON.parse(writes[0] as string) as {
+    plannerInputs: {
+      deleteUntagged: boolean;
+      deleteTags: string[];
+      excludeTags: string[];
+      keepNUntagged?: number;
+    };
+    directTargetTags: string[];
+    fullyDeletableRoots: Array<{ digest: string; reason: string }>;
+  };
+  assert.equal(plan.plannerInputs.deleteUntagged, false);
+  assert.deepEqual(plan.plannerInputs.deleteTags, []);
+  assert.deepEqual(plan.plannerInputs.excludeTags, []);
+  assert.equal(plan.plannerInputs.keepNUntagged, 0);
+  assert.deepEqual(plan.directTargetTags, []);
+  assert.deepEqual(
+    plan.fullyDeletableRoots.map((root) => ({ digest: root.digest, reason: root.reason })),
+    [
+      {
+        digest: "sha256:untagged-old",
+        reason: "keep-n-untagged-overflow"
+      }
+    ]
+  );
 });
 
 test("handlePlan resolves older-than into planner inputs", async () => {

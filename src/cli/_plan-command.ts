@@ -9,17 +9,28 @@ export async function handlePlan(args: string[]): Promise<number> {
   const deleteTags = collectRepeatedOption(args, "--delete-tag");
   const excludeTags = collectRepeatedOption(args, "--exclude-tag");
   const deleteUntagged = hasFlag(args, "--delete-untagged");
+  const keepNUntaggedRaw = collectRepeatedOption(args, "--keep-n-untagged");
   const olderThanRaw = collectRepeatedOption(args, "--older-than");
 
-  if (deleteUntagged && deleteTags.length > 0) {
-    throw new Error("plan currently supports either --delete-untagged or --delete-tag, not both");
+  if (keepNUntaggedRaw.length > 1) {
+    throw new Error("--keep-n-untagged may only be provided once");
   }
-
-  if (!deleteUntagged && deleteTags.length === 0) {
-    throw new Error("missing required cleanup selector: --delete-untagged or --delete-tag");
+  const keepNUntagged = keepNUntaggedRaw[0] ? resolveKeepCount("--keep-n-untagged", keepNUntaggedRaw[0]) : undefined;
+  const selectorCount =
+    (deleteUntagged ? 1 : 0) + (deleteTags.length > 0 ? 1 : 0) + (keepNUntagged !== undefined ? 1 : 0);
+  if (selectorCount > 1) {
+    throw new Error(
+      "plan currently supports exactly one selector family: --delete-untagged, --delete-tag, or --keep-n-untagged"
+    );
+  }
+  if (selectorCount === 0) {
+    throw new Error("missing required cleanup selector: --delete-untagged, --delete-tag, or --keep-n-untagged");
   }
 
   if (deleteUntagged && excludeTags.length > 0) {
+    throw new Error("--exclude-tag is only supported with --delete-tag");
+  }
+  if (keepNUntagged !== undefined && excludeTags.length > 0) {
     throw new Error("--exclude-tag is only supported with --delete-tag");
   }
   if (olderThanRaw.length > 1) {
@@ -30,10 +41,21 @@ export async function handlePlan(args: string[]): Promise<number> {
 
   const database = openDatabase(databasePath);
   const repository = new PlannerRepository(database);
-  const plan = deleteUntagged
-    ? repository.getDeleteUntaggedPlanWithCutoff(owner, packageName, olderThan)
-    : repository.getDeleteTagsPlanWithCutoff(owner, packageName, deleteTags, excludeTags, olderThan);
+  const plan =
+    keepNUntagged !== undefined
+      ? repository.getKeepNUntaggedPlanWithCutoff(owner, packageName, keepNUntagged, olderThan)
+      : deleteUntagged
+        ? repository.getDeleteUntaggedPlanWithCutoff(owner, packageName, olderThan)
+        : repository.getDeleteTagsPlanWithCutoff(owner, packageName, deleteTags, excludeTags, olderThan);
   console.log(JSON.stringify(plan, null, 2));
   database.close();
   return 0;
+}
+
+function resolveKeepCount(optionName: string, rawValue: string): number {
+  if (!/^\d+$/.test(rawValue)) {
+    throw new Error(`${optionName} must be a non-negative integer`);
+  }
+
+  return Number.parseInt(rawValue, 10);
 }
