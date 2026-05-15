@@ -166,11 +166,10 @@ This section is the canonical place for session-to-session continuity.
     uploads the final rescan DB artifact
   - `test-scenario-executor.yml` clears and reseeds a dedicated package per scenario, runs either `ghcr-manager` or
     `dataaxiom/ghcr-cleanup-action`, and uploads one owner/package/executor scan-history DB with both scans
-  - `test-scenario-executor-matrix.yml` currently fans out only the `ghcr-manager` scenario combinations in parallel by
-    calling the reusable scenario workflow with executor-isolated package-name suffixes, so same-scenario runs do not
-    race on one GHCR package
-  - upstream action runs stay available through direct `test-scenario-executor.yml` dispatches, but are excluded from
-    the matrix until the dedicated test-org repository lookup blocker is resolved
+  - `test-scenario-executor-matrix.yml` now fans out the full 6-scenario × 2-executor matrix in parallel by calling the
+    reusable scenario workflow with executor-isolated package-name suffixes, so same-scenario runs do not race on one
+    GHCR package
+  - the latest matrix run passed for all 12 scenario/executor combinations
   - current scenario coverage includes:
     - `delete-untagged-noop`
     - `delete-untagged-real`
@@ -193,11 +192,8 @@ This section is the canonical place for session-to-session continuity.
     indexes through `gh-workflow/multiarch-image-publish`, which uses keyless Cosign signing
   - the scenario matrix workflow now inherits caller secrets into the reusable scenario workflow and must also grant
     `id-token: write` because the called workflow requests it
-  - current upstream blocker:
-    - `dataaxiom/ghcr-cleanup-action` fails in the dedicated test org with
-      `GET /repos/<GHCR_TEST_OWNER>/<repository> -> 404`
-    - next likely experiment is to create a real repository in the test org and pass `repository` explicitly to the
-      upstream action
+  - prior upstream compatibility issues in the dedicated test org were resolved sufficiently for the current live
+    scenario matrix to pass with both executors
 - Current `untag-only` execution strategy:
   - informed by the linked shared ChatGPT discussion on the upstream hack
   - fetch the source manifest by digest from GHCR
