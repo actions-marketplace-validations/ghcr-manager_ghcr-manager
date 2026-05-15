@@ -72,14 +72,12 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        scan_output="$(ghcr-manager scan \
+        ghcr-manager scan \
           --db "${{ steps.prepare-db.outputs.db_path }}" \
           --owner "${{ inputs.owner }}" \
           --package "${{ inputs.package }}" \
-          --token "${{ inputs.github-token }}")"
-        printf '%s\n' "$scan_output"
-        is_public="$(node -e 'const payload = JSON.parse(process.argv[1]); process.stdout.write(payload.isPublic ? "true" : "false");' "$scan_output")"
-        echo "is_public=$is_public" >> "$GITHUB_OUTPUT"
+          --token "${{ inputs.github-token }}" \
+          --github-output "$GITHUB_OUTPUT"
 
     - name: Refuse unprotected private DB artifact upload
       if: ${{ inputs.upload-db-artifact == 'true' && steps.run-scan.outputs.is_public != 'true' }}

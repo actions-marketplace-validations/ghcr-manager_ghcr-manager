@@ -28,7 +28,7 @@ function printUsage(): void {
   ghcr-manager plan --db <path> [--log-level <trace|debug|info|warn|error|silent>] --owner <org> --package <name> --keep-n-tagged <count> [--older-than <interval>]
   ghcr-manager plan --db <path> [--log-level <trace|debug|info|warn|error|silent>] --owner <org> --package <name> --keep-n-untagged <count> [--older-than <interval>]
   ghcr-manager plan --db <path> [--log-level <trace|debug|info|warn|error|silent>] --owner <org> --package <name> --delete-tag <tag> [--delete-tag <tag> ...] [--exclude-tag <tag> ...] [--older-than <interval>]
-  ghcr-manager scan --db <path> [--log-level <trace|debug|info|warn|error|silent>] --owner <org> --package <name> --token <token>`);
+  ghcr-manager scan --db <path> [--log-level <trace|debug|info|warn|error|silent>] [--github-output <path>] --owner <org> --package <name> --token <token>`);
 }
 
 const _entryPath = process.argv[1];

@@ -151,6 +151,7 @@ This section is the canonical place for session-to-session continuity.
 - Scan hardening:
   - live GitHub scans now fetch package metadata up front and store `is_public` on `package_scans`
   - `scan` JSON output now includes `isPublic`
+  - `scan --github-output <path>` can also write scalar scan summary fields directly to a GitHub Actions output file
   - the composite action refuses `upload-db-artifact: true` for non-public package scans until encryption support exists
   - live GitHub package-version ingestion now reloads page 1 after pagination and aborts if the ordered version
     signature changed during the scan
