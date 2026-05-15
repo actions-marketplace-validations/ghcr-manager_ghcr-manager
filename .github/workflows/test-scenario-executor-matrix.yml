@@ -38,6 +38,7 @@ jobs:
           - scenario: untag-only-multiarch-shared-root
             executor: ghcr-cleanup-action
     uses: ./.github/workflows/test-scenario-executor.yml
+    secrets: inherit
     with:
       scenario: ${{ matrix.scenario }}
       executor: ${{ matrix.executor }}
