@@ -19,7 +19,10 @@ if (!scenario || !fixture || !databasePath || !planPath) {
 }
 
 const plan = JSON.parse(readFileSync(planPath, "utf8"));
-assert.match(plan.packageName, new RegExp(`-test--${fixture}$`));
+assert.ok(
+  typeof plan.packageName === "string" && plan.packageName.endsWith(`-test--${fixture}`),
+  `packageName must end with -test--${fixture}`
+);
 assert.ok(plan.scanCompletedAt, "scanCompletedAt must be populated");
 assert.deepEqual(plan.collateralTags, []);
 assertValidationContract(plan);

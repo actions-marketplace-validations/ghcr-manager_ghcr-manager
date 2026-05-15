@@ -38,6 +38,8 @@ This section is the canonical place for session-to-session continuity.
 
 ### Current Next Plan
 
+- ☑ Remove the CodeQL regex-injection warning in `tools/assert-test-registry-plan.mjs` by avoiding dynamic regular
+  expression construction for fixture suffix validation.
 - ☑ Add an initial cleanup roadmap that breaks the broad reimplementation goal into session-sized subtasks and defines
   how planning state is documented across sessions.
 - ☑ Write the cleanup semantics note: define the deletion unit, supported inputs, and explicit non-goals relative to
@@ -159,6 +161,8 @@ This section is the canonical place for session-to-session continuity.
   - `upload-db-artifact: true` now requires `db-artifact-encryption-passphrase` for non-public package scans
   - live GitHub package-version ingestion now reloads page 1 after pagination and aborts if the ordered version
     signature changed during the scan
+  - `tools/assert-test-registry-plan.mjs` now validates the fixture package suffix with `String#endsWith` instead of a
+    dynamic `RegExp`, resolving CodeQL alert `js/regex-injection`
 - Scan logging:
   - progress logs go to stderr
   - final scan summary JSON stays on stdout
