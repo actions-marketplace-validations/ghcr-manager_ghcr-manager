@@ -80,6 +80,8 @@ This section is the canonical place for session-to-session continuity.
 - ☑ Extend the planner beyond `--delete-untagged` to cover tag selectors, exclusions, age filters, and keep rules.
 - ☑ Extend execution beyond package-version deletion so `untag-only` roots can be applied safely.
 - ☐ Validate the new execution path against the seeded test registry workflow instead of local-only command tests.
+- ☐ Resolve upstream-action compatibility with the dedicated GHCR test org; current blocker is upstream repository
+  lookup against `GET /repos/<GHCR_TEST_OWNER>/<repository>`.
 - ☐ Revisit action packaging after the live ingest path and cleanup execution path are both stable.
 - ☑ Add package scopes to the DB schema so one SQLite database can store multiple owner/package scans.
 - ☑ Add a real GitHub Packages and GHCR ingest adapter beside the fixture loader.
@@ -175,6 +177,16 @@ This section is the canonical place for session-to-session continuity.
   - scenario-managed tags are namespaced as `${scenarioId}--<tag>` so later mixed-scenario packages can avoid tag
     collisions
   - validation scenarios can now derive plan args from the scanned DB before running the planner
+  - live GHCR test workflows now require dedicated test-org configuration:
+    - `GHCR_TEST_OWNER`
+    - `GHCR_TEST_PAT_USERNAME`
+    - `GHCR_TEST_PAT`
+  - the scenario matrix workflow now inherits caller secrets into the reusable scenario workflow
+  - current upstream blocker:
+    - `dataaxiom/ghcr-cleanup-action` fails in the dedicated test org with
+      `GET /repos/<GHCR_TEST_OWNER>/<repository> -> 404`
+    - next likely experiment is to create a real repository in the test org and pass `repository` explicitly to the
+      upstream action
 - Current `untag-only` execution strategy:
   - informed by the linked shared ChatGPT discussion on the upstream hack
   - fetch the source manifest by digest from GHCR
