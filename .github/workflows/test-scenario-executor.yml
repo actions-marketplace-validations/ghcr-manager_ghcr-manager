@@ -20,6 +20,8 @@ run-name: Test Scenario Executor (${{ inputs.scenario }} / ${{ inputs.executor }
           - keep-n-tagged-overflow
           - keep-n-untagged-overflow
           - delete-tags-keep-n-tagged-overflow
+          - wildcard-tagged-fully-deletable
+          - regex-untag-only-single-shared-root
       executor:
         description: Cleanup executor to run against the seeded scenario package.
         required: true
@@ -175,11 +177,13 @@ jobs:
           exclude_tags="$(jq -r '.dataaxiomInputs["exclude-tags"] // ""' "$RESOLUTION_PATH")"
           keep_n_tagged="$(jq -r '.dataaxiomInputs["keep-n-tagged"] // ""' "$RESOLUTION_PATH")"
           keep_n_untagged="$(jq -r '.dataaxiomInputs["keep-n-untagged"] // ""' "$RESOLUTION_PATH")"
+          use_regex="$(jq -r '.dataaxiomInputs["use-regex"] // ""' "$RESOLUTION_PATH")"
           echo "delete_untagged=$delete_untagged" >> "$GITHUB_OUTPUT"
           echo "delete_tags=$delete_tags" >> "$GITHUB_OUTPUT"
           echo "exclude_tags=$exclude_tags" >> "$GITHUB_OUTPUT"
           echo "keep_n_tagged=$keep_n_tagged" >> "$GITHUB_OUTPUT"
           echo "keep_n_untagged=$keep_n_untagged" >> "$GITHUB_OUTPUT"
+          echo "use_regex=$use_regex" >> "$GITHUB_OUTPUT"
 
       - name: Execute with ghcr-cleanup-action action
         if: ${{ inputs.executor == 'ghcr-cleanup-action' }}
@@ -193,6 +197,7 @@ jobs:
           exclude-tags: ${{ steps.upstream-inputs.outputs.exclude_tags }}
           keep-n-tagged: ${{ steps.upstream-inputs.outputs.keep_n_tagged }}
           keep-n-untagged: ${{ steps.upstream-inputs.outputs.keep_n_untagged }}
+          use-regex: ${{ steps.upstream-inputs.outputs.use_regex }}
 
       - name: Record upstream executor summary
         if: ${{ inputs.executor == 'ghcr-cleanup-action' }}

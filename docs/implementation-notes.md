@@ -84,6 +84,8 @@ This section is the canonical place for session-to-session continuity.
   to pass with both executors.
 - ☑ Extend the live scenario executor harness beyond basic delete/untag cases so it can exercise tag exclusion and keep
   rules against the dedicated test org.
+- ☑ Add CLI-side wildcard and regex tag selector expansion for tagged planner/execution flows, and wire the scenario
+  executor harness to pass upstream `use-regex` inputs.
 - ☐ Revisit action packaging after the live ingest path and cleanup execution path are both stable.
 - ☑ Add package scopes to the DB schema so one SQLite database can store multiple owner/package scans.
 - ☑ Add a real GitHub Packages and GHCR ingest adapter beside the fixture loader.
@@ -152,7 +154,9 @@ This section is the canonical place for session-to-session continuity.
   - `plan --keep-n-untagged <count>` keeps the newest eligible untagged roots and emits a dry-run delete plan for the
     older overflow roots of one owner/package
   - `plan --delete-tag <tag> [--delete-tag <tag> ...] [--exclude-tag <tag> ...] [--keep-n-tagged <count>]` emits a
-    dry-run exact-match tag delete/untag plan for one owner/package, optionally keeping the newest matched tagged roots
+    dry-run tag delete/untag plan for one owner/package, optionally keeping the newest matched tagged roots
+  - tagged selector families now treat `--delete-tag` and `--exclude-tag` values as wildcard patterns by default and as
+    regex selectors when `--use-regex` is present
   - all current plan selector families accept optional `--older-than <interval>` as a root-level eligibility filter
   - `execute` reuses the current planner selectors, deletes `fullyDeletableRoots` through the GitHub Packages org
     package-version delete endpoint, and now also applies `untag-only` roots by retargeting selected tags to a temporary
@@ -182,6 +186,10 @@ This section is the canonical place for session-to-session continuity.
     - `keep-n-tagged-overflow`
     - `keep-n-untagged-overflow`
     - `delete-tags-keep-n-tagged-overflow`
+    - `wildcard-tagged-fully-deletable`
+    - `regex-untag-only-single-shared-root`
+  - the latest completed live baseline still reflects the earlier 10-scenario matrix; the two new selector-pattern
+    scenarios were added after that run and still need a GitHub Actions pass
   - scenario-managed tags are namespaced as `${scenarioId}--<tag>` so later mixed-scenario packages can avoid tag
     collisions
   - `blocked-shared-closure` now builds its platform children through the shared `test-registry-build-image` action so
@@ -573,11 +581,11 @@ src/
 
 ## Next Increment
 
-1. Run the expanded scenario matrix in GitHub Actions and inspect whether the new keep/exclude scenarios behave the same
-   for `ghcr-manager` and `dataaxiom/ghcr-cleanup-action`.
+1. Run the expanded scenario matrix in GitHub Actions and inspect whether the new wildcard/regex scenarios behave the
+   same for `ghcr-manager` and `dataaxiom/ghcr-cleanup-action`.
 2. Decide whether the scenario workflow should stay observational or gain explicit per-scenario post-state assertions.
-3. Triage remaining upstream-alignment gaps after the expanded matrix: wildcard/regex tag selection, multi-package
-   expansion, ghost/partial/orphaned cleanup, validate-mode parity, and action-input packaging/default semantics.
+3. Triage remaining upstream-alignment gaps after the next selector-pattern matrix: multi-package expansion,
+   ghost/partial/orphaned cleanup, validate-mode parity, and action-input packaging/default semantics.
 
 ### 2026-04-29 (multi-package schema layer)
 

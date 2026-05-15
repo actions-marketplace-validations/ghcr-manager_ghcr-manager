@@ -30,11 +30,11 @@ function printUsage(): void {
   ghcr-manager plan --db <path> [--log-level <trace|debug|info|warn|error|silent>] --owner <org> --package <name> --delete-untagged [--older-than <interval>]
   ghcr-manager plan --db <path> [--log-level <trace|debug|info|warn|error|silent>] --owner <org> --package <name> --keep-n-tagged <count> [--older-than <interval>]
   ghcr-manager plan --db <path> [--log-level <trace|debug|info|warn|error|silent>] --owner <org> --package <name> --keep-n-untagged <count> [--older-than <interval>]
-  ghcr-manager plan --db <path> [--log-level <trace|debug|info|warn|error|silent>] --owner <org> --package <name> --delete-tag <tag> [--delete-tag <tag> ...] [--exclude-tag <tag> ...] [--older-than <interval>]
+  ghcr-manager plan --db <path> [--log-level <trace|debug|info|warn|error|silent>] --owner <org> --package <name> --delete-tag <tag> [--delete-tag <tag> ...] [--exclude-tag <tag> ...] [--use-regex] [--older-than <interval>]
   ghcr-manager execute --db <path> [--log-level <trace|debug|info|warn|error|silent>] --owner <org> --package <name> --token <token> --delete-untagged [--older-than <interval>]
   ghcr-manager execute --db <path> [--log-level <trace|debug|info|warn|error|silent>] --owner <org> --package <name> --token <token> --keep-n-tagged <count> [--older-than <interval>]
   ghcr-manager execute --db <path> [--log-level <trace|debug|info|warn|error|silent>] --owner <org> --package <name> --token <token> --keep-n-untagged <count> [--older-than <interval>]
-  ghcr-manager execute --db <path> [--log-level <trace|debug|info|warn|error|silent>] --owner <org> --package <name> --token <token> --delete-tag <tag> [--delete-tag <tag> ...] [--exclude-tag <tag> ...] [--older-than <interval>]
+  ghcr-manager execute --db <path> [--log-level <trace|debug|info|warn|error|silent>] --owner <org> --package <name> --token <token> --delete-tag <tag> [--delete-tag <tag> ...] [--exclude-tag <tag> ...] [--use-regex] [--older-than <interval>]
   ghcr-manager scan --db <path> [--log-level <trace|debug|info|warn|error|silent>] [--github-output <path>] --owner <org> --package <name> --token <token>`);
 }
 

@@ -3,6 +3,7 @@ import { executeDeletePlan } from "../execute/index.js";
 import { resolveGitHubToken, resolveLogLevel } from "./_args.js";
 import { createLogger } from "./_logger.js";
 import { loadDeletePlan, resolvePlanCommandInputs } from "./_planner-options.js";
+import { resolveTagSelectors } from "./_tag-selector-resolver.js";
 
 export async function handleExecute(args: string[]): Promise<number> {
   const inputs = resolvePlanCommandInputs(args);
@@ -12,7 +13,7 @@ export async function handleExecute(args: string[]): Promise<number> {
   try {
     const repository = new PlannerRepository(database, logger);
     logger.debug(`Starting execute for ${inputs.owner}/${inputs.packageName}`);
-    const plan = loadDeletePlan(repository, inputs);
+    const plan = loadDeletePlan(repository, resolveTagSelectors(database, inputs));
     const summary = await executeDeletePlan(plan, {
       token,
       logger,

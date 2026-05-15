@@ -135,6 +135,27 @@ export const scenarios = {
       deleteNewTag: "delete-new",
       keepTag: "keep"
     }
+  },
+  "wildcard-tagged-fully-deletable": {
+    id: "wildcard-tagged-fully-deletable",
+    packageSuffix: "scenario--wildcard-tagged-fully-deletable",
+    seedStrategy: "tagged-fully-deletable",
+    supportedExecutors: ["ghcr-manager", "ghcr-cleanup-action"],
+    ghcrManagerArgs: ["--delete-tag", "*delete-me"],
+    dataaxiomInputs: {
+      "delete-tags": "*delete-me"
+    }
+  },
+  "regex-untag-only-single-shared-root": {
+    id: "regex-untag-only-single-shared-root",
+    packageSuffix: "scenario--regex-untag-only-single-shared-root",
+    seedStrategy: "untag-only-single-shared-root",
+    supportedExecutors: ["ghcr-manager", "ghcr-cleanup-action"],
+    ghcrManagerArgs: ["--delete-tag", "^regex-untag-only-single-shared-root--delete-me$", "--use-regex"],
+    dataaxiomInputs: {
+      "delete-tags": "^regex-untag-only-single-shared-root--delete-me$",
+      "use-regex": "true"
+    }
   }
 };
 

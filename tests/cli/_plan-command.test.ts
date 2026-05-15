@@ -283,6 +283,69 @@ test("handlePlan prints a delete-tags plan for the selected package", async () =
   assert.equal(plan.fullyDeletableRoots[0]?.digest, "sha256:index-current");
 });
 
+test("handlePlan expands wildcard delete-tag selectors before planning", async () => {
+  const originalLog = console.log;
+  const writes: string[] = [];
+  console.log = (message?: unknown) => {
+    writes.push(String(message));
+  };
+
+  try {
+    await _withSampleDatabase(async (databasePath) => {
+      assert.equal(
+        await handlePlan(["--db", databasePath, "--owner", "acme", "--package", "example", "--delete-tag", "lat*"]),
+        0
+      );
+    });
+  } finally {
+    console.log = originalLog;
+  }
+
+  const plan = JSON.parse(writes[0] as string) as {
+    plannerInputs: { deleteTags: string[] };
+    directTargetTags: string[];
+  };
+  assert.deepEqual(plan.plannerInputs.deleteTags, ["latest"]);
+  assert.deepEqual(plan.directTargetTags, ["latest"]);
+});
+
+test("handlePlan expands regex selectors before planning when use-regex is set", async () => {
+  const originalLog = console.log;
+  const writes: string[] = [];
+  console.log = (message?: unknown) => {
+    writes.push(String(message));
+  };
+
+  try {
+    await _withSampleDatabase(async (databasePath) => {
+      assert.equal(
+        await handlePlan([
+          "--db",
+          databasePath,
+          "--owner",
+          "acme",
+          "--package",
+          "example",
+          "--delete-tag",
+          "^latest$",
+          "--exclude-tag",
+          "^keep",
+          "--use-regex"
+        ]),
+        0
+      );
+    });
+  } finally {
+    console.log = originalLog;
+  }
+
+  const plan = JSON.parse(writes[0] as string) as {
+    plannerInputs: { deleteTags: string[]; excludeTags: string[] };
+  };
+  assert.deepEqual(plan.plannerInputs.deleteTags, ["latest"]);
+  assert.deepEqual(plan.plannerInputs.excludeTags, ["keep-me"]);
+});
+
 test("handlePlan prints a keep-n-untagged plan for the selected package", async () => {
   const originalLog = console.log;
   const writes: string[] = [];

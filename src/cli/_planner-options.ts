@@ -9,6 +9,7 @@ export interface PlanCommandInputs {
   deleteTags: string[];
   excludeTags: string[];
   deleteUntagged: boolean;
+  useRegex: boolean;
   keepNTagged?: number;
   keepNUntagged?: number;
   olderThan?: string;
@@ -22,6 +23,7 @@ export function resolvePlanCommandInputs(args: string[]): PlanCommandInputs {
   const deleteTags = collectRepeatedOption(args, "--delete-tag");
   const excludeTags = collectRepeatedOption(args, "--exclude-tag");
   const deleteUntagged = hasFlag(args, "--delete-untagged");
+  const useRegex = hasFlag(args, "--use-regex");
   const keepNTaggedRaw = collectRepeatedOption(args, "--keep-n-tagged");
   const keepNUntaggedRaw = collectRepeatedOption(args, "--keep-n-untagged");
   const olderThanRaw = collectRepeatedOption(args, "--older-than");
@@ -65,6 +67,7 @@ export function resolvePlanCommandInputs(args: string[]): PlanCommandInputs {
     deleteTags,
     excludeTags,
     deleteUntagged,
+    useRegex,
     keepNTagged,
     keepNUntagged,
     olderThan: olderThan?.olderThan,
