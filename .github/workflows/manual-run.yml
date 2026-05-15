@@ -18,7 +18,7 @@ run-name: Manual Run for ${{ inputs.owner }}/${{ inputs.package }}
         default: true
         type: boolean
       db_artifact_encryption_passphrase:
-        description: Optional passphrase for encrypting uploaded DB artifacts; required for non-public scans.
+        description: Optional passphrase for encrypting uploaded DB artifacts; required for non-public registries.
         required: false
         default: ""
         type: string

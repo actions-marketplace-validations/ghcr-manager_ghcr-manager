@@ -21,7 +21,7 @@ inputs:
     required: false
     default: "false"
   db-artifact-encryption-passphrase:
-    description: Optional passphrase used to encrypt uploaded DB artifacts; required for non-public package scans
+    description: Optional passphrase used to encrypt uploaded DB artifacts; required for non-public registries
     required: false
     default: ""
   db-artifact-retention-days:
@@ -95,7 +95,7 @@ runs:
         artifact_file="${{ steps.prepare-db.outputs.db_file }}"
 
         if [[ "${{ steps.run-scan.outputs.is_public }}" != "true" && -z "$DB_ARTIFACT_ENCRYPTION_PASSPHRASE" ]]; then
-          echo "Refusing to upload DB artifact for a non-public package scan without encryption." >&2
+          echo "Refusing to upload DB artifact for a non-public registry without encryption." >&2
           echo "Provide db-artifact-encryption-passphrase to encrypt the uploaded artifact." >&2
           exit 1
         fi

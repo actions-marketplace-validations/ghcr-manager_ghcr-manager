@@ -62,6 +62,7 @@ jobs:
           owner: OWNER
           package: PACKAGE
           upload-db-artifact: true
+          db-artifact-encryption-passphrase: ${{ secrets.DB_ARTIFACT_ENCRYPTION_PASSPHRASE }}
 ```
 
 > Copy the [Manual Run Workflow](.github/workflows/manual-run.yml) as a ready-to-run manual scan workflow.
@@ -70,13 +71,14 @@ jobs:
 
 <!-- markdownlint-disable MD013 -->
 
-| Input                        | Description                                                     | Required | Default                        |
-| ---------------------------- | --------------------------------------------------------------- | -------- | ------------------------------ |
-| `github-token`               | GitHub token used for GitHub/GHCR API calls                     | Yes      | `${{ github.token }}`          |
-| `owner`                      | GitHub owner of the container package (user or org)             | Yes      |                                |
-| `package`                    | Container package name                                          | Yes      |                                |
-| `upload-db-artifact`         | Whether to upload the scan database as a workflow run artifact  | No       | `false`                        |
-| `db-artifact-retention-days` | Optional retention days override for uploaded database artifact | No       | `${{ github.retention_days }}` |
+| Input                               | Description                                                                                  | Required | Default                        |
+| ----------------------------------- | -------------------------------------------------------------------------------------------- | -------- | ------------------------------ |
+| `github-token`                      | GitHub token used for GitHub/GHCR API calls                                                  | Yes      | `${{ github.token }}`          |
+| `owner`                             | GitHub owner of the container package (user or org)                                          | Yes      |                                |
+| `package`                           | Container package name                                                                       | Yes      |                                |
+| `upload-db-artifact`                | Whether to upload the scan database as a workflow run artifact                               | No       | `false`                        |
+| `db-artifact-encryption-passphrase` | Optional passphrase for encrypting uploaded DB artifacts; required for non-public registries | No       |                                |
+| `db-artifact-retention-days`        | Optional retention days override for uploaded database artifact                              | No       | `${{ github.retention_days }}` |
 
 <!-- markdownlint-enable MD013 -->
 
@@ -90,8 +92,37 @@ jobs:
 
 <!-- markdownlint-disable MD013 -->
 
-| Name                          | Filename                          | Description                                                          |
-| ----------------------------- | --------------------------------- | -------------------------------------------------------------------- |
-| `${OWNER}__${PACKAGE}.sqlite` | `${OWNER}__${PACKAGE}.sqlite.zip` | Zipped SQLite database containing GitHub Container Registry metadata |
+| Name                              | Filename                          | Description                                          |
+| --------------------------------- | --------------------------------- | ---------------------------------------------------- |
+| `${OWNER}__${PACKAGE}.sqlite`     | `${OWNER}__${PACKAGE}.sqlite`     | Plain SQLite database artifact for public registries |
+| `${OWNER}__${PACKAGE}.sqlite.enc` | `${OWNER}__${PACKAGE}.sqlite.enc` | OpenSSL-encrypted SQLite database artifact           |
 
 <!-- markdownlint-enable MD013 -->
+
+## Encrypted Artifacts
+
+If `db-artifact-encryption-passphrase` is set, `ghcr-manager` encrypts the uploaded DB artifact with OpenSSL before
+upload. For non-public registries, this passphrase is required when `upload-db-artifact: true`.
+
+Encrypted artifacts use OpenSSL `enc` with:
+
+- `-aes-256-cbc`
+- `-pbkdf2`
+- `-salt`
+
+To decrypt an uploaded `*.sqlite.enc` artifact:
+
+```bash
+openssl enc -d -aes-256-cbc -pbkdf2 \
+  -in OWNER__PACKAGE.sqlite.enc \
+  -out OWNER__PACKAGE.sqlite
+```
+
+Or with the passphrase already in an environment variable:
+
+```bash
+openssl enc -d -aes-256-cbc -pbkdf2 \
+  -in OWNER__PACKAGE.sqlite.enc \
+  -out OWNER__PACKAGE.sqlite \
+  -pass env:DB_ARTIFACT_ENCRYPTION_PASSPHRASE
+```
