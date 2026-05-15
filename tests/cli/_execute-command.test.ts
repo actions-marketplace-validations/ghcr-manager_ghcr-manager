@@ -70,13 +70,15 @@ test("handleExecute deletes fully deletable roots and prints a summary", async (
   ]);
   const summary = JSON.parse(writes[0] as string) as {
     deletedPackageVersions: Array<{ versionId: number; digest: string }>;
+    untaggedTags: Array<unknown>;
     unsupportedUntagRoots: Array<unknown>;
   };
   assert.deepEqual(summary.deletedPackageVersions, [{ versionId: 104, digest: "sha256:untagged-old" }]);
+  assert.deepEqual(summary.untaggedTags, []);
   assert.deepEqual(summary.unsupportedUntagRoots, []);
 });
 
-test("handleExecute aborts before mutation when the plan contains untag-only roots", async () => {
+test("handleExecute applies untag-only roots via a temporary manifest clone", async () => {
   const tempDirectory = mkdtempSync(join(tmpdir(), "ghcr-manager-"));
   const databasePath = join(tempDirectory, "scan.sqlite");
   const database = openDatabase(databasePath);
@@ -105,40 +107,128 @@ test("handleExecute aborts before mutation when the plan contains untag-only roo
   database.close();
 
   const originalFetch = globalThis.fetch;
-  let fetchCallCount = 0;
-  globalThis.fetch = async () => {
-    fetchCallCount += 1;
-    return {
-      ok: true,
-      status: 204,
-      headers: new Headers(),
-      async json() {
-        return {};
-      }
-    } as Response;
+  const originalLog = console.log;
+  const writes: string[] = [];
+  let detachedDigest = "sha256:detached";
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.startsWith("https://ghcr.io/token")) {
+      return {
+        ok: true,
+        status: 200,
+        headers: new Headers({ "content-type": "application/json" }),
+        async json() {
+          return { token: "registry-token" };
+        }
+      } as Response;
+    }
+    if (url === "https://ghcr.io/v2/acme/example/manifests/sha256:index-shared") {
+      return {
+        ok: true,
+        status: 200,
+        headers: new Headers({ "content-type": "application/vnd.oci.image.manifest.v1+json" }),
+        async json() {
+          return {
+            schemaVersion: 2,
+            mediaType: "application/vnd.oci.image.manifest.v1+json",
+            config: { mediaType: "application/vnd.oci.image.config.v1+json", digest: "sha256:config", size: 1 },
+            layers: []
+          };
+        }
+      } as Response;
+    }
+    if (url === "https://ghcr.io/v2/acme/example/manifests/latest") {
+      const crypto = await import("node:crypto");
+      detachedDigest = `sha256:${crypto
+        .createHash("sha256")
+        .update(String(init?.body ?? ""))
+        .digest("hex")}`;
+      return {
+        ok: true,
+        status: 201,
+        headers: new Headers(),
+        async json() {
+          return {};
+        }
+      } as Response;
+    }
+    if (url === "https://api.github.com/orgs/acme/packages/container/example/versions?per_page=100&page=1") {
+      return {
+        ok: true,
+        status: 200,
+        headers: new Headers({ "content-type": "application/json" }),
+        async json() {
+          return [
+            {
+              id: 202,
+              name: detachedDigest,
+              metadata: {
+                container: {
+                  tags: ["latest"]
+                }
+              }
+            }
+          ];
+        }
+      } as Response;
+    }
+    if (url === "https://api.github.com/orgs/acme/packages/container/example/versions/202") {
+      return {
+        ok: true,
+        status: 204,
+        headers: new Headers(),
+        async json() {
+          return {};
+        }
+      } as Response;
+    }
+
+    throw new Error(`unexpected fetch: ${url}`);
+  };
+  console.log = (message?: unknown) => {
+    writes.push(String(message));
   };
 
   try {
-    await assert.rejects(
-      () =>
-        handleExecute([
-          "--db",
-          databasePath,
-          "--owner",
-          "acme",
-          "--package",
-          "example",
-          "--token",
-          "token",
-          "--delete-tag",
-          "latest"
-        ]),
-      /execution does not yet support untag-only roots: sha256:index-shared/
+    assert.equal(
+      await handleExecute([
+        "--db",
+        databasePath,
+        "--owner",
+        "acme",
+        "--package",
+        "example",
+        "--token",
+        "token",
+        "--delete-tag",
+        "latest"
+      ]),
+      0
     );
   } finally {
     globalThis.fetch = originalFetch;
+    console.log = originalLog;
     rmSync(tempDirectory, { recursive: true, force: true });
   }
 
-  assert.equal(fetchCallCount, 0);
+  const summary = JSON.parse(writes[0] as string) as {
+    deletedPackageVersions: Array<unknown>;
+    untaggedTags: Array<{
+      tag: string;
+      sourceDigest: string;
+      detachedVersionId: number;
+      detachedDigest: string;
+      sourceVersionId: number;
+    }>;
+  };
+  assert.deepEqual(summary.deletedPackageVersions, []);
+  assert.deepEqual(summary.untaggedTags, [
+    {
+      tag: "latest",
+      sourceDigest: "sha256:index-shared",
+      detachedVersionId: 202,
+      detachedDigest: summary.untaggedTags[0]?.detachedDigest,
+      sourceVersionId: 101
+    }
+  ]);
 });

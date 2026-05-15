@@ -7,6 +7,21 @@ import { handlePlan } from "../../src/cli/_plan-command.js";
 import { openDatabase, ScanWriter } from "../../src/db/index.js";
 import { importFileScan } from "../helpers/index.js";
 
+async function _withSampleDatabase(run: (databasePath: string) => Promise<void>): Promise<void> {
+  const tempDirectory = mkdtempSync(join(tmpdir(), "ghcr-manager-"));
+  const databasePath = join(tempDirectory, "scan.sqlite");
+  const database = openDatabase(databasePath);
+  const writer = new ScanWriter(database);
+  await importFileScan("tests/fixtures/sample-package.json", writer);
+  database.close();
+
+  try {
+    await run(databasePath);
+  } finally {
+    rmSync(tempDirectory, { recursive: true, force: true });
+  }
+}
+
 test("handlePlan requires the delete-untagged selector", async () => {
   await assert.rejects(
     () => handlePlan(["--db", "scan.sqlite", "--owner", "acme", "--package", "example"]),
@@ -33,13 +48,6 @@ test("handlePlan rejects mixed selector families", async () => {
 });
 
 test("handlePlan allows delete-tag combined with keep-n-tagged", async () => {
-  const tempDirectory = mkdtempSync(join(tmpdir(), "ghcr-manager-"));
-  const databasePath = join(tempDirectory, "scan.sqlite");
-  const database = openDatabase(databasePath);
-  const writer = new ScanWriter(database);
-  await importFileScan("tests/fixtures/sample-package.json", writer);
-  database.close();
-
   const originalLog = console.log;
   const writes: string[] = [];
   console.log = (message?: unknown) => {
@@ -47,24 +55,25 @@ test("handlePlan allows delete-tag combined with keep-n-tagged", async () => {
   };
 
   try {
-    assert.equal(
-      await handlePlan([
-        "--db",
-        databasePath,
-        "--owner",
-        "acme",
-        "--package",
-        "example",
-        "--delete-tag",
-        "latest",
-        "--keep-n-tagged",
-        "0"
-      ]),
-      0
-    );
+    await _withSampleDatabase(async (databasePath) => {
+      assert.equal(
+        await handlePlan([
+          "--db",
+          databasePath,
+          "--owner",
+          "acme",
+          "--package",
+          "example",
+          "--delete-tag",
+          "latest",
+          "--keep-n-tagged",
+          "0"
+        ]),
+        0
+      );
+    });
   } finally {
     console.log = originalLog;
-    rmSync(tempDirectory, { recursive: true, force: true });
   }
 
   assert.equal(writes.length, 1);
@@ -169,13 +178,6 @@ test("handlePlan rejects invalid keep-n-untagged values", async () => {
 });
 
 test("handlePlan prints a delete-untagged plan for the selected package", async () => {
-  const tempDirectory = mkdtempSync(join(tmpdir(), "ghcr-manager-"));
-  const databasePath = join(tempDirectory, "scan.sqlite");
-  const database = openDatabase(databasePath);
-  const writer = new ScanWriter(database);
-  await importFileScan("tests/fixtures/sample-package.json", writer);
-  database.close();
-
   const originalLog = console.log;
   const writes: string[] = [];
   console.log = (message?: unknown) => {
@@ -183,13 +185,14 @@ test("handlePlan prints a delete-untagged plan for the selected package", async 
   };
 
   try {
-    assert.equal(
-      await handlePlan(["--db", databasePath, "--owner", "acme", "--package", "example", "--delete-untagged"]),
-      0
-    );
+    await _withSampleDatabase(async (databasePath) => {
+      assert.equal(
+        await handlePlan(["--db", databasePath, "--owner", "acme", "--package", "example", "--delete-untagged"]),
+        0
+      );
+    });
   } finally {
     console.log = originalLog;
-    rmSync(tempDirectory, { recursive: true, force: true });
   }
 
   assert.equal(writes.length, 1);
@@ -203,13 +206,6 @@ test("handlePlan prints a delete-untagged plan for the selected package", async 
 });
 
 test("handlePlan prints a delete-tags plan for the selected package", async () => {
-  const tempDirectory = mkdtempSync(join(tmpdir(), "ghcr-manager-"));
-  const databasePath = join(tempDirectory, "scan.sqlite");
-  const database = openDatabase(databasePath);
-  const writer = new ScanWriter(database);
-  await importFileScan("tests/fixtures/sample-package.json", writer);
-  database.close();
-
   const originalLog = console.log;
   const writes: string[] = [];
   console.log = (message?: unknown) => {
@@ -217,13 +213,14 @@ test("handlePlan prints a delete-tags plan for the selected package", async () =
   };
 
   try {
-    assert.equal(
-      await handlePlan(["--db", databasePath, "--owner", "acme", "--package", "example", "--delete-tag", "latest"]),
-      0
-    );
+    await _withSampleDatabase(async (databasePath) => {
+      assert.equal(
+        await handlePlan(["--db", databasePath, "--owner", "acme", "--package", "example", "--delete-tag", "latest"]),
+        0
+      );
+    });
   } finally {
     console.log = originalLog;
-    rmSync(tempDirectory, { recursive: true, force: true });
   }
 
   assert.equal(writes.length, 1);
@@ -238,7 +235,12 @@ test("handlePlan prints a delete-tags plan for the selected package", async () =
     plannerInputs: { deleteUntagged: boolean; deleteTags: string[]; excludeTags: string[] };
     directTargetTags: string[];
     directTargetRoots: Array<{ digest: string; selectionMode: string }>;
-    rootDecisions: Array<{ digest: string; validationStatus: string }>;
+    rootDecisions: Array<{
+      digest: string;
+      selectionMode: string;
+      selectionReason: string;
+      validationStatus: string;
+    }>;
     protectedRoots: Array<{ digest: string }>;
     fullyDeletableRoots: Array<{ digest: string }>;
   };
@@ -282,13 +284,6 @@ test("handlePlan prints a delete-tags plan for the selected package", async () =
 });
 
 test("handlePlan prints a keep-n-untagged plan for the selected package", async () => {
-  const tempDirectory = mkdtempSync(join(tmpdir(), "ghcr-manager-"));
-  const databasePath = join(tempDirectory, "scan.sqlite");
-  const database = openDatabase(databasePath);
-  const writer = new ScanWriter(database);
-  await importFileScan("tests/fixtures/sample-package.json", writer);
-  database.close();
-
   const originalLog = console.log;
   const writes: string[] = [];
   console.log = (message?: unknown) => {
@@ -296,13 +291,14 @@ test("handlePlan prints a keep-n-untagged plan for the selected package", async 
   };
 
   try {
-    assert.equal(
-      await handlePlan(["--db", databasePath, "--owner", "acme", "--package", "example", "--keep-n-untagged", "0"]),
-      0
-    );
+    await _withSampleDatabase(async (databasePath) => {
+      assert.equal(
+        await handlePlan(["--db", databasePath, "--owner", "acme", "--package", "example", "--keep-n-untagged", "0"]),
+        0
+      );
+    });
   } finally {
     console.log = originalLog;
-    rmSync(tempDirectory, { recursive: true, force: true });
   }
 
   assert.equal(writes.length, 1);
@@ -333,13 +329,6 @@ test("handlePlan prints a keep-n-untagged plan for the selected package", async 
 });
 
 test("handlePlan prints a keep-n-tagged plan for the selected package", async () => {
-  const tempDirectory = mkdtempSync(join(tmpdir(), "ghcr-manager-"));
-  const databasePath = join(tempDirectory, "scan.sqlite");
-  const database = openDatabase(databasePath);
-  const writer = new ScanWriter(database);
-  await importFileScan("tests/fixtures/sample-package.json", writer);
-  database.close();
-
   const originalLog = console.log;
   const writes: string[] = [];
   console.log = (message?: unknown) => {
@@ -347,13 +336,14 @@ test("handlePlan prints a keep-n-tagged plan for the selected package", async ()
   };
 
   try {
-    assert.equal(
-      await handlePlan(["--db", databasePath, "--owner", "acme", "--package", "example", "--keep-n-tagged", "1"]),
-      0
-    );
+    await _withSampleDatabase(async (databasePath) => {
+      assert.equal(
+        await handlePlan(["--db", databasePath, "--owner", "acme", "--package", "example", "--keep-n-tagged", "1"]),
+        0
+      );
+    });
   } finally {
     console.log = originalLog;
-    rmSync(tempDirectory, { recursive: true, force: true });
   }
 
   assert.equal(writes.length, 1);

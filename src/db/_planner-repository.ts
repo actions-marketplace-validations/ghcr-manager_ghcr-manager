@@ -423,12 +423,9 @@ export class PlannerRepository {
   #getLatestCompletedScan(owner: string, packageName: string): _ScanRow {
     const sql = `
           SELECT scan_id, owner, package_name, scan_completed_at
-          FROM package_scans
+          FROM v_latest_scan_per_package
           WHERE owner = ?
             AND package_name = ?
-            AND status = 'completed'
-            AND scan_completed_at IS NOT NULL
-          ORDER BY scan_completed_at DESC, scan_id DESC
           LIMIT 1
         `;
     const row = this.#get<_ScanRow>(sql, [owner, packageName]);

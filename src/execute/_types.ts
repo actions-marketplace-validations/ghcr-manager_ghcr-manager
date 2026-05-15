@@ -11,12 +11,21 @@ export interface UnsupportedUntagRoot {
   reason: string;
 }
 
+export interface UntagTagOperation {
+  tag: string;
+  sourceVersionId: number;
+  sourceDigest: string;
+  detachedVersionId: number;
+  detachedDigest: string;
+}
+
 export interface DeleteExecutionSummary {
   owner: string;
   packageName: string;
   scanCompletedAt: string;
   plannerInputs: DeletePlan["plannerInputs"];
   deletedPackageVersions: DeletePackageVersionOperation[];
+  untaggedTags: UntagTagOperation[];
   blockedRoots: DeletePlan["blockedRoots"];
   unsupportedUntagRoots: UnsupportedUntagRoot[];
 }
@@ -25,7 +34,9 @@ export interface DeleteExecutionOptions {
   token: string;
   logger: DeleteExecutionLogger;
   githubApiBaseUrl?: string;
+  registryBaseUrl?: string;
   fetchImpl?: DeleteExecutionFetchLike;
+  listRootTags?: (root: { owner: string; packageName: string; versionId: number; digest: string }) => string[];
 }
 
 export interface DeleteExecutionLogger {

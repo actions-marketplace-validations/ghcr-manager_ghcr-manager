@@ -17,7 +17,7 @@ FROM (
              ps.scan_completed_at,
              ROW_NUMBER() OVER (
                  PARTITION BY ps.owner, ps.package_name
-                 ORDER BY ps.scan_completed_at DESC
+                 ORDER BY ps.scan_completed_at DESC, ps.scan_id DESC
                  ) AS rn
          FROM package_scans ps
          WHERE ps.scan_completed_at IS NOT NULL

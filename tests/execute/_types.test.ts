@@ -13,6 +13,7 @@ test("execute types expose delete execution summaries", () => {
       excludeTags: []
     },
     deletedPackageVersions: [],
+    untaggedTags: [],
     blockedRoots: [],
     unsupportedUntagRoots: []
   };

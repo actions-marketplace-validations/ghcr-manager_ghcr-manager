@@ -80,9 +80,10 @@ test("executeDeletePlan deletes fully deletable roots and returns a summary", as
 
   assert.deepEqual(deletedVersionIds, [104]);
   assert.deepEqual(summary.deletedPackageVersions, [{ versionId: 104, digest: "sha256:untagged-old" }]);
+  assert.deepEqual(summary.untaggedTags, []);
 });
 
-test("executeDeletePlan rejects untag-only roots before mutating", async () => {
+test("executeDeletePlan applies untag-only roots before deleting fully deletable roots", async () => {
   const plan: DeletePlan = {
     owner: "acme",
     packageName: "example",
@@ -127,31 +128,104 @@ test("executeDeletePlan rejects untag-only roots before mutating", async () => {
     collateralTags: []
   };
 
-  let mutated = false;
-  await assert.rejects(
-    () =>
-      executeDeletePlan(plan, {
-        token: "token",
-        logger: {
-          debug() {},
-          info() {},
-          warn() {},
-          error() {}
-        },
-        githubApiBaseUrl: "https://api.github.test",
-        fetchImpl: async () => {
-          mutated = true;
-          return {
-            ok: true,
-            status: 204,
-            headers: new Headers(),
-            async json() {
-              return {};
-            }
-          };
+  const fetchCalls: Array<{ url: string; method?: string }> = [];
+  let detachedDigest = "sha256:detached";
+  const summary = await executeDeletePlan(plan, {
+    token: "token",
+    logger: {
+      debug() {},
+      info() {},
+      warn() {},
+      error() {}
+    },
+    githubApiBaseUrl: "https://api.github.test",
+    registryBaseUrl: "https://ghcr.example.test",
+    listRootTags() {
+      return ["keep-me", "latest"];
+    },
+    fetchImpl: async (input, init) => {
+      const url = String(input);
+      fetchCalls.push({ url, method: init?.method });
+
+      if (url.startsWith("https://ghcr.example.test/token")) {
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers({ "content-type": "application/json" }),
+          async json() {
+            return { token: "registry-token" };
+          }
+        };
+      }
+      if (url === "https://ghcr.example.test/v2/acme/example/manifests/sha256:index-current") {
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers({ "content-type": "application/vnd.oci.image.manifest.v1+json" }),
+          async json() {
+            return {
+              schemaVersion: 2,
+              mediaType: "application/vnd.oci.image.manifest.v1+json",
+              config: { mediaType: "application/vnd.oci.image.config.v1+json", digest: "sha256:config", size: 1 },
+              layers: []
+            };
+          }
+        };
+      }
+      if (url === "https://ghcr.example.test/v2/acme/example/manifests/latest") {
+        const crypto = await import("node:crypto");
+        detachedDigest = `sha256:${crypto
+          .createHash("sha256")
+          .update(String(init?.body ?? ""))
+          .digest("hex")}`;
+        return {
+          ok: true,
+          status: 201,
+          headers: new Headers(),
+          async json() {
+            return {};
+          }
+        };
+      }
+      if (url === "https://api.github.test/orgs/acme/packages/container/example/versions?per_page=100&page=1") {
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers({ "content-type": "application/json" }),
+          async json() {
+            return [
+              {
+                id: 303,
+                name: detachedDigest,
+                metadata: {
+                  container: {
+                    tags: ["latest"]
+                  }
+                }
+              }
+            ];
+          }
+        };
+      }
+
+      return {
+        ok: true,
+        status: 204,
+        headers: new Headers(),
+        async json() {
+          return {};
         }
-      }),
-    /execution does not yet support untag-only roots: sha256:index-current/
+      };
+    }
+  });
+
+  assert.deepEqual(summary.deletedPackageVersions, []);
+  assert.deepEqual(
+    summary.untaggedTags.map((operation) => operation.tag),
+    ["latest"]
   );
-  assert.equal(mutated, false);
+  assert.equal(
+    fetchCalls.some((call) => call.url === "https://ghcr.example.test/v2/acme/example/manifests/latest"),
+    true
+  );
 });

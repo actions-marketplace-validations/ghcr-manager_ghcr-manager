@@ -78,7 +78,7 @@ This section is the canonical place for session-to-session continuity.
 - ☑ Abort live GitHub scans when the package-version page-1 signature changes between the start and end of paginated
   ingestion.
 - ☑ Extend the planner beyond `--delete-untagged` to cover tag selectors, exclusions, age filters, and keep rules.
-- ☐ Extend execution beyond package-version deletion so `untag-only` roots can be applied safely.
+- ☑ Extend execution beyond package-version deletion so `untag-only` roots can be applied safely.
 - ☐ Validate the new execution path against the seeded test registry workflow instead of local-only command tests.
 - ☐ Revisit action packaging after the live ingest path and cleanup execution path are both stable.
 - ☑ Add package scopes to the DB schema so one SQLite database can store multiple owner/package scans.
@@ -150,8 +150,9 @@ This section is the canonical place for session-to-session continuity.
   - `plan --delete-tag <tag> [--delete-tag <tag> ...] [--exclude-tag <tag> ...] [--keep-n-tagged <count>]` emits a
     dry-run exact-match tag delete/untag plan for one owner/package, optionally keeping the newest matched tagged roots
   - all current plan selector families accept optional `--older-than <interval>` as a root-level eligibility filter
-  - `execute` reuses the current planner selectors, deletes only `fullyDeletableRoots` through the GitHub Packages org
-    package-version delete endpoint, and aborts before mutation when the plan contains any `untag-only` roots
+  - `execute` reuses the current planner selectors, deletes `fullyDeletableRoots` through the GitHub Packages org
+    package-version delete endpoint, and now also applies `untag-only` roots by retargeting selected tags to a temporary
+    manifest clone before deleting the temporary package version
   - schema initialization now also creates a descendant-distance reachability index so root detection avoids the slow
     `ancestor_digest <> root_digest` probe shape on large scans
 - Current test-registry workflow shape:
@@ -162,8 +163,15 @@ This section is the canonical place for session-to-session continuity.
     non-destructive cleanup scenario, then reruns the action against the same local `db-path` so the action itself
     uploads the final rescan DB artifact
   - `test-scenario-executor.yml` clears and reseeds a dedicated package per scenario, runs either `ghcr-manager` or
-    `dataaxiom/ghcr-cleanup-action`, and uploads separate before/after scan DBs for local inspection
+    `dataaxiom/ghcr-cleanup-action`, and uploads one owner/package/executor scan-history DB with both scans
   - validation scenarios can now derive plan args from the scanned DB before running the planner
+- Current `untag-only` execution strategy:
+  - informed by the linked shared ChatGPT discussion on the upstream hack
+  - fetch the source manifest by digest from GHCR
+  - publish a digest-changing clone to the selected tag instead of a stripped dummy manifest
+  - OCI manifests/indexes get a top-level detach annotation
+  - Docker media types fall back to a schema-equivalent byte-different clone without injected fields
+  - delete the temporary package version that GHCR creates for the retargeted tag
 - Scan hardening:
   - live GitHub scans now fetch package metadata up front and store `is_public` on `package_scans`
   - `scan` JSON output now includes `isPublic`

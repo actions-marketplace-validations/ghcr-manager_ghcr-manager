@@ -1,24 +1,45 @@
 import type { DeletePlan } from "../db/index.js";
 import { deletePackageVersionForOrg } from "./_package-version-delete-client.js";
+import { untagRootTags } from "./_untag-client.js";
 import {
   type DeleteExecutionOptions,
   type DeleteExecutionSummary,
-  type DeletePackageVersionOperation,
-  type UnsupportedUntagRoot
+  type DeletePackageVersionOperation
 } from "./_types.js";
 
 export async function executeDeletePlan(
   plan: DeletePlan,
   options: DeleteExecutionOptions
 ): Promise<DeleteExecutionSummary> {
-  const unsupportedUntagRoots = _listUnsupportedUntagRoots(plan);
-  if (unsupportedUntagRoots.length > 0) {
-    throw new Error(
-      `execution does not yet support untag-only roots: ${unsupportedUntagRoots.map((root) => root.digest).join(", ")}`
+  const deletedPackageVersions: DeletePackageVersionOperation[] = [];
+  const untaggedTags = [];
+  const directTargetTagSet = new Set(plan.directTargetTags);
+
+  for (const decision of plan.rootDecisions) {
+    if (decision.validationStatus !== "untag-only") {
+      continue;
+    }
+    if (!options.listRootTags) {
+      throw new Error(`execution requires listRootTags support for untag-only root ${decision.digest}`);
+    }
+
+    const selectedTags = options
+      .listRootTags({
+        owner: plan.owner,
+        packageName: plan.packageName,
+        versionId: decision.versionId,
+        digest: decision.digest
+      })
+      .filter((tag) => directTargetTagSet.has(tag));
+    if (selectedTags.length === 0) {
+      throw new Error(`no selected tags resolved for untag-only root ${decision.digest}`);
+    }
+
+    untaggedTags.push(
+      ...(await untagRootTags(plan.owner, plan.packageName, decision.versionId, decision.digest, selectedTags, options))
     );
   }
 
-  const deletedPackageVersions: DeletePackageVersionOperation[] = [];
   for (const root of plan.fullyDeletableRoots) {
     options.logger.info(
       `Deleting package version ${root.versionId} for ${plan.owner}/${plan.packageName} (${root.digest})`
@@ -39,17 +60,8 @@ export async function executeDeletePlan(
     scanCompletedAt: plan.scanCompletedAt,
     plannerInputs: plan.plannerInputs,
     deletedPackageVersions,
+    untaggedTags,
     blockedRoots: plan.blockedRoots,
-    unsupportedUntagRoots
+    unsupportedUntagRoots: []
   };
-}
-
-function _listUnsupportedUntagRoots(plan: DeletePlan): UnsupportedUntagRoot[] {
-  return plan.rootDecisions
-    .filter((decision) => decision.validationStatus === "untag-only")
-    .map((decision) => ({
-      versionId: decision.versionId,
-      digest: decision.digest,
-      reason: decision.validationReason
-    }));
 }
