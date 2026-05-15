@@ -3,6 +3,22 @@ run-name: Test Scenario Executor Matrix
 
 "on":
   workflow_dispatch:
+    inputs:
+      upload_db_artifact:
+        description: Upload the final rescan DB artifact from inside the action.
+        required: false
+        default: true
+        type: boolean
+      db_artifact_encryption_passphrase:
+        description: Optional passphrase for encrypting uploaded DB artifacts; required for non-public registries.
+        required: false
+        default: ""
+        type: string
+      artifact_retention_days:
+        description: Optional artifact retention-days override for action-owned DB uploads.
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -36,4 +52,7 @@ jobs:
     with:
       scenario: ${{ matrix.scenario }}
       executor: ${{ matrix.executor }}
+      upload_db_artifact: ${{ inputs.upload_db_artifact }}
+      db_artifact_encryption_passphrase: ${{ inputs.db_artifact_encryption_passphrase }}
+      artifact_retention_days: ${{ inputs.artifact_retention_days }}
       package_name_suffix: ${{ matrix.executor }}
