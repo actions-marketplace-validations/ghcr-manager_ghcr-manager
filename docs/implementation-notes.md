@@ -137,6 +137,9 @@ This section is the canonical place for session-to-session continuity.
   - missing referenced digests are derived from descriptor and subject references instead of being represented as
     manifest rows
 - Current action shape: thin composite wrapper that invokes the shared CLI.
+- Current action DB handling:
+  - by default the action creates a fresh DB path under runner temp storage
+  - the action also supports an optional local `db-path` input so later scans can append to the same SQLite file
 - Current CLI shape:
   - `scan` imports live GitHub Packages + GHCR state into SQLite
   - `plan --delete-untagged` emits a dry-run delete plan for the latest completed scan of one owner/package
@@ -156,7 +159,8 @@ This section is the canonical place for session-to-session continuity.
   - `test-registry-validate.yml` runs one scan against an already-seeded fixture, then executes one or all applicable
     validation scenarios without republishing it
   - `test-registry-execute.yml` runs one scan against an already-seeded fixture, executes a guarded destructive or
-    non-destructive cleanup scenario, rescans the fixture, and verifies the post-execution plan
+    non-destructive cleanup scenario, then reruns the action against the same local `db-path` so the action itself
+    uploads the final rescan DB artifact
   - validation scenarios can now derive plan args from the scanned DB before running the planner
 - Scan hardening:
   - live GitHub scans now fetch package metadata up front and store `is_public` on `package_scans`
@@ -344,6 +348,8 @@ src/
   - `first-fully-deletable-tagged-root` scans the seeded fixture, finds the first exact-match tag whose plan has
     `fullyDeletableRoots > 0` and no `untag-only` roots, executes it, rescans, and verifies the selected tag is no
     longer directly targetable
+  - the action now supports an optional local `db-path` so the workflow can rescan through the action and still use the
+    action's built-in DB artifact upload behavior for the final history DB
   - destructive runs are intentionally reseed-required; the workflow is for explicit manual or called execution, not the
     default validation loop
 - Remaining execution-track work:
@@ -572,7 +578,8 @@ src/
 - Implemented in `action.yml`:
   - optional in-action DB artifact upload (off by default)
   - optional retention override (otherwise GitHub policy default is used)
-  - scan DB path is derived internally from owner/package under runner temp storage (no `db-path` action input)
+  - scan DB path defaults to owner/package-based runner temp storage, but workflows may now override it via the
+    local-only `db-path` action input
 - Added `.github/workflows/manual-run.yml` as a `workflow_dispatch` validation workflow that:
   - accepts explicit `owner` and `package` inputs
   - runs `uses: ./` against the local action implementation

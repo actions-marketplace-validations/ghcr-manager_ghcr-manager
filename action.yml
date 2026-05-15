@@ -16,6 +16,10 @@ inputs:
   package:
     description: Container package name.
     required: true
+  db-path:
+    description: Optional local SQLite DB path to use instead of creating a fresh runner-temp DB file
+    required: false
+    default: ""
   upload-db-artifact:
     description: Whether to upload the scan database as a workflow run artifact
     required: false
@@ -60,14 +64,21 @@ runs:
       id: prepare-db
       shell: bash
       env:
+        INPUT_DB_PATH: ${{ inputs.db-path }}
         RUNNER_TEMP: ${{ runner.temp }}
       run: |
         set -euo pipefail
         db_file="${{ inputs.owner }}__${{ inputs.package }}.sqlite"
-        scan_uuid="$(cat /proc/sys/kernel/random/uuid)"
-        db_dir="$RUNNER_TEMP/ghcr-manager/$scan_uuid"
+        if [[ -n "$INPUT_DB_PATH" ]]; then
+          db_path="$INPUT_DB_PATH"
+          db_dir="$(dirname "$db_path")"
+          db_file="$(basename "$db_path")"
+        else
+          scan_uuid="$(cat /proc/sys/kernel/random/uuid)"
+          db_dir="$RUNNER_TEMP/ghcr-manager/$scan_uuid"
+          db_path="$db_dir/$db_file"
+        fi
         mkdir -p "$db_dir"
-        db_path="$db_dir/$db_file"
         echo "db_file=$db_file" >> "$GITHUB_OUTPUT"
         echo "db_path=$db_path" >> "$GITHUB_OUTPUT"
 

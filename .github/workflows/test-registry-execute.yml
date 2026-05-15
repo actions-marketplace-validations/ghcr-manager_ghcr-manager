@@ -21,7 +21,7 @@ run-name: Test Registry Execute (${{ inputs.fixture }} / ${{ inputs.execution_sc
           - delete-untagged
           - first-fully-deletable-tagged-root
       upload_db_artifact:
-        description: Upload the SQLite DBs produced by the pre/post scans.
+        description: Upload the final rescan DB artifact from inside the action.
         required: false
         default: true
         type: boolean
@@ -84,13 +84,13 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Run ghcr-manager action scan
-        id: ghcr-manager
+        id: initial-scan
         uses: ./
         with:
           github-token: ${{ github.token }}
           owner: ${{ github.repository_owner }}
           package: ${{ env.TEST_PACKAGE }}
-          upload-db-artifact: ${{ inputs.upload_db_artifact }}
+          upload-db-artifact: "false"
           db-artifact-encryption-passphrase: ${{ inputs.db_artifact_encryption_passphrase }}
           db-artifact-retention-days: ${{ inputs.artifact_retention_days }}
 
@@ -98,7 +98,7 @@ jobs:
         id: args
         shell: bash
         env:
-          DB_PATH: ${{ steps.ghcr-manager.outputs.db-path }}
+          DB_PATH: ${{ steps.initial-scan.outputs.db-path }}
           OWNER: ${{ github.repository_owner }}
           PACKAGE: ${{ env.TEST_PACKAGE }}
           SCENARIO: ${{ inputs.execution_scenario }}
@@ -128,7 +128,7 @@ jobs:
         id: pre-plan
         shell: bash
         env:
-          DB_PATH: ${{ steps.ghcr-manager.outputs.db-path }}
+          DB_PATH: ${{ steps.initial-scan.outputs.db-path }}
           OWNER: ${{ github.repository_owner }}
           PACKAGE: ${{ env.TEST_PACKAGE }}
           WORK_DIR: ${{ steps.args.outputs.work_dir }}
@@ -174,7 +174,7 @@ jobs:
         id: execute
         shell: bash
         env:
-          DB_PATH: ${{ steps.ghcr-manager.outputs.db-path }}
+          DB_PATH: ${{ steps.initial-scan.outputs.db-path }}
           OWNER: ${{ github.repository_owner }}
           PACKAGE: ${{ env.TEST_PACKAGE }}
           WORK_DIR: ${{ steps.args.outputs.work_dir }}
@@ -194,28 +194,21 @@ jobs:
 
       - name: Rescan package after execution
         id: rescan
-        shell: bash
-        env:
-          OWNER: ${{ github.repository_owner }}
-          PACKAGE: ${{ env.TEST_PACKAGE }}
-          GITHUB_TOKEN: ${{ github.token }}
-          RUNNER_TEMP: ${{ runner.temp }}
-        run: |
-          set -euo pipefail
-          post_db_path="$RUNNER_TEMP/ghcr-manager/post-${{ inputs.fixture }}.sqlite"
-          ghcr-manager scan \
-            --db "$post_db_path" \
-            --owner "$OWNER" \
-            --package "$PACKAGE" \
-            --token "$GITHUB_TOKEN" \
-            >/dev/null
-          echo "post_db_path=$post_db_path" >> "$GITHUB_OUTPUT"
+        uses: ./
+        with:
+          github-token: ${{ github.token }}
+          owner: ${{ github.repository_owner }}
+          package: ${{ env.TEST_PACKAGE }}
+          db-path: ${{ steps.initial-scan.outputs.db-path }}
+          upload-db-artifact: ${{ inputs.upload_db_artifact }}
+          db-artifact-encryption-passphrase: ${{ inputs.db_artifact_encryption_passphrase }}
+          db-artifact-retention-days: ${{ inputs.artifact_retention_days }}
 
       - name: Run post-execution plan
         id: post-plan
         shell: bash
         env:
-          POST_DB_PATH: ${{ steps.rescan.outputs.post_db_path }}
+          POST_DB_PATH: ${{ steps.rescan.outputs.db-path }}
           OWNER: ${{ github.repository_owner }}
           PACKAGE: ${{ env.TEST_PACKAGE }}
           WORK_DIR: ${{ steps.args.outputs.work_dir }}
@@ -277,21 +270,12 @@ jobs:
           retention-days:
             ${{ inputs.artifact_retention_days != '' && inputs.artifact_retention_days || github.retention_days }}
 
-      - name: Upload post-scan DB artifact
-        if: ${{ inputs.upload_db_artifact }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: ${{ env.TEST_PACKAGE }}__${{ inputs.execution_scenario }}-post-scan.sqlite
-          path: ${{ steps.rescan.outputs.post_db_path }}
-          retention-days:
-            ${{ inputs.artifact_retention_days != '' && inputs.artifact_retention_days || github.retention_days }}
-
       - name: Print execution targets
         shell: bash
         run: |
           echo "Owner: ${{ github.repository_owner }}"
           echo "Package: ${{ env.TEST_PACKAGE }}"
           echo "Execution scenario: ${{ inputs.execution_scenario }}"
-          echo "Pre-scan DB path: ${{ steps.ghcr-manager.outputs.db-path }}"
-          echo "Post-scan DB path: ${{ steps.rescan.outputs.post_db_path }}"
+          echo "Initial DB path: ${{ steps.initial-scan.outputs.db-path }}"
+          echo "Rescan DB path: ${{ steps.rescan.outputs.db-path }}"
           echo "Execution work dir: ${{ steps.args.outputs.work_dir }}"
