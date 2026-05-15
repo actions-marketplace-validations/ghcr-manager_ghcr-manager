@@ -76,6 +76,65 @@ export const scenarios = {
     tagNames: {
       trackedTag: "tracked"
     }
+  },
+  "exclude-tag-protected-root": {
+    id: "exclude-tag-protected-root",
+    packageSuffix: "scenario--exclude-tag-protected-root",
+    seedStrategy: "exclude-tag-protected-root",
+    supportedExecutors: ["ghcr-manager", "ghcr-cleanup-action"],
+    ghcrManagerArgs: ["--delete-tag", "{deleteTag}", "--exclude-tag", "{keepTag}"],
+    dataaxiomInputs: {
+      "delete-tags": "{deleteTag}",
+      "exclude-tags": "{keepTag}"
+    },
+    tagNames: {
+      deleteTag: "delete-me",
+      keepTag: "keep-me"
+    }
+  },
+  "keep-n-tagged-overflow": {
+    id: "keep-n-tagged-overflow",
+    packageSuffix: "scenario--keep-n-tagged-overflow",
+    seedStrategy: "keep-n-tagged-overflow",
+    supportedExecutors: ["ghcr-manager", "ghcr-cleanup-action"],
+    ghcrManagerArgs: ["--keep-n-tagged", "1"],
+    dataaxiomInputs: {
+      "keep-n-tagged": "1"
+    },
+    tagNames: {
+      oldestTag: "oldest",
+      middleTag: "middle",
+      newestTag: "newest"
+    }
+  },
+  "keep-n-untagged-overflow": {
+    id: "keep-n-untagged-overflow",
+    packageSuffix: "scenario--keep-n-untagged-overflow",
+    seedStrategy: "keep-n-untagged-overflow",
+    supportedExecutors: ["ghcr-manager", "ghcr-cleanup-action"],
+    ghcrManagerArgs: ["--keep-n-untagged", "1"],
+    dataaxiomInputs: {
+      "keep-n-untagged": "1"
+    },
+    tagNames: {
+      trackedTag: "tracked"
+    }
+  },
+  "delete-tags-keep-n-tagged-overflow": {
+    id: "delete-tags-keep-n-tagged-overflow",
+    packageSuffix: "scenario--delete-tags-keep-n-tagged-overflow",
+    seedStrategy: "delete-tags-keep-n-tagged-overflow",
+    supportedExecutors: ["ghcr-manager", "ghcr-cleanup-action"],
+    ghcrManagerArgs: ["--delete-tag", "{deleteOldTag}", "--delete-tag", "{deleteNewTag}", "--keep-n-tagged", "1"],
+    dataaxiomInputs: {
+      "delete-tags": "{deleteOldTag},{deleteNewTag}",
+      "keep-n-tagged": "1"
+    },
+    tagNames: {
+      deleteOldTag: "delete-old",
+      deleteNewTag: "delete-new",
+      keepTag: "keep"
+    }
   }
 };
 

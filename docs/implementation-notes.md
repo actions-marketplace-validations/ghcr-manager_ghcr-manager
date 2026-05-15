@@ -79,9 +79,11 @@ This section is the canonical place for session-to-session continuity.
   ingestion.
 - ☑ Extend the planner beyond `--delete-untagged` to cover tag selectors, exclusions, age filters, and keep rules.
 - ☑ Extend execution beyond package-version deletion so `untag-only` roots can be applied safely.
-- ☐ Validate the new execution path against the seeded test registry workflow instead of local-only command tests.
-- ☐ Resolve upstream-action compatibility with the dedicated GHCR test org; current blocker is upstream repository
-  lookup against `GET /repos/<GHCR_TEST_OWNER>/<repository>`.
+- ☑ Validate the new execution path against the seeded test registry workflow instead of local-only command tests.
+- ☑ Resolve upstream-action compatibility with the dedicated GHCR test org well enough for the current scenario matrix
+  to pass with both executors.
+- ☑ Extend the live scenario executor harness beyond basic delete/untag cases so it can exercise tag exclusion and keep
+  rules against the dedicated test org.
 - ☐ Revisit action packaging after the live ingest path and cleanup execution path are both stable.
 - ☑ Add package scopes to the DB schema so one SQLite database can store multiple owner/package scans.
 - ☑ Add a real GitHub Packages and GHCR ingest adapter beside the fixture loader.
@@ -166,17 +168,22 @@ This section is the canonical place for session-to-session continuity.
     uploads the final rescan DB artifact
   - `test-scenario-executor.yml` clears and reseeds a dedicated package per scenario, runs either `ghcr-manager` or
     `dataaxiom/ghcr-cleanup-action`, and uploads one owner/package/executor scan-history DB with both scans
-  - `test-scenario-executor-matrix.yml` now fans out the full 6-scenario × 2-executor matrix in parallel by calling the
-    reusable scenario workflow with executor-isolated package-name suffixes, so same-scenario runs do not race on one
-    GHCR package
-  - the latest matrix run passed for all 12 scenario/executor combinations
-  - current scenario coverage includes:
+  - `test-scenario-executor-matrix.yml` fans out the reusable scenario workflow in parallel with executor-isolated
+    package-name suffixes, so same-scenario runs do not race on one GHCR package
+  - the latest completed matrix baseline passed for all 6 scenarios × 2 executors (12 jobs)
+  - the committed scenario workflow definitions now cover:
     - `delete-untagged-noop`
     - `delete-untagged-real`
     - `tagged-fully-deletable`
     - `blocked-shared-closure`
     - `untag-only-single-shared-root`
     - `untag-only-multiarch-shared-root`
+    - `exclude-tag-protected-root`
+    - `keep-n-tagged-overflow`
+    - `keep-n-untagged-overflow`
+    - `delete-tags-keep-n-tagged-overflow`
+  - the newly added four scenarios have local workflow coverage wired up but were not yet run in GitHub Actions at the
+    time of this note, so the last known green baseline remains the earlier 12-job matrix
   - scenario-managed tags are namespaced as `${scenarioId}--<tag>` so later mixed-scenario packages can avoid tag
     collisions
   - `blocked-shared-closure` now builds its platform children through the shared `test-registry-build-image` action so
@@ -568,10 +575,11 @@ src/
 
 ## Next Increment
 
-1. Revisit whether `manifest_edges` should stay as a stored normalized table or become derived from descriptors plus
-   referrer relations.
-2. Improve planner output so it explains why versions are protected or deletable.
-3. Add more planner tests for multi-arch images, referrers, and explicit tag exclusion cases.
+1. Run the expanded scenario matrix in GitHub Actions and inspect whether the new keep/exclude scenarios behave the same
+   for `ghcr-manager` and `dataaxiom/ghcr-cleanup-action`.
+2. Decide whether the scenario workflow should stay observational or gain explicit per-scenario post-state assertions.
+3. Triage remaining upstream-alignment gaps after the expanded matrix: wildcard/regex tag selection, multi-package
+   expansion, ghost/partial/orphaned cleanup, validate-mode parity, and action-input packaging/default semantics.
 
 ### 2026-04-29 (multi-package schema layer)
 

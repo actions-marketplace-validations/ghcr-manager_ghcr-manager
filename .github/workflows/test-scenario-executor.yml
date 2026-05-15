@@ -16,6 +16,10 @@ run-name: Test Scenario Executor (${{ inputs.scenario }} / ${{ inputs.executor }
           - untag-only-multiarch-shared-root
           - blocked-shared-closure
           - delete-untagged-real
+          - exclude-tag-protected-root
+          - keep-n-tagged-overflow
+          - keep-n-untagged-overflow
+          - delete-tags-keep-n-tagged-overflow
       executor:
         description: Cleanup executor to run against the seeded scenario package.
         required: true
@@ -168,8 +172,14 @@ jobs:
           set -euo pipefail
           delete_untagged="$(jq -r '.dataaxiomInputs["delete-untagged"] // ""' "$RESOLUTION_PATH")"
           delete_tags="$(jq -r '.dataaxiomInputs["delete-tags"] // ""' "$RESOLUTION_PATH")"
+          exclude_tags="$(jq -r '.dataaxiomInputs["exclude-tags"] // ""' "$RESOLUTION_PATH")"
+          keep_n_tagged="$(jq -r '.dataaxiomInputs["keep-n-tagged"] // ""' "$RESOLUTION_PATH")"
+          keep_n_untagged="$(jq -r '.dataaxiomInputs["keep-n-untagged"] // ""' "$RESOLUTION_PATH")"
           echo "delete_untagged=$delete_untagged" >> "$GITHUB_OUTPUT"
           echo "delete_tags=$delete_tags" >> "$GITHUB_OUTPUT"
+          echo "exclude_tags=$exclude_tags" >> "$GITHUB_OUTPUT"
+          echo "keep_n_tagged=$keep_n_tagged" >> "$GITHUB_OUTPUT"
+          echo "keep_n_untagged=$keep_n_untagged" >> "$GITHUB_OUTPUT"
 
       - name: Execute with ghcr-cleanup-action action
         if: ${{ inputs.executor == 'ghcr-cleanup-action' }}
@@ -180,6 +190,9 @@ jobs:
           package: ${{ steps.scenario.outputs.package_name }}
           delete-untagged: ${{ steps.upstream-inputs.outputs.delete_untagged }}
           delete-tags: ${{ steps.upstream-inputs.outputs.delete_tags }}
+          exclude-tags: ${{ steps.upstream-inputs.outputs.exclude_tags }}
+          keep-n-tagged: ${{ steps.upstream-inputs.outputs.keep_n_tagged }}
+          keep-n-untagged: ${{ steps.upstream-inputs.outputs.keep_n_untagged }}
 
       - name: Record upstream executor summary
         if: ${{ inputs.executor == 'ghcr-cleanup-action' }}

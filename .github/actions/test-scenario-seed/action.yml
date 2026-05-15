@@ -238,12 +238,150 @@ runs:
           --tag "$IMAGE_REF:${SCENARIO_ID}--delete-me" \
           "$delete_dir"
 
+    - name: Seed exclude-tag-protected-root
+      if: ${{ inputs.seed_strategy == 'exclude-tag-protected-root' }}
+      shell: bash
+      env:
+        IMAGE_REF: ${{ inputs.image_ref }}
+        SCENARIO_ID: exclude-tag-protected-root
+      run: |
+        set -euo pipefail
+        context_dir="$(mktemp -d)"
+        cp "$GITHUB_ACTION_PATH/../../test-scenarios/minimal-image/Dockerfile" "$context_dir/Dockerfile"
+        printf '%s\n' "$SCENARIO_ID" > "$context_dir/payload.txt"
+        docker buildx build \
+          --platform linux/amd64 \
+          --provenance=false \
+          --push \
+          --tag "$IMAGE_REF:${SCENARIO_ID}--delete-me" \
+          --tag "$IMAGE_REF:${SCENARIO_ID}--keep-me" \
+          "$context_dir"
+
+    - name: Seed keep-n-tagged-overflow
+      if: ${{ inputs.seed_strategy == 'keep-n-tagged-overflow' }}
+      shell: bash
+      env:
+        IMAGE_REF: ${{ inputs.image_ref }}
+        SCENARIO_ID: keep-n-tagged-overflow
+      run: |
+        set -euo pipefail
+
+        oldest_dir="$(mktemp -d)"
+        cp "$GITHUB_ACTION_PATH/../../test-scenarios/minimal-image/Dockerfile" "$oldest_dir/Dockerfile"
+        printf '%s\n' "${SCENARIO_ID} oldest" > "$oldest_dir/payload.txt"
+        docker buildx build \
+          --platform linux/amd64 \
+          --provenance=false \
+          --push \
+          --tag "$IMAGE_REF:${SCENARIO_ID}--oldest" \
+          "$oldest_dir"
+
+        middle_dir="$(mktemp -d)"
+        cp "$GITHUB_ACTION_PATH/../../test-scenarios/minimal-image/Dockerfile" "$middle_dir/Dockerfile"
+        printf '%s\n' "${SCENARIO_ID} middle" > "$middle_dir/payload.txt"
+        docker buildx build \
+          --platform linux/amd64 \
+          --provenance=false \
+          --push \
+          --tag "$IMAGE_REF:${SCENARIO_ID}--middle" \
+          "$middle_dir"
+
+        newest_dir="$(mktemp -d)"
+        cp "$GITHUB_ACTION_PATH/../../test-scenarios/minimal-image/Dockerfile" "$newest_dir/Dockerfile"
+        printf '%s\n' "${SCENARIO_ID} newest" > "$newest_dir/payload.txt"
+        docker buildx build \
+          --platform linux/amd64 \
+          --provenance=false \
+          --push \
+          --tag "$IMAGE_REF:${SCENARIO_ID}--newest" \
+          "$newest_dir"
+
+    - name: Seed keep-n-untagged-overflow
+      if: ${{ inputs.seed_strategy == 'keep-n-untagged-overflow' }}
+      shell: bash
+      env:
+        IMAGE_REF: ${{ inputs.image_ref }}
+        SCENARIO_ID: keep-n-untagged-overflow
+      run: |
+        set -euo pipefail
+
+        oldest_dir="$(mktemp -d)"
+        cp "$GITHUB_ACTION_PATH/../../test-scenarios/minimal-image/Dockerfile" "$oldest_dir/Dockerfile"
+        printf '%s\n' "${SCENARIO_ID} oldest" > "$oldest_dir/payload.txt"
+        docker buildx build \
+          --platform linux/amd64 \
+          --provenance=false \
+          --push \
+          --tag "$IMAGE_REF:${SCENARIO_ID}--tracked" \
+          "$oldest_dir"
+
+        middle_dir="$(mktemp -d)"
+        cp "$GITHUB_ACTION_PATH/../../test-scenarios/minimal-image/Dockerfile" "$middle_dir/Dockerfile"
+        printf '%s\n' "${SCENARIO_ID} middle" > "$middle_dir/payload.txt"
+        docker buildx build \
+          --platform linux/amd64 \
+          --provenance=false \
+          --push \
+          --tag "$IMAGE_REF:${SCENARIO_ID}--tracked" \
+          "$middle_dir"
+
+        newest_dir="$(mktemp -d)"
+        cp "$GITHUB_ACTION_PATH/../../test-scenarios/minimal-image/Dockerfile" "$newest_dir/Dockerfile"
+        printf '%s\n' "${SCENARIO_ID} newest" > "$newest_dir/payload.txt"
+        docker buildx build \
+          --platform linux/amd64 \
+          --provenance=false \
+          --push \
+          --tag "$IMAGE_REF:${SCENARIO_ID}--tracked" \
+          "$newest_dir"
+
+    - name: Seed delete-tags-keep-n-tagged-overflow
+      if: ${{ inputs.seed_strategy == 'delete-tags-keep-n-tagged-overflow' }}
+      shell: bash
+      env:
+        IMAGE_REF: ${{ inputs.image_ref }}
+        SCENARIO_ID: delete-tags-keep-n-tagged-overflow
+      run: |
+        set -euo pipefail
+
+        keep_dir="$(mktemp -d)"
+        cp "$GITHUB_ACTION_PATH/../../test-scenarios/minimal-image/Dockerfile" "$keep_dir/Dockerfile"
+        printf '%s\n' "${SCENARIO_ID} keep" > "$keep_dir/payload.txt"
+        docker buildx build \
+          --platform linux/amd64 \
+          --provenance=false \
+          --push \
+          --tag "$IMAGE_REF:${SCENARIO_ID}--keep" \
+          "$keep_dir"
+
+        delete_old_dir="$(mktemp -d)"
+        cp "$GITHUB_ACTION_PATH/../../test-scenarios/minimal-image/Dockerfile" "$delete_old_dir/Dockerfile"
+        printf '%s\n' "${SCENARIO_ID} delete old" > "$delete_old_dir/payload.txt"
+        docker buildx build \
+          --platform linux/amd64 \
+          --provenance=false \
+          --push \
+          --tag "$IMAGE_REF:${SCENARIO_ID}--delete-old" \
+          "$delete_old_dir"
+
+        delete_new_dir="$(mktemp -d)"
+        cp "$GITHUB_ACTION_PATH/../../test-scenarios/minimal-image/Dockerfile" "$delete_new_dir/Dockerfile"
+        printf '%s\n' "${SCENARIO_ID} delete new" > "$delete_new_dir/payload.txt"
+        docker buildx build \
+          --platform linux/amd64 \
+          --provenance=false \
+          --push \
+          --tag "$IMAGE_REF:${SCENARIO_ID}--delete-new" \
+          "$delete_new_dir"
+
     - name: Reject unknown seed strategy
       if:
         ${{ inputs.seed_strategy != 'delete-untagged-noop' && inputs.seed_strategy != 'delete-untagged-real' &&
         inputs.seed_strategy != 'tagged-fully-deletable' && inputs.seed_strategy != 'untag-only-single-shared-root' &&
         inputs.seed_strategy != 'untag-only-multiarch-shared-root' && inputs.seed_strategy != 'blocked-shared-closure'
-        }}
+        && inputs.seed_strategy != 'exclude-tag-protected-root' && inputs.seed_strategy != 'keep-n-tagged-overflow' &&
+        inputs.seed_strategy != 'keep-n-untagged-overflow' && inputs.seed_strategy !=
+        'delete-tags-keep-n-tagged-overflow' }}
       shell: bash
       run: |
         echo "Unknown seed strategy: ${{ inputs.seed_strategy }}" >&2
