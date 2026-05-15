@@ -189,6 +189,8 @@ This section is the canonical place for session-to-session continuity.
     - `GHCR_TEST_OWNER`
     - `GHCR_TEST_PAT_USERNAME`
     - `GHCR_TEST_PAT`
+  - `test-scenario-executor.yml` also requires `id-token: write` because `blocked-shared-closure` seeds multi-arch
+    indexes through `gh-workflow/multiarch-image-publish`, which uses keyless Cosign signing
   - the scenario matrix workflow now inherits caller secrets into the reusable scenario workflow
   - current upstream blocker:
     - `dataaxiom/ghcr-cleanup-action` fails in the dedicated test org with
