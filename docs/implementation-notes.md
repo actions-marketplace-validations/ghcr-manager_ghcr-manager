@@ -170,7 +170,7 @@ This section is the canonical place for session-to-session continuity.
     `dataaxiom/ghcr-cleanup-action`, and uploads one owner/package/executor scan-history DB with both scans
   - `test-scenario-executor-matrix.yml` fans out the reusable scenario workflow in parallel with executor-isolated
     package-name suffixes, so same-scenario runs do not race on one GHCR package
-  - the latest completed matrix baseline passed for all 6 scenarios × 2 executors (12 jobs)
+  - the latest completed matrix baseline passed for all 10 scenarios × 2 executors (20 jobs)
   - the committed scenario workflow definitions now cover:
     - `delete-untagged-noop`
     - `delete-untagged-real`
@@ -182,8 +182,6 @@ This section is the canonical place for session-to-session continuity.
     - `keep-n-tagged-overflow`
     - `keep-n-untagged-overflow`
     - `delete-tags-keep-n-tagged-overflow`
-  - the newly added four scenarios have local workflow coverage wired up but were not yet run in GitHub Actions at the
-    time of this note, so the last known green baseline remains the earlier 12-job matrix
   - scenario-managed tags are namespaced as `${scenarioId}--<tag>` so later mixed-scenario packages can avoid tag
     collisions
   - `blocked-shared-closure` now builds its platform children through the shared `test-registry-build-image` action so
