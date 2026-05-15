@@ -166,9 +166,11 @@ This section is the canonical place for session-to-session continuity.
     uploads the final rescan DB artifact
   - `test-scenario-executor.yml` clears and reseeds a dedicated package per scenario, runs either `ghcr-manager` or
     `dataaxiom/ghcr-cleanup-action`, and uploads one owner/package/executor scan-history DB with both scans
-  - `test-scenario-executor-matrix.yml` fans out all scenario/executor combinations in parallel by calling the reusable
-    scenario workflow with executor-isolated package-name suffixes, so same-scenario runs do not race on one GHCR
-    package
+  - `test-scenario-executor-matrix.yml` currently fans out only the `ghcr-manager` scenario combinations in parallel by
+    calling the reusable scenario workflow with executor-isolated package-name suffixes, so same-scenario runs do not
+    race on one GHCR package
+  - upstream action runs stay available through direct `test-scenario-executor.yml` dispatches, but are excluded from
+    the matrix until the dedicated test-org repository lookup blocker is resolved
   - current scenario coverage includes:
     - `delete-untagged-noop`
     - `delete-untagged-real`
@@ -178,6 +180,8 @@ This section is the canonical place for session-to-session continuity.
     - `untag-only-multiarch-shared-root`
   - scenario-managed tags are namespaced as `${scenarioId}--<tag>` so later mixed-scenario packages can avoid tag
     collisions
+  - `blocked-shared-closure` now builds its platform children through the shared `test-registry-build-image` action so
+    the published digests match the expectations of `gh-workflow/multiarch-image-publish`
   - validation scenarios can now derive plan args from the scanned DB before running the planner
   - live GHCR test workflows now require dedicated test-org configuration:
     - `GHCR_TEST_OWNER`

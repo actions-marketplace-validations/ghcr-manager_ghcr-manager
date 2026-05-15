@@ -126,38 +126,41 @@ runs:
     - name: Build blocked delete amd64 child
       if: ${{ inputs.seed_strategy == 'blocked-shared-closure' }}
       id: blocked-delete-amd64
-      uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+      uses: ./.github/actions/test-registry-build-image
       with:
         context: ${{ steps.blocked-contexts.outputs.delete_dir }}
-        file: ${{ steps.blocked-contexts.outputs.delete_dir }}/Dockerfile
-        push: true
-        provenance: false
-        platforms: linux/amd64
-        tags: ${{ inputs.image_ref }}:blocked-shared-closure--source-delete-amd64
+        dockerfile: ${{ steps.blocked-contexts.outputs.delete_dir }}/Dockerfile
+        image_ref: ${{ inputs.image_ref }}
+        arch: blocked-shared-closure-source-delete-amd64
+        platform: linux/amd64
+        registry_username: ${{ inputs.registry_username }}
+        registry_password: ${{ inputs.registry_password }}
 
     - name: Build blocked shared arm64 child
       if: ${{ inputs.seed_strategy == 'blocked-shared-closure' }}
       id: blocked-shared-arm64
-      uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+      uses: ./.github/actions/test-registry-build-image
       with:
         context: ${{ steps.blocked-contexts.outputs.shared_dir }}
-        file: ${{ steps.blocked-contexts.outputs.shared_dir }}/Dockerfile
-        push: true
-        provenance: false
-        platforms: linux/arm64
-        tags: ${{ inputs.image_ref }}:blocked-shared-closure--source-shared-arm64
+        dockerfile: ${{ steps.blocked-contexts.outputs.shared_dir }}/Dockerfile
+        image_ref: ${{ inputs.image_ref }}
+        arch: blocked-shared-closure-source-shared-arm64
+        platform: linux/arm64
+        registry_username: ${{ inputs.registry_username }}
+        registry_password: ${{ inputs.registry_password }}
 
     - name: Build blocked keep amd64 child
       if: ${{ inputs.seed_strategy == 'blocked-shared-closure' }}
       id: blocked-keep-amd64
-      uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+      uses: ./.github/actions/test-registry-build-image
       with:
         context: ${{ steps.blocked-contexts.outputs.keep_dir }}
-        file: ${{ steps.blocked-contexts.outputs.keep_dir }}/Dockerfile
-        push: true
-        provenance: false
-        platforms: linux/amd64
-        tags: ${{ inputs.image_ref }}:blocked-shared-closure--source-keep-amd64
+        dockerfile: ${{ steps.blocked-contexts.outputs.keep_dir }}/Dockerfile
+        image_ref: ${{ inputs.image_ref }}
+        arch: blocked-shared-closure-source-keep-amd64
+        platform: linux/amd64
+        registry_username: ${{ inputs.registry_username }}
+        registry_password: ${{ inputs.registry_password }}
 
     - name: Publish blocked delete index
       if: ${{ inputs.seed_strategy == 'blocked-shared-closure' }}

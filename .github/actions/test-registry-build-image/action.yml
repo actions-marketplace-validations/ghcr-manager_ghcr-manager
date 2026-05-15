@@ -5,9 +5,17 @@ inputs:
   image_ref:
     description: Image reference to push the temporary architecture image to.
     required: true
+  context:
+    description: Optional build context directory.
+    required: false
+    default: .
   arch:
     description: Architecture label used in the temporary image tag.
     required: true
+  dockerfile:
+    description: Optional Dockerfile path or URL.
+    required: false
+    default: https://raw.githubusercontent.com/gh-workflow/multiarch-image-publish/main/tests/build/Dockerfile
   platform:
     description: Docker platform to build.
     required: true
@@ -40,9 +48,8 @@ runs:
       id: build
       uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
       with:
-        context: .
-        file: >-
-          https://raw.githubusercontent.com/gh-workflow/multiarch-image-publish/main/tests/build/Dockerfile
+        context: ${{ inputs.context }}
+        file: ${{ inputs.dockerfile }}
         push: true
         provenance: true
         platforms: ${{ inputs.platform }}
