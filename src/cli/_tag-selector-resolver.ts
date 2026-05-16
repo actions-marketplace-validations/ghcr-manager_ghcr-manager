@@ -12,7 +12,9 @@ export function resolveTagSelectors(database: Database.Database, inputs: PlanCom
     return inputs;
   }
 
-  const availableTags = _listLatestPackageTags(database, inputs.owner, inputs.packageName);
+  const availableTags = inputs.useRegex
+    ? _listLatestPackageTags(database, inputs.owner, inputs.packageName)
+    : undefined;
   return {
     ...inputs,
     deleteTags: inputs.deleteGhostImages
@@ -21,8 +23,22 @@ export function resolveTagSelectors(database: Database.Database, inputs: PlanCom
         ? _listLatestPartialTags(database, inputs.owner, inputs.packageName, inputs.cutoffTimestamp)
         : inputs.deleteOrphanedImages
           ? _listLatestOrphanedTags(database, inputs.owner, inputs.packageName, inputs.cutoffTimestamp)
-          : _resolveSelectors(availableTags, inputs.deleteTags, inputs.useRegex),
-    excludeTags: _resolveSelectors(availableTags, inputs.excludeTags, inputs.useRegex)
+          : _resolveSelectors(
+              database,
+              inputs.owner,
+              inputs.packageName,
+              availableTags,
+              inputs.deleteTags,
+              inputs.useRegex
+            ),
+    excludeTags: _resolveSelectors(
+      database,
+      inputs.owner,
+      inputs.packageName,
+      availableTags,
+      inputs.excludeTags,
+      inputs.useRegex
+    )
   };
 }
 
@@ -42,16 +58,64 @@ function _listLatestPackageTags(database: Database.Database, owner: string, pack
   return rows.map((row) => row.tag);
 }
 
-function _resolveSelectors(availableTags: string[], selectors: string[], useRegex: boolean): string[] {
+function _resolveSelectors(
+  database: Database.Database,
+  owner: string,
+  packageName: string,
+  availableTags: string[] | undefined,
+  selectors: string[],
+  useRegex: boolean
+): string[] {
+  if (selectors.length === 0) {
+    return [];
+  }
+
+  if (!useRegex) {
+    return _resolveWildcardSelectorsInDatabase(database, owner, packageName, selectors);
+  }
+
+  if (!availableTags) {
+    throw new Error("availableTags are required for regex selector resolution");
+  }
+
   const resolved = new Set<string>();
   for (const selector of selectors) {
-    const matcher = useRegex ? _buildRegexMatcher(selector) : _buildWildcardMatcher(selector);
+    const matcher = _buildRegexMatcher(selector);
     for (const tag of availableTags) {
       if (matcher(tag)) {
         resolved.add(tag);
       }
     }
   }
+  return [...resolved];
+}
+
+function _resolveWildcardSelectorsInDatabase(
+  database: Database.Database,
+  owner: string,
+  packageName: string,
+  selectors: string[]
+): string[] {
+  const resolved = new Set<string>();
+  const statement = database.prepare(
+    `
+      SELECT t.tag
+      FROM tags t
+      INNER JOIN v_latest_scan_per_package latest_scan ON latest_scan.scan_id = t.scan_id
+      WHERE latest_scan.owner = ?
+        AND latest_scan.package_name = ?
+        AND t.tag LIKE ? ESCAPE '\\'
+      ORDER BY t.tag
+    `
+  );
+
+  for (const selector of selectors) {
+    const rows = statement.all(owner, packageName, _wildcardSelectorToSqlLike(selector)) as Array<{ tag: string }>;
+    for (const row of rows) {
+      resolved.add(row.tag);
+    }
+  }
+
   return [...resolved];
 }
 
@@ -184,11 +248,19 @@ function _buildRegexMatcher(selector: string): (tag: string) => boolean {
   return (tag) => pattern.test(tag);
 }
 
-function _buildWildcardMatcher(selector: string): (tag: string) => boolean {
-  const escaped = selector
-    .replaceAll(/[|\\{}()[\]^$+.]/g, "\\$&")
-    .replaceAll("*", ".*")
-    .replaceAll("?", ".");
-  const pattern = new RegExp(`^${escaped}$`);
-  return (tag) => pattern.test(tag);
+function _wildcardSelectorToSqlLike(selector: string): string {
+  return selector.replaceAll(/[%_\\*?]/g, (character) => {
+    switch (character) {
+      case "%":
+      case "_":
+      case "\\":
+        return `\\${character}`;
+      case "*":
+        return "%";
+      case "?":
+        return "_";
+      default:
+        return character;
+    }
+  });
 }

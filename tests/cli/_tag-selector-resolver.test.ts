@@ -46,6 +46,66 @@ test("resolveTagSelectors expands wildcard delete-tag selectors against latest s
   });
 });
 
+test("resolveTagSelectors treats sql wildcard characters literally in wildcard mode", () => {
+  const tempDirectory = mkdtempSync(join(tmpdir(), "ghcr-manager-"));
+  const databasePath = join(tempDirectory, "scan.sqlite");
+  const database = openDatabase(databasePath);
+  const writer = new ScanWriter(database);
+  writer.resetScan("acme", "example", "2026-05-15T00:00:00.000Z");
+  writer.insertPackageVersion({
+    versionId: 201,
+    createdAt: "2026-05-10T00:00:00.000Z",
+    updatedAt: "2026-05-10T00:00:00.000Z"
+  });
+  writer.insertManifest({
+    versionId: 201,
+    digest: "sha256:literal-percent",
+    mediaType: "application/vnd.oci.image.manifest.v1+json",
+    manifestKind: "image_manifest"
+  });
+  writer.insertTag({
+    tag: "release%candidate_1",
+    versionId: 201
+  });
+  writer.insertPackageVersion({
+    versionId: 202,
+    createdAt: "2026-05-11T00:00:00.000Z",
+    updatedAt: "2026-05-11T00:00:00.000Z"
+  });
+  writer.insertManifest({
+    versionId: 202,
+    digest: "sha256:similar",
+    mediaType: "application/vnd.oci.image.manifest.v1+json",
+    manifestKind: "image_manifest"
+  });
+  writer.insertTag({
+    tag: "releasexcandidatez1",
+    versionId: 202
+  });
+  writer.markScanCompleted("2026-05-15T00:00:00.000Z");
+
+  try {
+    const resolved = resolveTagSelectors(database, {
+      databasePath,
+      owner: "acme",
+      packageName: "example",
+      deleteTags: ["release%candidate_1"],
+      deleteTagsRequested: true,
+      deleteGhostImages: false,
+      deletePartialImages: false,
+      deleteOrphanedImages: false,
+      excludeTags: [],
+      deleteUntagged: false,
+      useRegex: false
+    });
+
+    assert.deepEqual(resolved.deleteTags, ["release%candidate_1"]);
+  } finally {
+    database.close();
+    rmSync(tempDirectory, { recursive: true, force: true });
+  }
+});
+
 test("resolveTagSelectors expands regex delete-tag and exclude-tag selectors", async () => {
   await _withSampleDatabase(async (database) => {
     const inputs = {
