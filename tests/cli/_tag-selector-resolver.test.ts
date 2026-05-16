@@ -106,7 +106,29 @@ test("resolveTagSelectors treats sql wildcard characters literally in wildcard m
   }
 });
 
-test("resolveTagSelectors expands regex delete-tag and exclude-tag selectors", async () => {
+test("resolveTagSelectors expands wildcard delete-tag and exclude-tag selectors", async () => {
+  await _withSampleDatabase(async (database) => {
+    const inputs = {
+      databasePath: "scan.sqlite",
+      owner: "acme",
+      packageName: "example",
+      deleteTags: ["l*"],
+      deleteTagsRequested: true,
+      deleteGhostImages: false,
+      deletePartialImages: false,
+      deleteOrphanedImages: false,
+      excludeTags: ["*me"],
+      deleteUntagged: false,
+      useRegex: false
+    };
+
+    const resolved = resolveTagSelectors(database, inputs);
+    assert.deepEqual(resolved.deleteTags, ["latest"]);
+    assert.deepEqual(resolved.excludeTags, ["keep-me"]);
+  });
+});
+
+test("resolveTagSelectors expands regex delete-tag and exclude-tag selectors in sqlite", async () => {
   await _withSampleDatabase(async (database) => {
     const inputs = {
       databasePath: "scan.sqlite",

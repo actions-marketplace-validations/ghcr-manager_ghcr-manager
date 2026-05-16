@@ -81,8 +81,8 @@ This section is the canonical place for session-to-session continuity.
   to pass with both executors.
 - ☑ Extend the live scenario executor harness beyond basic delete/untag cases so it can exercise tag exclusion and keep
   rules against the dedicated test org.
-- ☑ Add CLI-side wildcard and regex tag selector expansion for tagged planner/execution flows, and wire the scenario
-  executor harness to pass upstream `use-regex` inputs.
+- ☑ Add CLI-side wildcard tag selector expansion for tagged planner/execution flows, with optional `--use-regex`
+  fallback for explicit regex selector runs.
 - ☑ Add DB-derived `delete-orphaned-images` planning/execution by resolving orphan-style `sha256-*` tags from the latest
   scan before the tagged planner runs.
 - ☑ Add a derived `v_digest_derived_tag_relations` SQL view for digest-shaped `sha256-*` tags without weakening the
@@ -223,7 +223,7 @@ This section is the canonical place for session-to-session continuity.
     - `delete-orphaned-images-noop`
     - `wildcard-tagged-fully-deletable`
     - `regex-untag-only-single-shared-root`
-  - the selector-pattern and orphan scenarios now pass in GitHub Actions for both executors
+    - the selector-pattern and orphan scenarios now pass in GitHub Actions for both executors
   - scenario-managed tags are namespaced as `${scenarioId}--<tag>` so later mixed-scenario packages can avoid tag
     collisions
   - `blocked-shared-closure` now builds its platform children through the shared `test-registry-build-image` action so
@@ -504,8 +504,8 @@ src/
   - deletion safety is decided on manifest closures, not on tag names alone
   - selective tag matches may require untag actions separate from package-version deletion
   - destructive cleanup should require explicit intent, with no implicit default "delete all untagged" mode
-- Deferred upstream parity features for later planner phases: ghost/partial/orphaned image cleanup, regex selectors,
-  multi-package expansion, and validate-mode parity.
+- Deferred upstream parity features for later planner phases: ghost/partial/orphaned image cleanup, multi-package
+  expansion, and validate-mode parity.
 - Added [docs/cleanup-roadmap.md](cleanup-roadmap.md) to turn the broad cleanup reimplementation goal into ordered,
   session-sized subtasks with explicit deliverables and acceptance focus.
 - Chosen documentation shape for the cleanup track:
@@ -588,7 +588,7 @@ src/
     root-level keep ranking retains the newer shared root and the older shared root remains `untag-only` because
     unmatched tags still exist on it
 - Kept the scope intentionally narrow for now:
-  - exact tag matches only, not wildcard or regex selectors
+  - exact tag matches only, not wildcard selectors
   - one selector family per invocation instead of combining `delete-tags` with `delete-untagged`
 
 ### 2026-05-14

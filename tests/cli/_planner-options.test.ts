@@ -42,6 +42,23 @@ test("resolvePlanCommandInputs rejects exclude-tag for keep-n-untagged", () => {
   );
 });
 
+test("resolvePlanCommandInputs treats delete-tag selectors as wildcard patterns by default", () => {
+  const inputs = resolvePlanCommandInputs([
+    "--db",
+    "scan.sqlite",
+    "--owner",
+    "acme",
+    "--package",
+    "example",
+    "--delete-tag",
+    "*latest*"
+  ]);
+
+  assert.equal(inputs.deleteTagsRequested, true);
+  assert.deepEqual(inputs.deleteTags, ["*latest*"]);
+  assert.equal(inputs.useRegex, false);
+});
+
 test("resolvePlanCommandInputs parses use-regex for tagged selectors", () => {
   const inputs = resolvePlanCommandInputs([
     "--db",

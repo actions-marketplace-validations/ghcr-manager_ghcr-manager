@@ -12,9 +12,6 @@ export function resolveTagSelectors(database: Database.Database, inputs: PlanCom
     return inputs;
   }
 
-  const availableTags = inputs.useRegex
-    ? _listLatestPackageTags(database, inputs.owner, inputs.packageName)
-    : undefined;
   return {
     ...inputs,
     deleteTags: inputs.deleteGhostImages
@@ -23,46 +20,15 @@ export function resolveTagSelectors(database: Database.Database, inputs: PlanCom
         ? _listLatestPartialTags(database, inputs.owner, inputs.packageName, inputs.cutoffTimestamp)
         : inputs.deleteOrphanedImages
           ? _listLatestOrphanedTags(database, inputs.owner, inputs.packageName, inputs.cutoffTimestamp)
-          : _resolveSelectors(
-              database,
-              inputs.owner,
-              inputs.packageName,
-              availableTags,
-              inputs.deleteTags,
-              inputs.useRegex
-            ),
-    excludeTags: _resolveSelectors(
-      database,
-      inputs.owner,
-      inputs.packageName,
-      availableTags,
-      inputs.excludeTags,
-      inputs.useRegex
-    )
+          : _resolveSelectors(database, inputs.owner, inputs.packageName, inputs.deleteTags, inputs.useRegex),
+    excludeTags: _resolveSelectors(database, inputs.owner, inputs.packageName, inputs.excludeTags, inputs.useRegex)
   };
-}
-
-function _listLatestPackageTags(database: Database.Database, owner: string, packageName: string): string[] {
-  const rows = database
-    .prepare(
-      `
-        SELECT t.tag
-        FROM tags t
-        INNER JOIN v_latest_scan_per_package latest_scan ON latest_scan.scan_id = t.scan_id
-        WHERE latest_scan.owner = ?
-          AND latest_scan.package_name = ?
-        ORDER BY t.tag
-      `
-    )
-    .all(owner, packageName) as Array<{ tag: string }>;
-  return rows.map((row) => row.tag);
 }
 
 function _resolveSelectors(
   database: Database.Database,
   owner: string,
   packageName: string,
-  availableTags: string[] | undefined,
   selectors: string[],
   useRegex: boolean
 ): string[] {
@@ -70,24 +36,9 @@ function _resolveSelectors(
     return [];
   }
 
-  if (!useRegex) {
-    return _resolveWildcardSelectorsInDatabase(database, owner, packageName, selectors);
-  }
-
-  if (!availableTags) {
-    throw new Error("availableTags are required for regex selector resolution");
-  }
-
-  const resolved = new Set<string>();
-  for (const selector of selectors) {
-    const matcher = _buildRegexMatcher(selector);
-    for (const tag of availableTags) {
-      if (matcher(tag)) {
-        resolved.add(tag);
-      }
-    }
-  }
-  return [...resolved];
+  return useRegex
+    ? _resolveRegexSelectorsInDatabase(database, owner, packageName, selectors)
+    : _resolveWildcardSelectorsInDatabase(database, owner, packageName, selectors);
 }
 
 function _resolveWildcardSelectorsInDatabase(
@@ -111,6 +62,37 @@ function _resolveWildcardSelectorsInDatabase(
 
   for (const selector of selectors) {
     const rows = statement.all(owner, packageName, _wildcardSelectorToSqlLike(selector)) as Array<{ tag: string }>;
+    for (const row of rows) {
+      resolved.add(row.tag);
+    }
+  }
+
+  return [...resolved];
+}
+
+function _resolveRegexSelectorsInDatabase(
+  database: Database.Database,
+  owner: string,
+  packageName: string,
+  selectors: string[]
+): string[] {
+  _registerRegexFunction(database);
+
+  const resolved = new Set<string>();
+  const statement = database.prepare(
+    `
+      SELECT t.tag
+      FROM tags t
+      INNER JOIN v_latest_scan_per_package latest_scan ON latest_scan.scan_id = t.scan_id
+      WHERE latest_scan.owner = ?
+        AND latest_scan.package_name = ?
+        AND regexp(?, t.tag)
+      ORDER BY t.tag
+    `
+  );
+
+  for (const selector of selectors) {
+    const rows = statement.all(owner, packageName, selector) as Array<{ tag: string }>;
     for (const row of rows) {
       resolved.add(row.tag);
     }
@@ -243,11 +225,6 @@ function _listLatestOrphanedTags(
   return rows.map((row) => row.tag);
 }
 
-function _buildRegexMatcher(selector: string): (tag: string) => boolean {
-  const pattern = new RegExp(selector);
-  return (tag) => pattern.test(tag);
-}
-
 function _wildcardSelectorToSqlLike(selector: string): string {
   return selector.replaceAll(/[%_\\*?]/g, (character) => {
     switch (character) {
@@ -263,4 +240,14 @@ function _wildcardSelectorToSqlLike(selector: string): string {
         return character;
     }
   });
+}
+
+function _registerRegexFunction(database: Database.Database): void {
+  const markedDatabase = database as Database.Database & { __ghcrManagerRegexRegistered?: boolean };
+  if (markedDatabase.__ghcrManagerRegexRegistered) {
+    return;
+  }
+
+  database.function("regexp", (pattern: string, value: string) => (new RegExp(pattern).test(value) ? 1 : 0));
+  markedDatabase.__ghcrManagerRegexRegistered = true;
 }

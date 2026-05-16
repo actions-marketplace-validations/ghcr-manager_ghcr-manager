@@ -510,6 +510,42 @@ test("handlePlan expands wildcard delete-tag selectors before planning", async (
   assert.deepEqual(plan.directTargetTags, ["latest"]);
 });
 
+test("handlePlan expands wildcard selectors before planning", async () => {
+  const originalLog = console.log;
+  const writes: string[] = [];
+  console.log = (message?: unknown) => {
+    writes.push(String(message));
+  };
+
+  try {
+    await _withSampleDatabase(async (databasePath) => {
+      assert.equal(
+        await handlePlan([
+          "--db",
+          databasePath,
+          "--owner",
+          "acme",
+          "--package",
+          "example",
+          "--delete-tag",
+          "latest",
+          "--exclude-tag",
+          "keep*"
+        ]),
+        0
+      );
+    });
+  } finally {
+    console.log = originalLog;
+  }
+
+  const plan = JSON.parse(writes[0] as string) as {
+    plannerInputs: { deleteTags: string[]; excludeTags: string[] };
+  };
+  assert.deepEqual(plan.plannerInputs.deleteTags, ["latest"]);
+  assert.deepEqual(plan.plannerInputs.excludeTags, ["keep-me"]);
+});
+
 test("handlePlan expands regex selectors before planning when use-regex is set", async () => {
   const originalLog = console.log;
   const writes: string[] = [];
@@ -547,7 +583,7 @@ test("handlePlan expands regex selectors before planning when use-regex is set",
   assert.deepEqual(plan.plannerInputs.excludeTags, ["keep-me"]);
 });
 
-test("handlePlan treats unmatched regex delete-tag selectors as a no-op", async () => {
+test("handlePlan treats unmatched wildcard delete-tag selectors as a no-op", async () => {
   const originalLog = console.log;
   const writes: string[] = [];
   console.log = (message?: unknown) => {
@@ -565,8 +601,7 @@ test("handlePlan treats unmatched regex delete-tag selectors as a no-op", async 
           "--package",
           "example",
           "--delete-tag",
-          "^does-not-match$",
-          "--use-regex"
+          "does-not-match"
         ]),
         0
       );
