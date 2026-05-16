@@ -87,8 +87,8 @@ This section is the canonical place for session-to-session continuity.
   strict manifest graph tables.
 - ☑ Add a repo-local digest-derived tag relation reporting tool and query note so latest-scan heuristic rows can be
   inspected without ad hoc SQL.
-- ☐ Remove the failed package-visibility/publicize automation from the live test workflows and keep private-registry
-  handling explicit.
+- ☐ Decide and document the intended `delete-orphaned-images` behavior when GHCR refuses package-version deletion for a
+  package's last tagged version.
 - ☐ Revisit action packaging after the live ingest path and cleanup execution path are both stable.
 - ☑ Add package scopes to the DB schema so one SQLite database can store multiple owner/package scans.
 - ☑ Add a real GitHub Packages and GHCR ingest adapter beside the fixture loader.
@@ -190,7 +190,9 @@ This section is the canonical place for session-to-session continuity.
     or more matrix legs fail
   - `manual-run-test.yml` now switches to `GHCR_TEST_PAT` automatically when the requested owner matches
     `GHCR_TEST_OWNER`, so private test-org packages remain scannable without a separate ad hoc workflow edit
-  - the latest completed matrix baseline passed for all 10 scenarios × 2 executors (20 jobs)
+  - the latest completed matrix baseline passed for all non-orphan scenarios across 14 scenarios × 2 executors; only the
+    two known `delete-orphaned-images-real` jobs still fail, one per executor, with GHCR's "last tagged version"
+    package-version delete restriction
   - the committed scenario workflow definitions now cover:
     - `delete-untagged-noop`
     - `delete-untagged-real`
@@ -206,8 +208,8 @@ This section is the canonical place for session-to-session continuity.
     - `delete-orphaned-images-noop`
     - `wildcard-tagged-fully-deletable`
     - `regex-untag-only-single-shared-root`
-  - the latest completed live baseline still reflects the earlier 10-scenario matrix; the two selector-pattern scenarios
-    and the two orphaned-image scenarios were added after that run and still need a GitHub Actions pass
+  - the selector-pattern scenarios now pass in GitHub Actions; the remaining live gap is limited to the two
+    `delete-orphaned-images-real` executor jobs
   - scenario-managed tags are namespaced as `${scenarioId}--<tag>` so later mixed-scenario packages can avoid tag
     collisions
   - `blocked-shared-closure` now builds its platform children through the shared `test-registry-build-image` action so
