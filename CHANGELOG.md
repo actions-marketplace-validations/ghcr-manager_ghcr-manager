@@ -44,7 +44,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Immutable per-scan UUID (`package_scans.scan_uuid`) for robust duplicate detection across merged databases.
 - Optional action artifact upload for scan DB export (`upload-db-artifact`, optional retention override).
 - Manual workflow for interactive scan runs (`.github/workflows/manual-run.yml`).
-- Missing-manifest investigation SQL recipes (`docs/missing-manifests-queries.md`) and schema/terminology docs.
+- Missing-manifest investigation SQL recipes (`docs/queries/missing-manifests-queries.md`) and schema/terminology docs.
 
 ### Changed
 

@@ -71,7 +71,7 @@ Sometimes a fetched manifest payload references a digest that is not part of the
 - Missing digests are not inserted into `manifests`.
 - Missing digests are derived from descriptor rows and `subject_digest` values whose targets are absent from
   `manifests`.
-- Query recipes: [missing-manifests-queries.md](missing-manifests-queries.md)
+- Query recipes: [queries/missing-manifests-queries.md](queries/missing-manifests-queries.md)
 
 ## Derived Digest-Tag Relations
 
@@ -79,6 +79,8 @@ Some OCI tooling publishes companion artifacts under digest-derived tags such as
 
 - `v_digest_derived_tag_relations` is a derived latest-scan view over those digest-shaped tags.
 - It infers the candidate parent digest from the tag name and reports whether that parent digest exists in `manifests`.
+- It also exposes the artifact manifest's `subject_digest` and whether that declared subject matches the inferred parent
+  digest.
 - This is heuristic helper data for planning and validation, not a substitute for `manifest_edges`.
 
 ## Raw JSON Side Tables

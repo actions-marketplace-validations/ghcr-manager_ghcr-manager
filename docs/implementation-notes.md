@@ -90,6 +90,8 @@ This section is the canonical place for session-to-session continuity.
   scan before the tagged planner runs.
 - ☑ Add a derived `v_digest_derived_tag_relations` SQL view for digest-shaped `sha256-*` tags without weakening the
   strict manifest graph tables.
+- ☑ Add a repo-local digest-derived tag relation reporting tool and query note so latest-scan heuristic rows can be
+  inspected without ad hoc SQL.
 - ☐ Revisit action packaging after the live ingest path and cleanup execution path are both stable.
 - ☑ Add package scopes to the DB schema so one SQLite database can store multiple owner/package scans.
 - ☑ Add a real GitHub Packages and GHCR ingest adapter beside the fixture loader.
@@ -651,7 +653,7 @@ src/
 ### 2026-04-29 (missing-manifest query recipes)
 
 - Operationally, GHCR scans can complete with missing manifests (HTTP 404). Ingest skips these and continues.
-- Query recipes are documented in [docs/missing-manifests-queries.md](missing-manifests-queries.md).
+- Query recipes are documented in [docs/queries/missing-manifests-queries.md](queries/missing-manifests-queries.md).
 - Rationale:
   - CLI should stay platform-agnostic and usable outside GitHub Actions.
   - GitHub-specific concerns (artifact retention, upload policy, conditional publish flags) belong to action wiring.
