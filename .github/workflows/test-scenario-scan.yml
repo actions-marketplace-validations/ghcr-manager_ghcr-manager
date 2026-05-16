@@ -5,7 +5,7 @@ run-name: Test Scenario Scan (${{ inputs.scenario }})
   workflow_dispatch:
     inputs:
       scenario:
-        description: Dedicated scenario package to clear, seed, publicize, and scan.
+        description: Dedicated scenario package to clear, seed, and scan.
         required: true
         default: delete-untagged-noop
         type: choice
@@ -106,14 +106,6 @@ jobs:
           seed_strategy: ${{ steps.scenario.outputs.seed_strategy }}
           registry_username: ${{ vars.GHCR_TEST_PAT_USERNAME }}
           registry_password: ${{ secrets.GHCR_TEST_PAT }}
-
-      - name: Make scenario package public
-        uses: ./.github/actions/test-org-set-package-visibility
-        with:
-          owner: ${{ vars.GHCR_TEST_OWNER }}
-          package_name: ${{ steps.scenario.outputs.package_name }}
-          github_token: ${{ secrets.GHCR_TEST_PAT }}
-          visibility: public
 
       - name: Scan scenario package
         id: ghcr-manager

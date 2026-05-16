@@ -38,8 +38,6 @@ This section is the canonical place for session-to-session continuity.
 
 ### Current Next Plan
 
-- ☑ Remove the CodeQL regex-injection warning in `tools/assert-test-registry-plan.mjs` by avoiding dynamic regular
-  expression construction for fixture suffix validation.
 - ☑ Add an initial cleanup roadmap that breaks the broad reimplementation goal into session-sized subtasks and defines
   how planning state is documented across sessions.
 - ☑ Write the cleanup semantics note: define the deletion unit, supported inputs, and explicit non-goals relative to
@@ -68,9 +66,6 @@ This section is the canonical place for session-to-session continuity.
 - ☑ Replace blocked-root validation over the global `v_scan_root_overlap` view with request-scoped joins from selected
   closure members to retained roots.
 - ☑ Expand plan output with explicit validation summaries, per-root decisions, and protected-root explanations.
-- ☑ Extend seeded-registry validation assertions so workflow scenarios verify the new plan validation contract fields.
-- ☑ Split `tools/assert-test-registry-plan.mjs` by responsibility into entrypoint, contract checks, scenario checks, and
-  DB helpers.
 - ☑ Record GitHub package visibility in `package_scans`, expose it in scan metadata, and block unencrypted DB artifact
   uploads for non-public scans.
 - ☑ Complete the hardening side-task: require encrypted DB artifact upload for non-public registries, support optional
@@ -92,8 +87,8 @@ This section is the canonical place for session-to-session continuity.
   strict manifest graph tables.
 - ☑ Add a repo-local digest-derived tag relation reporting tool and query note so latest-scan heuristic rows can be
   inspected without ad hoc SQL.
-- ☑ Split live test-org workflow intent between public scenario/fixture packages for easy DB inspection and separate
-  private-registry hardening coverage.
+- ☐ Remove the failed package-visibility/publicize automation from the live test workflows and keep private-registry
+  handling explicit.
 - ☐ Revisit action packaging after the live ingest path and cleanup execution path are both stable.
 - ☑ Add package scopes to the DB schema so one SQLite database can store multiple owner/package scans.
 - ☑ Add a real GitHub Packages and GHCR ingest adapter beside the fixture loader.
@@ -118,6 +113,8 @@ This section is the canonical place for session-to-session continuity.
 - ☑ Add bounded retry handling for GitHub/GHCR requests; after the retry budget is exhausted, the scan fails immediately
   with context-rich errors.
 - ☑ Add automated assertions for seeded test-registry validation runs so fixture drift fails the validation workflow.
+- ☑ Remove the legacy seeded-fixture validation workflow and its helper scripts now that scenario workflows are the
+  active live test surface.
 - ☐ Expand planner output so it explains why versions are protected or deletable.
 - ☑ Add manifest kind classification so image indexes, image manifests, signatures, and attestations are queryable
   without ad-hoc JSON inspection.
@@ -176,13 +173,11 @@ This section is the canonical place for session-to-session continuity.
     `ancestor_digest <> root_digest` probe shape on large scans
 - Current test-registry workflow shape:
   - `test-registry-fill-*.yml` performs one-time GHCR fixture seeding
-  - `test-registry-validate.yml` runs one scan against an already-seeded fixture, then executes one or all applicable
-    validation scenarios without republishing it
   - `test-scenario-executor.yml` clears and reseeds a dedicated package per scenario, runs either `ghcr-manager` or
     `dataaxiom/ghcr-cleanup-action`, then reruns the local action against the shared `db-path` so the action itself can
     upload the final rescan DB artifact
-  - `test-scenario-scan.yml` now clears, reseeds, publicizes, and scans one dedicated scenario package so a fresh DB can
-    be captured without running a cleanup executor
+  - `test-scenario-scan.yml` now clears, reseeds, and scans one dedicated scenario package so a fresh DB can be captured
+    without running a cleanup executor
   - test workflows no longer upload DBs directly or upload plan, execution-summary, or scenario helper artifacts; DB
     artifact upload remains solely the composite action's responsibility so the non-public encryption safeguard stays
     centralized
@@ -195,8 +190,6 @@ This section is the canonical place for session-to-session continuity.
     or more matrix legs fail
   - `manual-run-test.yml` now switches to `GHCR_TEST_PAT` automatically when the requested owner matches
     `GHCR_TEST_OWNER`, so private test-org packages remain scannable without a separate ad hoc workflow edit
-  - scenario packages plus the seeded `single` and `complex` fixture packages are now made public after publishing so
-    everyday live DB inspection does not require encrypted artifact handling
   - the latest completed matrix baseline passed for all 10 scenarios × 2 executors (20 jobs)
   - the committed scenario workflow definitions now cover:
     - `delete-untagged-noop`
@@ -247,8 +240,6 @@ This section is the canonical place for session-to-session continuity.
   - `upload-db-artifact: true` now requires `db-artifact-encryption-passphrase` for non-public package scans
   - live GitHub package-version ingestion now reloads page 1 after pagination and aborts if the ordered version
     signature changed during the scan
-  - `tools/assert-test-registry-plan.mjs` now validates the fixture package suffix with `String#endsWith` instead of a
-    dynamic `RegExp`, resolving CodeQL alert `js/regex-injection`
 - Scan logging:
   - progress logs go to stderr
   - final scan summary JSON stays on stdout
@@ -442,19 +433,6 @@ src/
 
 ### 2026-05-14
 
-- Added `.github/workflows/test-registry-validate.yml` as the reusable validation workflow for already-seeded GHCR test
-  fixtures.
-- Chosen test-registry workflow split:
-  - fill workflows remain the one-time registry setup mechanism
-  - validation runs should scan and plan against seeded fixtures without rebuilding them
-- Current validation workflow behavior:
-  - selects one fixture by name (`single` or `complex`)
-  - selects one validation scenario
-  - scans the seeded package through the local action
-  - resolves scenario-specific planner args from the produced SQLite DB when needed
-  - runs `ghcr-manager plan ...` against the produced SQLite DB
-  - asserts fixture/scenario-specific expectations against the produced plan JSON before the run succeeds
-  - can upload both the scan DB and the plan JSON as artifacts
 - Added the first read-only planner implementation for `plan --delete-untagged`.
 - Added scan-scoped planner base views:
   - `v_scan_root_manifests`

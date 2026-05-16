@@ -63,7 +63,6 @@ test owner rather than the repository owner.
 Intended behavior:
 
 - publish scenario packages to `ghcr.io/<GHCR_TEST_OWNER>/...`
-- set scenario and seeded fixture package visibility to `public` after publishing
 - delete scenario packages via the org-scoped GitHub Packages API for `GHCR_TEST_OWNER`
 - scan and execute against packages owned by `GHCR_TEST_OWNER`
 
