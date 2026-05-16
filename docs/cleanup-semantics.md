@@ -168,16 +168,10 @@ Planner output implications:
 - Ordering is by package-version recency.
 - A value of `0` is equivalent to `delete-untagged`.
 
-## Explicit Non-Goals For This First Cleanup Track
+## Explicit Non-Goals
 
-The following behaviors are intentionally out of scope until the planner and execution model above are stable.
+The following behaviors remain intentionally out of scope until the planner and execution model above are stable.
 
-### Not in the first planner track
-
-- `delete-ghost-images`
-- `delete-partial-images`
-- `delete-orphaned-images`
-- regex selector support
 - multi-package expansion or package-name pattern selection
 - validate-mode parity with the upstream action
 
