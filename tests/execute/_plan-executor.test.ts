@@ -229,3 +229,126 @@ test("executeDeletePlan applies untag-only roots before deleting fully deletable
     true
   );
 });
+
+test("executeDeletePlan rejects untag-only roots without listRootTags support", async () => {
+  const plan: DeletePlan = {
+    owner: "acme",
+    packageName: "example",
+    scanCompletedAt: "2026-05-15T00:00:00.000Z",
+    plannerInputs: {
+      deleteUntagged: false,
+      deleteTags: ["latest"],
+      excludeTags: []
+    },
+    validationSummary: {
+      directTargetTagCount: 1,
+      directTargetRootCount: 1,
+      deleteRootCandidateCount: 0,
+      untagOnlyRootCount: 1,
+      fullyDeletableRootCount: 0,
+      blockedDeleteRootCount: 0,
+      protectedRootCount: 0
+    },
+    directTargetTags: ["latest"],
+    directTargetRoots: [
+      {
+        versionId: 101,
+        digest: "sha256:index-current",
+        reason: "delete-tags-partial-tag-match",
+        selectionMode: "untag-only"
+      }
+    ],
+    rootDecisions: [
+      {
+        versionId: 101,
+        digest: "sha256:index-current",
+        selectionMode: "untag-only",
+        selectionReason: "delete-tags-partial-tag-match",
+        validationStatus: "untag-only",
+        validationReason: "selected tags do not cover every tag on the root"
+      }
+    ],
+    protectedRoots: [],
+    closureManifests: [],
+    blockedRoots: [],
+    fullyDeletableRoots: [],
+    collateralTags: []
+  };
+
+  await assert.rejects(
+    () =>
+      executeDeletePlan(plan, {
+        token: "token",
+        logger: {
+          debug() {},
+          info() {},
+          warn() {},
+          error() {}
+        }
+      }),
+    /execution requires listRootTags support for untag-only root sha256:index-current/
+  );
+});
+
+test("executeDeletePlan rejects untag-only roots when no selected tags resolve", async () => {
+  const plan: DeletePlan = {
+    owner: "acme",
+    packageName: "example",
+    scanCompletedAt: "2026-05-15T00:00:00.000Z",
+    plannerInputs: {
+      deleteUntagged: false,
+      deleteTags: ["latest"],
+      excludeTags: []
+    },
+    validationSummary: {
+      directTargetTagCount: 1,
+      directTargetRootCount: 1,
+      deleteRootCandidateCount: 0,
+      untagOnlyRootCount: 1,
+      fullyDeletableRootCount: 0,
+      blockedDeleteRootCount: 0,
+      protectedRootCount: 0
+    },
+    directTargetTags: ["latest"],
+    directTargetRoots: [
+      {
+        versionId: 101,
+        digest: "sha256:index-current",
+        reason: "delete-tags-partial-tag-match",
+        selectionMode: "untag-only"
+      }
+    ],
+    rootDecisions: [
+      {
+        versionId: 101,
+        digest: "sha256:index-current",
+        selectionMode: "untag-only",
+        selectionReason: "delete-tags-partial-tag-match",
+        validationStatus: "untag-only",
+        validationReason: "selected tags do not cover every tag on the root"
+      }
+    ],
+    protectedRoots: [],
+    closureManifests: [],
+    blockedRoots: [],
+    fullyDeletableRoots: [],
+    collateralTags: []
+  };
+
+  await assert.rejects(
+    () =>
+      executeDeletePlan(plan, {
+        token: "token",
+        logger: {
+          debug() {},
+          info() {},
+          warn() {},
+          error() {}
+        },
+        listRootTags() {
+          return ["keep-me"];
+        }
+      }),
+    /no selected tags resolved for untag-only root sha256:index-current/
+  );
+});

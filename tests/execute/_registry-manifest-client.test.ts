@@ -185,3 +185,125 @@ test("putRegistryManifestForTag surfaces transport failures", async () => {
     /GHCR manifest put request for tag latest failed - fetch failed/
   );
 });
+
+test("loadRegistryManifestByDigest sends the accepted media types and retries retryable failures", async () => {
+  const originalSetTimeout = globalThis.setTimeout;
+  const warnings: string[] = [];
+  let attempts = 0;
+  const requests: Array<{ url: string; accept: string | null }> = [];
+  globalThis.setTimeout = ((callback: (...args: unknown[]) => void) => {
+    callback();
+    return 0;
+  }) as unknown as typeof setTimeout;
+
+  try {
+    const manifest = await loadRegistryManifestByDigest(
+      "acme",
+      "example",
+      "sha256:source",
+      "registry-token",
+      {
+        debug() {},
+        info() {},
+        warn(message) {
+          warnings.push(message);
+        },
+        error() {}
+      },
+      {
+        registryBaseUrl: "https://ghcr.example.test",
+        fetchImpl: async (input, init) => {
+          attempts += 1;
+          const headers = new Headers(init?.headers);
+          requests.push({ url: String(input), accept: headers.get("accept") });
+          if (attempts === 1) {
+            return {
+              ok: false,
+              status: 503,
+              headers: new Headers({ "content-type": "application/json" }),
+              async json() {
+                return { message: "Service Unavailable" };
+              }
+            };
+          }
+          return {
+            ok: true,
+            status: 200,
+            headers: new Headers({ "content-type": "application/vnd.oci.image.index.v1+json" }),
+            async json() {
+              return {
+                schemaVersion: 2,
+                mediaType: "application/vnd.oci.image.index.v1+json",
+                manifests: []
+              };
+            }
+          };
+        }
+      }
+    );
+
+    assert.equal(manifest.mediaType, "application/vnd.oci.image.index.v1+json");
+    assert.equal(attempts, 2);
+    assert.equal(requests[0]?.url, "https://ghcr.example.test/v2/acme/example/manifests/sha256:source");
+    assert.match(requests[0]?.accept ?? "", /application\/vnd\.docker\.distribution\.manifest\.list\.v2\+json/);
+    assert.match(
+      warnings[0] ?? "",
+      /GHCR manifest request for sha256:source failed on attempt 1\/4; retrying in 1000ms - GHCR manifest request for sha256:source failed - status 503 - Service Unavailable/
+    );
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+  }
+});
+
+test("putRegistryManifestForTag sends the expected headers and surfaces non-retryable HTTP failures", async () => {
+  const requests: Array<{ url: string; method?: string; contentType: string | null; authorization: string | null }> =
+    [];
+
+  await assert.rejects(
+    () =>
+      putRegistryManifestForTag(
+        "acme",
+        "example",
+        "latest",
+        "application/vnd.oci.image.manifest.v1+json",
+        '{"schemaVersion":2}\n',
+        "registry-token",
+        {
+          debug() {},
+          info() {},
+          warn() {},
+          error() {}
+        },
+        {
+          registryBaseUrl: "https://ghcr.example.test",
+          fetchImpl: async (input, init) => {
+            const headers = new Headers(init?.headers);
+            requests.push({
+              url: String(input),
+              method: init?.method,
+              contentType: headers.get("content-type"),
+              authorization: headers.get("authorization")
+            });
+            return {
+              ok: false,
+              status: 400,
+              headers: new Headers({ "content-type": "application/json" }),
+              async json() {
+                return { message: "bad manifest" };
+              }
+            };
+          }
+        }
+      ),
+    /GHCR manifest put request for tag latest failed - status 400 - bad manifest/
+  );
+
+  assert.deepEqual(requests, [
+    {
+      url: "https://ghcr.example.test/v2/acme/example/manifests/latest",
+      method: "PUT",
+      contentType: "application/vnd.oci.image.manifest.v1+json",
+      authorization: "Bearer registry-token"
+    }
+  ]);
+});
