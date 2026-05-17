@@ -6,6 +6,10 @@ branding:
   color: blue
 
 inputs:
+  command:
+    description: Action command to run (`scan` or `cleanup`)
+    required: false
+    default: scan
   github-token:
     description: GitHub token used for GitHub/GHCR API calls
     required: true
@@ -21,7 +25,7 @@ inputs:
     required: false
     default: ""
   upload-db-artifact:
-    description: Whether to upload the scan database as a workflow run artifact
+    description: Whether to upload the database as a workflow run artifact
     required: false
     default: "false"
   db-artifact-encryption-passphrase:
@@ -32,6 +36,54 @@ inputs:
     description: Optional retention days override for uploaded database artifacts
     required: false
     default: ""
+  delete-tags:
+    description: Optional comma-separated tags to delete during cleanup
+    required: false
+    default: ""
+  exclude-tags:
+    description: Optional comma-separated tags to exclude from cleanup
+    required: false
+    default: ""
+  keep-n-tagged:
+    description: Optional number of tagged roots to keep during cleanup
+    required: false
+    default: ""
+  keep-n-untagged:
+    description: Optional number of untagged roots to keep during cleanup
+    required: false
+    default: ""
+  delete-untagged:
+    description: Whether cleanup should target untagged roots
+    required: false
+    default: "false"
+  delete-ghost-images:
+    description: Whether cleanup should target ghost multi-arch roots
+    required: false
+    default: "false"
+  delete-partial-images:
+    description: Whether cleanup should target partial multi-arch roots
+    required: false
+    default: "false"
+  delete-orphaned-images:
+    description: Whether cleanup should target orphaned digest-derived tags
+    required: false
+    default: "false"
+  older-than:
+    description: Optional age cutoff for cleanup selectors
+    required: false
+    default: ""
+  use-regex:
+    description: Whether cleanup tag selectors should be treated as regular expressions
+    required: false
+    default: "false"
+  dry-run:
+    description: Whether cleanup should simulate changes without mutating GHCR
+    required: false
+    default: "false"
+  log-level:
+    description: Log level passed to the shared CLI
+    required: false
+    default: info
 
 outputs:
   db-path:
@@ -59,6 +111,18 @@ runs:
         set -euo pipefail
         npm run build
 
+    - name: Validate action command
+      shell: bash
+      run: |
+        set -euo pipefail
+        case "${{ inputs.command }}" in
+          scan|cleanup) ;;
+          *)
+            echo "Unsupported command '${{ inputs.command }}'. Expected 'scan' or 'cleanup'." >&2
+            exit 1
+            ;;
+        esac
+
     - name: Prepare scan DB path
       id: prepare-db
       shell: bash
@@ -81,30 +145,128 @@ runs:
         echo "db_file=$db_file" >> "$GITHUB_OUTPUT"
         echo "db_path=$db_path" >> "$GITHUB_OUTPUT"
 
-    - name: Run ghcr-manager
-      id: run-scan
+    - name: Scan before command
+      id: scan-before
+      if: ${{ inputs.command == 'scan' || inputs.command == 'cleanup' }}
       shell: bash
       run: |
         set -euo pipefail
         npm run ghcr-manager:dist -- scan \
           --db "${{ steps.prepare-db.outputs.db_path }}" \
+          --log-level "${{ inputs.log-level }}" \
+          --owner "${{ inputs.owner }}" \
+          --package "${{ inputs.package }}" \
+          --token "${{ inputs.github-token }}" \
+          --github-output "$GITHUB_OUTPUT"
+
+    - name: Run cleanup
+      if: ${{ inputs.command == 'cleanup' }}
+      shell: bash
+      env:
+        DELETE_TAGS: ${{ inputs.delete-tags }}
+        DELETE_UNTAGGED: ${{ inputs.delete-untagged }}
+        DELETE_GHOST_IMAGES: ${{ inputs.delete-ghost-images }}
+        DELETE_ORPHANED_IMAGES: ${{ inputs.delete-orphaned-images }}
+        DELETE_PARTIAL_IMAGES: ${{ inputs.delete-partial-images }}
+        DRY_RUN: ${{ inputs.dry-run }}
+        EXCLUDE_TAGS: ${{ inputs.exclude-tags }}
+        KEEP_N_TAGGED: ${{ inputs.keep-n-tagged }}
+        KEEP_N_UNTAGGED: ${{ inputs.keep-n-untagged }}
+        OLDER_THAN: ${{ inputs.older-than }}
+        USE_REGEX: ${{ inputs.use-regex }}
+      run: |
+        set -euo pipefail
+
+        cleanup_args=(
+          --db "${{ steps.prepare-db.outputs.db_path }}"
+          --log-level "${{ inputs.log-level }}"
+          --owner "${{ inputs.owner }}"
+          --package "${{ inputs.package }}"
+        )
+
+        if [[ "$DRY_RUN" == "true" ]]; then
+          cleanup_args+=(--dry-run)
+        else
+          cleanup_args+=(--token "${{ inputs.github-token }}")
+        fi
+
+        if [[ "$DELETE_UNTAGGED" == "true" ]]; then
+          cleanup_args+=(--delete-untagged)
+        fi
+        if [[ "$DELETE_GHOST_IMAGES" == "true" ]]; then
+          cleanup_args+=(--delete-ghost-images)
+        fi
+        if [[ "$DELETE_PARTIAL_IMAGES" == "true" ]]; then
+          cleanup_args+=(--delete-partial-images)
+        fi
+        if [[ "$DELETE_ORPHANED_IMAGES" == "true" ]]; then
+          cleanup_args+=(--delete-orphaned-images)
+        fi
+        if [[ "$USE_REGEX" == "true" ]]; then
+          cleanup_args+=(--use-regex)
+        fi
+        if [[ -n "$KEEP_N_TAGGED" ]]; then
+          cleanup_args+=(--keep-n-tagged "$KEEP_N_TAGGED")
+        fi
+        if [[ -n "$KEEP_N_UNTAGGED" ]]; then
+          cleanup_args+=(--keep-n-untagged "$KEEP_N_UNTAGGED")
+        fi
+        if [[ -n "$OLDER_THAN" ]]; then
+          cleanup_args+=(--older-than "$OLDER_THAN")
+        fi
+
+        append_csv_args() {
+          local option="$1"
+          local raw_values="$2"
+          local values=()
+          local value=""
+          if [[ -z "$raw_values" ]]; then
+            return
+          fi
+          IFS=',' read -r -a values <<< "$raw_values"
+          for value in "${values[@]}"; do
+            value="${value#"${value%%[![:space:]]*}"}"
+            value="${value%"${value##*[![:space:]]}"}"
+            if [[ -n "$value" ]]; then
+              cleanup_args+=("$option" "$value")
+            fi
+          done
+        }
+
+        append_csv_args --delete-tag "$DELETE_TAGS"
+        append_csv_args --exclude-tag "$EXCLUDE_TAGS"
+
+        npm run ghcr-manager:dist -- cleanup "${cleanup_args[@]}"
+
+    - name: Scan after live cleanup
+      id: scan-after
+      if: ${{ inputs.command == 'cleanup' && inputs.dry-run != 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        npm run ghcr-manager:dist -- scan \
+          --db "${{ steps.prepare-db.outputs.db_path }}" \
+          --log-level "${{ inputs.log-level }}" \
           --owner "${{ inputs.owner }}" \
           --package "${{ inputs.package }}" \
           --token "${{ inputs.github-token }}" \
           --github-output "$GITHUB_OUTPUT"
 
     - name: Prepare DB artifact upload
-      if: ${{ inputs.upload-db-artifact == 'true' }}
+      if: ${{ inputs.command == 'scan' || inputs.upload-db-artifact == 'true' }}
       id: prepare-upload
       shell: bash
       env:
         DB_ARTIFACT_ENCRYPTION_PASSPHRASE: ${{ inputs.db-artifact-encryption-passphrase }}
+        IS_PUBLIC:
+          ${{ steps.scan-after.outputs.is_public != '' && steps.scan-after.outputs.is_public ||
+          steps.scan-before.outputs.is_public }}
       run: |
         set -euo pipefail
         artifact_path="${{ steps.prepare-db.outputs.db_path }}"
         artifact_file="${{ steps.prepare-db.outputs.db_file }}"
 
-        if [[ "${{ steps.run-scan.outputs.is_public }}" != "true" && -z "$DB_ARTIFACT_ENCRYPTION_PASSPHRASE" ]]; then
+        if [[ "$IS_PUBLIC" != "true" && -z "$DB_ARTIFACT_ENCRYPTION_PASSPHRASE" ]]; then
           echo "Refusing to upload DB artifact for a non-public registry without encryption." >&2
           echo "Provide db-artifact-encryption-passphrase to encrypt the uploaded artifact." >&2
           exit 1
@@ -128,7 +290,7 @@ runs:
         echo "artifact_file=$artifact_file" >> "$GITHUB_OUTPUT"
 
     - name: Upload DB artifact
-      if: ${{ inputs.upload-db-artifact == 'true' }}
+      if: ${{ inputs.command == 'scan' || inputs.upload-db-artifact == 'true' }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: ${{ steps.prepare-upload.outputs.artifact_file }}

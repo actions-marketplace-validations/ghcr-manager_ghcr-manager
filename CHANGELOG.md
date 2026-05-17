@@ -11,6 +11,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - The GitHub Action now builds and runs the repo-local CLI directly instead of installing `ghcr-manager` from npm at
   runtime.
+- The primary cleanup surface is now `cleanup` with `dry-run` semantics, both in the CLI and the action.
+- The GitHub Action now supports `command: scan | cleanup`; cleanup runs an implicit pre-scan and a post-scan after live
+  mutations.
 
 ## [0.0.6] - 2026-04-30
 

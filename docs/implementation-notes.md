@@ -161,27 +161,31 @@ This section is the canonical place for session-to-session continuity.
 - Current action DB handling:
   - by default the action creates a fresh DB path under runner temp storage
   - the action also supports an optional local `db-path` input so later scans can append to the same SQLite file
+  - `command: scan` always uploads the resulting DB artifact
+  - `command: cleanup` always runs an implicit pre-scan, optionally uploads the resulting DB, and now rescans after live
+    cleanup so the shared DB reflects post-mutation state
 - Current CLI shape:
   - `scan` imports live GitHub Packages + GHCR state into SQLite
-  - `plan --delete-untagged` emits a dry-run delete plan for the latest completed scan of one owner/package
-  - `plan --keep-n-tagged <count>` keeps the newest eligible tagged roots and emits a dry-run delete plan for the older
-    overflow tagged roots of one owner/package
-  - `plan --keep-n-untagged <count>` keeps the newest eligible untagged roots and emits a dry-run delete plan for the
-    older overflow roots of one owner/package
-  - `plan --delete-tag <tag> [--delete-tag <tag> ...] [--exclude-tag <tag> ...] [--keep-n-tagged <count>]` emits a
-    dry-run tag delete/untag plan for one owner/package, optionally keeping the newest matched tagged roots
-  - `plan --delete-partial-images [--exclude-tag <tag> ...] [--keep-n-tagged <count>]` resolves tagged multi-arch roots
-    whose child descriptors are only partially present in the latest scan, then emits the normal tagged delete/untag
-    dry-run plan for those concrete tags
-  - `plan --delete-orphaned-images [--exclude-tag <tag> ...] [--keep-n-tagged <count>]` resolves orphan-style `sha256-*`
-    tags whose implied parent digest is absent from the latest scan, then emits the normal tagged delete/untag dry-run
-    plan for those concrete tags
+  - `cleanup --dry-run ...` emits the dry-run delete plan for the latest completed scan of one owner/package
+  - `cleanup ...` applies that same planner contract against the latest completed scan of one owner/package
+  - `cleanup --keep-n-tagged <count> [--older-than <interval>]` keeps the newest eligible tagged roots and applies or
+    prints the older overflow plan for one owner/package
+  - `cleanup --keep-n-untagged <count> [--older-than <interval>]` keeps the newest eligible untagged roots and applies
+    or prints the older overflow plan for one owner/package
+  - `cleanup --delete-tag <tag> [--delete-tag <tag> ...] [--exclude-tag <tag> ...] [--keep-n-tagged <count>]` applies or
+    prints a tag delete/untag plan for one owner/package, optionally keeping the newest matched tagged roots
+  - `cleanup --delete-partial-images [--exclude-tag <tag> ...] [--keep-n-tagged <count>]` resolves tagged multi-arch
+    roots whose child descriptors are only partially present in the latest scan, then applies or prints the normal
+    tagged delete/untag plan for those concrete tags
+  - `cleanup --delete-orphaned-images [--exclude-tag <tag> ...] [--keep-n-tagged <count>]` resolves orphan-style
+    `sha256-*` tags whose implied parent digest is absent from the latest scan, then applies or prints the normal tagged
+    delete/untag plan for those concrete tags
   - tagged selector families now treat `--delete-tag` and `--exclude-tag` values as wildcard patterns by default and as
     regex selectors when `--use-regex` is present
-  - all current plan selector families accept optional `--older-than <interval>` as a root-level eligibility filter
-  - `execute` reuses the current planner selectors, deletes `fullyDeletableRoots` through the GitHub Packages org
-    package-version delete endpoint, and now also applies `untag-only` roots by retargeting selected tags to a temporary
-    manifest clone before deleting the temporary package version
+  - all current cleanup selector families accept optional `--older-than <interval>` as a root-level eligibility filter
+  - live `cleanup` deletes `fullyDeletableRoots` through the GitHub Packages org package-version delete endpoint and
+    also applies `untag-only` roots by retargeting selected tags to a temporary manifest clone before deleting the
+    temporary package version
   - schema initialization now also creates a descendant-distance reachability index so root detection avoids the slow
     `ancestor_digest <> root_digest` probe shape on large scans
 - Current test-registry workflow shape:
@@ -737,3 +741,18 @@ src/
 - [x] Chosen packaging stance for now:
   - GitHub Actions consumes repo-owned code from the tagged action revision.
   - npm publication remains for local/dev CLI usage, not for action bootstrapping.
+
+### 2026-05-17 (cleanup interface alignment)
+
+- [x] Added `ghcr-manager cleanup` as the primary CLI cleanup surface, with `--dry-run` acting as the user-facing
+      dry-run mode for the cleanup contract.
+- [x] Removed the transitional `plan` and `execute` CLI aliases so the public CLI surface is now only `scan` and
+      `cleanup`.
+- [x] Expanded `action.yml` from scan-only to `command: scan | cleanup`.
+- [x] Chosen action cleanup semantics:
+  - `command: cleanup` always runs a fresh pre-scan into the configured DB before applying selector logic.
+  - live cleanup runs a post-cleanup rescan so the resulting DB reflects final package state.
+  - `dry-run` is cleanup-only and maps to the same planner contract as CLI `cleanup --dry-run`.
+  - `command: scan` always uploads the resulting DB artifact; cleanup DB upload remains optional.
+- [x] Updated the GHCR scenario workflow so the `ghcr-manager` executor leg now exercises the action cleanup surface
+      instead of calling the CLI directly.

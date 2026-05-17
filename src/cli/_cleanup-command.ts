@@ -1,25 +1,32 @@
 import { openDatabase, PlannerRepository } from "../db/index.js";
 import { executeDeletePlan } from "../execute/index.js";
-import { resolveGitHubToken, resolveLogLevel } from "./_args.js";
+import { hasFlag, resolveGitHubToken, resolveLogLevel } from "./_args.js";
 import { createLogger } from "./_logger.js";
 import { loadDeletePlan, resolvePlanCommandInputs } from "./_planner-options.js";
 import { resolveTagSelectors } from "./_tag-selector-resolver.js";
 
-export async function handleExecute(args: string[]): Promise<number> {
+export async function handleCleanup(args: string[]): Promise<number> {
   const inputs = resolvePlanCommandInputs(args);
-  const token = resolveGitHubToken(args);
+  const dryRun = hasFlag(args, "--dry-run");
+  const token = dryRun ? undefined : resolveGitHubToken(args);
   const logger = createLogger(resolveLogLevel(args));
   const database = openDatabase(inputs.databasePath);
   try {
     const repository = new PlannerRepository(database, logger);
-    logger.debug(`Starting execute for ${inputs.owner}/${inputs.packageName}`);
+    logger.debug(`Starting cleanup for ${inputs.owner}/${inputs.packageName}`);
     const plan = loadDeletePlan(repository, resolveTagSelectors(database, inputs));
+    if (dryRun) {
+      logger.debug(`Completed dry-run cleanup for ${inputs.owner}/${inputs.packageName}`);
+      console.log(JSON.stringify(plan, null, 2));
+      return 0;
+    }
+
     const summary = await executeDeletePlan(plan, {
-      token,
+      token: token as string,
       logger,
       listRootTags: (root) => _listRootTags(database, root.owner, root.packageName, root.versionId)
     });
-    logger.debug(`Completed execute for ${inputs.owner}/${inputs.packageName}`);
+    logger.debug(`Completed cleanup for ${inputs.owner}/${inputs.packageName}`);
     console.log(JSON.stringify(summary, null, 2));
     return 0;
   } finally {

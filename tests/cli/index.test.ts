@@ -15,7 +15,7 @@ test("main throws for an unknown command", async () => {
   await assert.rejects(() => main(["unknown"]), /unknown command: unknown/);
 });
 
-test("main dispatches the plan command", async () => {
+test("main dispatches the cleanup dry-run command", async () => {
   const tempDirectory = mkdtempSync(join(tmpdir(), "ghcr-manager-"));
   const databasePath = join(tempDirectory, "scan.sqlite");
   const database = openDatabase(databasePath);
@@ -31,7 +31,17 @@ test("main dispatches the plan command", async () => {
 
   try {
     assert.equal(
-      await main(["plan", "--db", databasePath, "--owner", "acme", "--package", "example", "--delete-untagged"]),
+      await main([
+        "cleanup",
+        "--db",
+        databasePath,
+        "--owner",
+        "acme",
+        "--package",
+        "example",
+        "--dry-run",
+        "--delete-untagged"
+      ]),
       0
     );
   } finally {
@@ -42,7 +52,7 @@ test("main dispatches the plan command", async () => {
   assert.equal(writes.length, 1);
 });
 
-test("main dispatches the execute command", async () => {
+test("main dispatches the cleanup command", async () => {
   const tempDirectory = mkdtempSync(join(tmpdir(), "ghcr-manager-"));
   const databasePath = join(tempDirectory, "scan.sqlite");
   const database = openDatabase(databasePath);
@@ -70,7 +80,7 @@ test("main dispatches the execute command", async () => {
   try {
     assert.equal(
       await main([
-        "execute",
+        "cleanup",
         "--db",
         databasePath,
         "--owner",

@@ -158,6 +158,7 @@ jobs:
           registry_password: ${{ secrets.GHCR_TEST_PAT }}
 
       - name: Scan before execution
+        if: ${{ inputs.executor == 'ghcr-cleanup-action' }}
         uses: ./
         with:
           github-token: ${{ secrets.GHCR_TEST_PAT }}
@@ -166,30 +167,8 @@ jobs:
           db-path: ${{ steps.scenario.outputs.db_path }}
           upload-db-artifact: "false"
 
-      - name: Execute with ghcr-manager
-        if: ${{ inputs.executor == 'ghcr-manager' }}
-        shell: bash
-        env:
-          DB_PATH: ${{ steps.scenario.outputs.db_path }}
-          OWNER: ${{ vars.GHCR_TEST_OWNER }}
-          PACKAGE: ${{ steps.scenario.outputs.package_name }}
-          RESOLUTION_PATH: ${{ steps.scenario.outputs.resolution_path }}
-          SUMMARY_PATH: ${{ steps.scenario.outputs.summary_path }}
-          GITHUB_TOKEN: ${{ secrets.GHCR_TEST_PAT }}
-        run: |
-          set -euo pipefail
-          mapfile -t plan_args < <(jq -r '.ghcrManagerArgs[]' "$RESOLUTION_PATH")
-          ghcr-manager execute \
-            --db "$DB_PATH" \
-            --owner "$OWNER" \
-            --package "$PACKAGE" \
-            --token "$GITHUB_TOKEN" \
-            "${plan_args[@]}" \
-            | tee "$SUMMARY_PATH"
-
-      - name: Prepare upstream action inputs
-        if: ${{ inputs.executor == 'ghcr-cleanup-action' }}
-        id: upstream-inputs
+      - name: Prepare cleanup action inputs
+        id: cleanup-inputs
         shell: bash
         env:
           RESOLUTION_PATH: ${{ steps.scenario.outputs.resolution_path }}
@@ -214,6 +193,35 @@ jobs:
           echo "delete_orphaned_images=$delete_orphaned_images" >> "$GITHUB_OUTPUT"
           echo "use_regex=$use_regex" >> "$GITHUB_OUTPUT"
 
+      - name: Execute with ghcr-manager action
+        if: ${{ inputs.executor == 'ghcr-manager' }}
+        uses: ./
+        with:
+          command: cleanup
+          github-token: ${{ secrets.GHCR_TEST_PAT }}
+          owner: ${{ vars.GHCR_TEST_OWNER }}
+          package: ${{ steps.scenario.outputs.package_name }}
+          db-path: ${{ steps.scenario.outputs.db_path }}
+          upload-db-artifact: "false"
+          delete-untagged: ${{ steps.cleanup-inputs.outputs.delete_untagged }}
+          delete-tags: ${{ steps.cleanup-inputs.outputs.delete_tags }}
+          exclude-tags: ${{ steps.cleanup-inputs.outputs.exclude_tags }}
+          keep-n-tagged: ${{ steps.cleanup-inputs.outputs.keep_n_tagged }}
+          keep-n-untagged: ${{ steps.cleanup-inputs.outputs.keep_n_untagged }}
+          delete-ghost-images: ${{ steps.cleanup-inputs.outputs.delete_ghost_images }}
+          delete-partial-images: ${{ steps.cleanup-inputs.outputs.delete_partial_images }}
+          delete-orphaned-images: ${{ steps.cleanup-inputs.outputs.delete_orphaned_images }}
+          use-regex: ${{ steps.cleanup-inputs.outputs.use_regex }}
+
+      - name: Record ghcr-manager executor summary
+        if: ${{ inputs.executor == 'ghcr-manager' }}
+        shell: bash
+        env:
+          SUMMARY_PATH: ${{ steps.scenario.outputs.summary_path }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' '{"executor":"ghcr-manager","status":"completed"}' > "$SUMMARY_PATH"
+
       - name: Execute with ghcr-cleanup-action action
         if: ${{ inputs.executor == 'ghcr-cleanup-action' }}
         uses: dataaxiom/ghcr-cleanup-action@aa3ef78ce6e21c2820a185de1c6c59aafc41b2e7
@@ -221,15 +229,15 @@ jobs:
           token: ${{ secrets.GHCR_TEST_PAT }}
           owner: ${{ vars.GHCR_TEST_OWNER }}
           package: ${{ steps.scenario.outputs.package_name }}
-          delete-untagged: ${{ steps.upstream-inputs.outputs.delete_untagged }}
-          delete-tags: ${{ steps.upstream-inputs.outputs.delete_tags }}
-          exclude-tags: ${{ steps.upstream-inputs.outputs.exclude_tags }}
-          keep-n-tagged: ${{ steps.upstream-inputs.outputs.keep_n_tagged }}
-          keep-n-untagged: ${{ steps.upstream-inputs.outputs.keep_n_untagged }}
-          delete-ghost-images: ${{ steps.upstream-inputs.outputs.delete_ghost_images }}
-          delete-partial-images: ${{ steps.upstream-inputs.outputs.delete_partial_images }}
-          delete-orphaned-images: ${{ steps.upstream-inputs.outputs.delete_orphaned_images }}
-          use-regex: ${{ steps.upstream-inputs.outputs.use_regex }}
+          delete-untagged: ${{ steps.cleanup-inputs.outputs.delete_untagged }}
+          delete-tags: ${{ steps.cleanup-inputs.outputs.delete_tags }}
+          exclude-tags: ${{ steps.cleanup-inputs.outputs.exclude_tags }}
+          keep-n-tagged: ${{ steps.cleanup-inputs.outputs.keep_n_tagged }}
+          keep-n-untagged: ${{ steps.cleanup-inputs.outputs.keep_n_untagged }}
+          delete-ghost-images: ${{ steps.cleanup-inputs.outputs.delete_ghost_images }}
+          delete-partial-images: ${{ steps.cleanup-inputs.outputs.delete_partial_images }}
+          delete-orphaned-images: ${{ steps.cleanup-inputs.outputs.delete_orphaned_images }}
+          use-regex: ${{ steps.cleanup-inputs.outputs.use_regex }}
 
       - name: Record upstream executor summary
         if: ${{ inputs.executor == 'ghcr-cleanup-action' }}
@@ -241,6 +249,7 @@ jobs:
           printf '%s\n' '{"executor":"dataaxiom","status":"completed"}' > "$SUMMARY_PATH"
 
       - name: Scan after execution
+        if: ${{ inputs.executor == 'ghcr-cleanup-action' }}
         uses: ./
         with:
           github-token: ${{ secrets.GHCR_TEST_PAT }}
