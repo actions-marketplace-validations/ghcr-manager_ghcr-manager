@@ -82,11 +82,11 @@ try {
   const protectedRoots = database
     .prepare(
       `
-        SELECT digest
-        FROM cleanup_protected_roots
-        WHERE cleanup_run_id = ?
-        ORDER BY digest
-      `
+      SELECT DISTINCT protected_digest AS digest
+      FROM cleanup_protected_root_blocks
+      WHERE cleanup_run_id = ?
+      ORDER BY digest
+    `
     )
     .all(cleanupRun.cleanup_run_id)
     .map((row) => row.digest);
@@ -239,8 +239,8 @@ function _buildDiagnosticContext(database, scenarioId, cleanupAuditAssertions, t
       protectedRoots: database
         .prepare(
           `
-            SELECT digest
-            FROM cleanup_protected_roots
+            SELECT DISTINCT protected_digest AS digest
+            FROM cleanup_protected_root_blocks
             WHERE cleanup_run_id = ?
             ORDER BY digest
           `

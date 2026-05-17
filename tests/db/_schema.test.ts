@@ -231,8 +231,7 @@ test("initializeSchema creates cleanup audit tables", () => {
       `
     )
     .get() as { sql?: string } | undefined;
-  assert.match(cleanupProtectedRootsRow?.sql ?? "", /digest TEXT NOT NULL/);
-  assert.doesNotMatch(cleanupProtectedRootsRow?.sql ?? "", /reason TEXT NOT NULL/);
+  assert.equal(cleanupProtectedRootsRow, undefined);
 
   const cleanupProtectedRootBlocksRow = database
     .prepare(

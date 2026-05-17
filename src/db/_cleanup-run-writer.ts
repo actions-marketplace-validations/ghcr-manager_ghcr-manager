@@ -45,19 +45,6 @@ export class CleanupRunWriter {
       }
 
       for (const protectedRoot of plan.protectedRoots) {
-        this.#database
-          .prepare(
-            `
-              INSERT INTO cleanup_protected_roots(
-                cleanup_run_id,
-                scan_id,
-                digest
-              )
-              VALUES(?, ?, ?)
-            `
-          )
-          .run(cleanupRunId, scanId, protectedRoot.digest);
-
         for (const block of protectedRoot.blocks) {
           this.#database
             .prepare(

@@ -163,20 +163,6 @@ test("cleanup run writer stores planner decisions and protected roots", () => {
   assert.equal(rootDecision.blocking_digest, "sha256:keep-root");
   assert.equal(rootDecision.overlap_digest, "sha256:shared");
 
-  const protectedRoot = database
-    .prepare(
-      `
-        SELECT digest
-        FROM cleanup_protected_roots
-        WHERE cleanup_run_id = ?
-          AND digest = 'sha256:keep-root'
-      `
-    )
-    .get(cleanupRunId) as {
-    digest: string;
-  };
-  assert.equal(protectedRoot.digest, "sha256:keep-root");
-
   const protectedRootBlocks = database
     .prepare(
       `
@@ -202,6 +188,17 @@ test("cleanup run writer stores planner decisions and protected roots", () => {
       overlap_digest: "sha256:shared"
     }
   ]);
+
+  const protectedRoots = database
+    .prepare(
+      `
+        SELECT DISTINCT protected_digest AS digest
+        FROM cleanup_protected_root_blocks
+        WHERE cleanup_run_id = ?
+      `
+    )
+    .all(cleanupRunId) as Array<{ digest: string }>;
+  assert.deepEqual(protectedRoots, [{ digest: "sha256:keep-root" }]);
 
   const closureMembers = database
     .prepare(

@@ -147,15 +147,6 @@ CREATE TABLE IF NOT EXISTS cleanup_root_decisions (
   FOREIGN KEY(scan_id, overlap_digest) REFERENCES manifests(scan_id, digest)
 );
 
-CREATE TABLE IF NOT EXISTS cleanup_protected_roots (
-  cleanup_run_id INTEGER NOT NULL,
-  scan_id INTEGER NOT NULL,
-  digest TEXT NOT NULL,
-  PRIMARY KEY(cleanup_run_id, digest),
-  FOREIGN KEY(cleanup_run_id, scan_id) REFERENCES cleanup_runs(cleanup_run_id, scan_id),
-  FOREIGN KEY(scan_id, digest) REFERENCES manifests(scan_id, digest)
-);
-
 CREATE TABLE IF NOT EXISTS cleanup_protected_root_blocks (
   cleanup_run_id INTEGER NOT NULL,
   scan_id INTEGER NOT NULL,
@@ -166,8 +157,6 @@ CREATE TABLE IF NOT EXISTS cleanup_protected_root_blocks (
   PRIMARY KEY(cleanup_run_id, protected_digest, blocked_digest, overlap_digest),
   CHECK(block_reason_code IN ('overlap-with-retained-root')),
   FOREIGN KEY(cleanup_run_id, scan_id) REFERENCES cleanup_runs(cleanup_run_id, scan_id),
-  FOREIGN KEY(cleanup_run_id, protected_digest)
-    REFERENCES cleanup_protected_roots(cleanup_run_id, digest),
   FOREIGN KEY(scan_id, protected_digest) REFERENCES manifests(scan_id, digest),
   FOREIGN KEY(scan_id, blocked_digest) REFERENCES manifests(scan_id, digest),
   FOREIGN KEY(scan_id, overlap_digest) REFERENCES manifests(scan_id, digest)

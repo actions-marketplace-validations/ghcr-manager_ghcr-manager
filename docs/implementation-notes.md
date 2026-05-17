@@ -188,10 +188,10 @@ This section is the canonical place for session-to-session continuity.
   - cleanup-audit read ergonomics now rely on derived SQL views instead of persisting closure-member rows:
     `v_cleanup_root_closure_members` materializes selected-root closures from existing graph data, and
     `v_cleanup_blocking_overlaps` materializes protected/blocking overlap evidence from the persisted audit rows
-  - `cleanup_protected_roots` now stores only the protected digest identity; per-row explanation lives in the normalized
-    `cleanup_protected_root_blocks` rows rather than a constant reason string
   - protected-root blocking relations are normalized into `cleanup_protected_root_blocks` as
     `protected_digest`/`blocked_digest`/`overlap_digest` rows, again scoped by explicit `scan_id`
+  - the separate `cleanup_protected_roots` table has been removed again; the protected-root set is now derived as
+    `DISTINCT protected_digest` from `cleanup_protected_root_blocks`
   - `tools/report-cleanup-run.mjs` can now render one persisted cleanup run back into planner-shaped JSON, either by
     explicit `--cleanup-run-id` or by latest run for `--owner` plus `--package`
   - this first slice intentionally does not persist `closureManifests` or per-manifest execution effects yet

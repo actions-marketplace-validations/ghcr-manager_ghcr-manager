@@ -57,12 +57,12 @@ try {
   const protectedRootRows = database
     .prepare(
       `
-        SELECT manifest.version_id, protected.digest
-        FROM cleanup_protected_roots protected
+        SELECT DISTINCT manifest.version_id, block.protected_digest AS digest
+        FROM cleanup_protected_root_blocks block
         JOIN manifests manifest
-          ON manifest.scan_id = protected.scan_id
-         AND manifest.digest = protected.digest
-        WHERE protected.cleanup_run_id = ?
+          ON manifest.scan_id = block.scan_id
+         AND manifest.digest = block.protected_digest
+        WHERE block.cleanup_run_id = ?
         ORDER BY manifest.version_id
       `
     )
