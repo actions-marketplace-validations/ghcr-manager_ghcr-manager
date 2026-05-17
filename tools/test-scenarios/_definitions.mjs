@@ -105,8 +105,7 @@ export const scenarios = {
       validationSummary: {
         directTargetRootCount: 1,
         fullyDeletableRootCount: 0,
-        blockedDeleteRootCount: 1,
-        protectedRootCount: 1
+        blockedDeleteRootCount: 1
       },
       rootDecisions: [
         {

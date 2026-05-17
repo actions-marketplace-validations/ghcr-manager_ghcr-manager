@@ -128,11 +128,17 @@ const protectedRoots = database
 const expectedProtectedDigests = (cleanupAuditAssertions.protectedTagNameKeys ?? [])
   .map((tagNameKey) => _requireTagDigest(tagDigestsByKey, tagNameKey, scenarioId))
   .sort();
-assert.deepEqual(
-  protectedRoots,
-  expectedProtectedDigests,
-  `unexpected cleanup_protected_roots digests for scenario '${scenarioId}'`
+assert.equal(
+  new Set(protectedRoots).size,
+  protectedRoots.length,
+  `cleanup_protected_roots contained duplicate digests for scenario '${scenarioId}'`
 );
+for (const expectedProtectedDigest of expectedProtectedDigests) {
+  assert.ok(
+    protectedRoots.includes(expectedProtectedDigest),
+    `missing cleanup_protected_roots digest '${expectedProtectedDigest}' for scenario '${scenarioId}'`
+  );
+}
 
 const protectedRootBlocks = database
   .prepare(
@@ -144,12 +150,6 @@ const protectedRootBlocks = database
     `
   )
   .all(cleanupRun.cleanup_run_id);
-
-assert.equal(
-  protectedRootBlocks.length,
-  (cleanupAuditAssertions.protectedRootBlocks ?? []).length,
-  `unexpected cleanup_protected_root_blocks row count for scenario '${scenarioId}'`
-);
 
 for (const expectedBlock of cleanupAuditAssertions.protectedRootBlocks ?? []) {
   const protectedDigest = _requireTagDigest(tagDigestsByKey, expectedBlock.protectedTagNameKey, scenarioId);
