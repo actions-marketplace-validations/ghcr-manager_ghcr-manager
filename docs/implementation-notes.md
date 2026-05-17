@@ -263,6 +263,9 @@ This section is the canonical place for session-to-session continuity.
     then explicitly `cosign sign`s the final index digest and both child platform digests without going through the
     separate `gh-workflow/multiarch-image-publish` action; its order now mirrors the older explicit publish flow by
     delaying the final tag until after the digest-level publish and signing steps
+  - `.github/workflows/repro-issue-104-seed-simple.yml` is a second courtesy helper with the same end state but a
+    simpler flow: final per-arch and multi-arch tags are published immediately, then the final multi-arch digest and
+    both child platform digests are signed at the end, without extra verification steps
     - `exclude-tag-protected-root`
     - `keep-n-tagged-overflow`
     - `keep-n-untagged-overflow`
