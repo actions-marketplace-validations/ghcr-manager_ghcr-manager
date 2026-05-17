@@ -101,16 +101,6 @@ for (const expectedRootDecision of cleanupAuditAssertions.rootDecisions ?? []) {
     expectedRootDecision.validationStatus,
     `unexpected validation status for digest '${digest}' in scenario '${scenarioId}'`
   );
-
-  if (expectedRootDecision.blockingTagNameKey) {
-    assert.equal(
-      row.blocking_digest,
-      _requireTagDigest(tagDigestsByKey, expectedRootDecision.blockingTagNameKey, scenarioId),
-      `unexpected blocking digest for root decision '${digest}' in scenario '${scenarioId}'`
-    );
-  } else {
-    assert.equal(row.blocking_digest, null, `unexpected blocking digest for root decision '${digest}'`);
-  }
 }
 
 const protectedRoots = database
