@@ -33,10 +33,10 @@ const cleanupRun = database
       SELECT
         cleanup_run_id,
         scan_id,
-        direct_target_root_count,
-        fully_deletable_root_count,
-        blocked_delete_root_count,
-        protected_root_count
+        direct_target_root_count AS directTargetRootCount,
+        fully_deletable_root_count AS fullyDeletableRootCount,
+        blocked_delete_root_count AS blockedDeleteRootCount,
+        protected_root_count AS protectedRootCount
       FROM cleanup_runs
       ORDER BY cleanup_run_id DESC
       LIMIT 1
