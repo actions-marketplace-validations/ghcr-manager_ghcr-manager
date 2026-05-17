@@ -28,6 +28,10 @@ inputs:
     description: Whether to upload the database as a workflow run artifact
     required: false
     default: "false"
+  scan-after-cleanup:
+    description: Whether live cleanup should run a second full scan so the DB reflects post-mutation state
+    required: false
+    default: "false"
   db-artifact-encryption-passphrase:
     description: Optional passphrase used to encrypt uploaded DB artifacts; required for non-public registries
     required: false
@@ -248,7 +252,7 @@ runs:
 
     - name: Scan after live cleanup
       id: scan-after
-      if: ${{ inputs.command == 'cleanup' && inputs.dry-run != 'true' }}
+      if: ${{ inputs.command == 'cleanup' && inputs.dry-run != 'true' && inputs.scan-after-cleanup == 'true' }}
       shell: bash
       run: |
         set -euo pipefail

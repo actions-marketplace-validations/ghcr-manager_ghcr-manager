@@ -220,6 +220,7 @@ jobs:
           package: ${{ steps.scenario.outputs.package_name }}
           db-path: ${{ steps.scenario.outputs.db_path }}
           upload-db-artifact: ${{ inputs.upload_db_artifact }}
+          scan-after-cleanup: "true"
           db-artifact-encryption-passphrase: ${{ inputs.db_artifact_encryption_passphrase }}
           db-artifact-retention-days: ${{ inputs.artifact_retention_days }}
           delete-untagged: ${{ steps.cleanup-inputs.outputs.delete_untagged }}

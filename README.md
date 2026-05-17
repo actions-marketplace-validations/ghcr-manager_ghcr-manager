@@ -43,7 +43,8 @@ packages and correct handling of multi-arch images, referrers, and attestations.
 The action supports two commands:
 
 - `scan`: scan one package and always upload the resulting DB artifact
-- `cleanup`: scan first, then simulate or apply cleanup selectors; DB upload stays optional here
+- `cleanup`: scan first, then simulate or apply cleanup selectors; DB upload stays optional here, and a second
+  post-cleanup scan is opt-in
 
 ```yaml
 concurrency:
@@ -70,6 +71,7 @@ jobs:
           delete-untagged: true
           dry-run: true
           upload-db-artifact: true
+          scan-after-cleanup: true
           db-artifact-encryption-passphrase: ${{ secrets.DB_ARTIFACT_ENCRYPTION_PASSPHRASE }}
 ```
 
@@ -88,6 +90,7 @@ jobs:
 | `package`                           | Container package name                                                                                           | Yes      |                                |
 | `db-path`                           | Optional local SQLite DB path so multiple action steps can append to the same DB                                 | No       |                                |
 | `upload-db-artifact`                | Whether `cleanup` should upload the resulting DB artifact. `scan` always uploads regardless of this setting      | No       | `false`                        |
+| `scan-after-cleanup`                | Whether live `cleanup` should run a second full scan so the DB reflects post-mutation state                      | No       | `false`                        |
 | `db-artifact-encryption-passphrase` | Optional passphrase for encrypting uploaded DB artifacts; required for non-public registries when upload happens | No       |                                |
 | `db-artifact-retention-days`        | Optional retention days override for uploaded database artifact                                                  | No       | `${{ github.retention_days }}` |
 | `delete-tags`                       | Optional comma-separated tags to delete during `cleanup`                                                         | No       |                                |

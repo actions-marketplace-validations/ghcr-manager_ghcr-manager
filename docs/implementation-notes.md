@@ -164,8 +164,8 @@ This section is the canonical place for session-to-session continuity.
   - by default the action creates a fresh DB path under runner temp storage
   - the action also supports an optional local `db-path` input so later scans can append to the same SQLite file
   - `command: scan` always uploads the resulting DB artifact
-  - `command: cleanup` always runs an implicit pre-scan, optionally uploads the resulting DB, and now rescans after live
-    cleanup so the shared DB reflects post-mutation state
+  - `command: cleanup` always runs an implicit pre-scan and optionally uploads the resulting DB
+  - live `cleanup` only runs the second post-mutation scan when the caller opts into `scan-after-cleanup`
 - Current CLI shape:
   - `scan` imports live GitHub Packages + GHCR state into SQLite
   - `cleanup --dry-run ...` emits the dry-run delete plan for the latest completed scan of one owner/package
@@ -244,6 +244,9 @@ This section is the canonical place for session-to-session continuity.
   - the reusable executor workflow now passes the caller's DB-artifact upload settings through to the `ghcr-manager`
     cleanup action as well as the upstream post-cleanup scan path, so both executor legs emit one action-owned final DB
     artifact when upload is enabled
+  - the action-level post-cleanup rescan is now explicit via `scan-after-cleanup` instead of being unconditional for
+    every live cleanup; the scenario executor opts into it for the `ghcr-manager` leg so test DBs still capture both
+    before and after state in one SQLite file
   - `test-scenario-seed` no longer keeps a duplicated hardcoded allowlist of seed strategies; it now sets a generic
     handled marker from whichever scenario branch ran and only fails at the end if no branch claimed the requested
     strategy
