@@ -16,6 +16,28 @@ test("resolveOlderThan accepts singular units and months", () => {
   });
 });
 
+test("resolveOlderThan trims input, lowercases units, and supports minute or hour intervals", () => {
+  assert.deepEqual(resolveOlderThan(" 15 MINUTES ", new Date("2026-05-14T12:00:00.000Z")), {
+    olderThan: "15 minutes",
+    cutoffTimestamp: "2026-05-14T11:45:00.000Z"
+  });
+  assert.deepEqual(resolveOlderThan("2 hours", new Date("2026-05-14T12:00:00.000Z")), {
+    olderThan: "2 hours",
+    cutoffTimestamp: "2026-05-14T10:00:00.000Z"
+  });
+});
+
+test("resolveOlderThan supports week and year intervals", () => {
+  assert.deepEqual(resolveOlderThan("3 weeks", new Date("2026-05-14T12:00:00.000Z")), {
+    olderThan: "3 weeks",
+    cutoffTimestamp: "2026-04-23T12:00:00.000Z"
+  });
+  assert.deepEqual(resolveOlderThan("1 year", new Date("2026-05-14T12:00:00.000Z")), {
+    olderThan: "1 year",
+    cutoffTimestamp: "2025-05-14T12:00:00.000Z"
+  });
+});
+
 test("resolveOlderThan rejects unsupported syntax", () => {
   assert.throws(
     () => resolveOlderThan("1 year 2 months", new Date("2026-05-14T12:00:00.000Z")),

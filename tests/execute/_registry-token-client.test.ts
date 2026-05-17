@@ -35,3 +35,90 @@ test("loadRegistryPushToken requests a push-capable token", async () => {
     "https://ghcr.example.test/token?service=ghcr.example.test&scope=repository%3Aacme%2Fexample%3Apull%2Cpush"
   ]);
 });
+
+test("loadRegistryPushToken surfaces non-retryable HTTP failures", async () => {
+  await assert.rejects(
+    () =>
+      loadRegistryPushToken(
+        "acme",
+        "example",
+        "github-token",
+        {
+          debug() {},
+          info() {},
+          warn() {},
+          error() {}
+        },
+        {
+          registryBaseUrl: "https://ghcr.example.test",
+          fetchImpl: async () => ({
+            ok: false,
+            status: 401,
+            headers: new Headers({
+              "content-type": "application/json",
+              "www-authenticate": 'Bearer realm="test"'
+            }),
+            async json() {
+              return { message: "unauthorized" };
+            }
+          })
+        }
+      ),
+    /GHCR token request failed - status 401 - unauthorized - www-authenticate: Bearer realm="test"/
+  );
+});
+
+test("loadRegistryPushToken rejects responses without a token", async () => {
+  await assert.rejects(
+    () =>
+      loadRegistryPushToken(
+        "acme",
+        "example",
+        "github-token",
+        {
+          debug() {},
+          info() {},
+          warn() {},
+          error() {}
+        },
+        {
+          registryBaseUrl: "https://ghcr.example.test",
+          fetchImpl: async () => ({
+            ok: true,
+            status: 200,
+            headers: new Headers({ "content-type": "application/json" }),
+            async json() {
+              return {};
+            }
+          })
+        }
+      ),
+    /GHCR token response did not include a token/
+  );
+});
+
+test("loadRegistryPushToken surfaces transport failures", async () => {
+  await assert.rejects(
+    () =>
+      loadRegistryPushToken(
+        "acme",
+        "example",
+        "github-token",
+        {
+          debug() {},
+          info() {},
+          warn() {},
+          error() {}
+        },
+        {
+          registryBaseUrl: "https://ghcr.example.test",
+          fetchImpl: async () => {
+            throw new TypeError("fetch failed", {
+              cause: Object.assign(new Error("socket hang up"), { code: "ECONNRESET" })
+            });
+          }
+        }
+      ),
+    /GHCR token request failed - fetch failed/
+  );
+});

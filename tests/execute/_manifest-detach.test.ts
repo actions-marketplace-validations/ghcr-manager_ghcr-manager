@@ -45,3 +45,37 @@ test("buildDetachedManifestClone keeps docker manifests schema-equivalent", () =
   assert.equal("annotations" in JSON.parse(clone), false);
   assert.notEqual(clone, manifest);
 });
+
+test("buildDetachedManifestClone preserves string annotations and drops non-string values", () => {
+  const manifest = JSON.stringify({
+    schemaVersion: 2,
+    mediaType: "application/vnd.oci.artifact.manifest.v1+json",
+    annotations: {
+      keep: "yes",
+      nested: { invalid: true },
+      count: 1
+    }
+  });
+
+  const clone = buildDetachedManifestClone(manifest, "application/vnd.oci.artifact.manifest.v1+json", {
+    detachedTag: "latest",
+    sourceDigest: "sha256:source"
+  });
+
+  const parsed = JSON.parse(clone) as { annotations?: Record<string, string> };
+  assert.deepEqual(parsed.annotations, {
+    keep: "yes",
+    "io.github.ghcr-manager.detached-tag": "latest sha256:source"
+  });
+});
+
+test("buildDetachedManifestClone rejects non-object manifests", () => {
+  assert.throws(
+    () =>
+      buildDetachedManifestClone("[]", "application/vnd.oci.image.manifest.v1+json", {
+        detachedTag: "latest",
+        sourceDigest: "sha256:source"
+      }),
+    /manifest sha256:source is not a JSON object/
+  );
+});

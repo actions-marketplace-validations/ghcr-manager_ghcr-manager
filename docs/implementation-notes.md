@@ -99,7 +99,7 @@ This section is the canonical place for session-to-session continuity.
 - ☑ Revisit action packaging after the live ingest path and cleanup execution path are both stable.
 - ☑ Add explicit live scenario coverage for Docker manifest-list multi-arch roots now that manifest-kind classification
   treats them as `image_index`.
-- ☐ Run the expanded scenario matrix in GitHub Actions and record the first green baseline that includes the Docker
+- ☑ Run the expanded scenario matrix in GitHub Actions and record the first green baseline that includes the Docker
   manifest-list shared-root scenario.
 - ☑ Persist cleanup planner runs in SQLite for both `cleanup --dry-run` and live `cleanup`, starting with the run
   header, root decisions, and protected roots.
@@ -169,6 +169,15 @@ This section is the canonical place for session-to-session continuity.
     manifest rows
 - Current action shape: thin composite wrapper that installs dependencies, builds the repo-local CLI from source, and
   invokes that shared CLI directly without installing the package from npm at runtime.
+- Current developer validation commands:
+  - `./scripts/lint.sh` runs the full lint/typecheck/format pipeline
+  - `npm test` runs the Node test suite
+  - `npm run coverage` is the preferred TypeScript-attributed coverage report; the raw Node
+    `--experimental-test-coverage` output is not a trustworthy repo-wide signal here
+  - the current repo baseline from `npm run coverage` is `96.82%` statements/lines, `88.5%` branches, and `100%`
+    functions; the recent CLI/cleanup coverage hardening brought both `_cleanup-command.ts` and `_scan-command.ts` to
+    full line coverage, and the next notable remaining hotspots are execute-side HTTP/page clients rather than planner
+    core
 - Action interface direction:
   - `command` is explicit and required; the action no longer defaults to `scan` when callers omit it
 - Current action DB handling:
@@ -239,7 +248,8 @@ This section is the canonical place for session-to-session continuity.
   - `manual-run-test.yml` now switches to `GHCR_TEST_PAT` automatically when the requested owner matches
     `GHCR_TEST_OWNER`, so private test-org packages remain scannable without a separate ad hoc workflow edit
   - the latest completed matrix baseline passed for all 18 scenarios × 2 executors (36 jobs), including the
-    `delete-ghost-images`, `delete-partial-images`, and regex selector scenarios
+    `delete-ghost-images`, `delete-partial-images`, regex selector scenarios, the Docker manifest-list shared-root
+    scenario, and the first cleanup-audit scenario assertions
   - the committed scenario workflow definitions now cover:
     - `delete-untagged-noop`
     - `delete-untagged-real`
