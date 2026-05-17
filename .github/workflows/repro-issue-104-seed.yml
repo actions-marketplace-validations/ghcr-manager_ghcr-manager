@@ -1,0 +1,198 @@
+name: Repro Issue 104 Seed
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+env:
+  IMAGE_REF: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-issue-104-repro
+  FINAL_TAG: issue-104-${{ github.run_id }}
+
+jobs:
+  build:
+    name: Build image (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    outputs:
+      digest_amd64: ${{ steps.out-amd64.outputs.digest }}
+      digest_arm64: ${{ steps.out-arm64.outputs.digest }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Prepare repro build context
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp/issue-104-repro
+          cat > .tmp/issue-104-repro/Dockerfile <<'EOF'
+          FROM busybox:1.36.1
+          ARG TARGETARCH
+          RUN printf '%s\n' "$TARGETARCH" > /arch.txt
+          CMD ["cat", "/arch.txt"]
+          EOF
+
+      - name: Build image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .tmp/issue-104-repro
+          file: .tmp/issue-104-repro/Dockerfile
+          push: true
+          provenance: true
+          platforms: ${{ matrix.platform }}
+          tags: ${{ env.IMAGE_REF }}:${{ github.run_id }}-${{ matrix.arch }}-test
+
+      # Add steps downloading and testing the image here
+
+      - name: Export digest (amd64)
+        id: out-amd64
+        if: matrix.arch == 'amd64'
+        run: echo "digest=${{ steps.build.outputs.digest }}" >> "$GITHUB_OUTPUT"
+
+      - name: Export digest (arm64)
+        id: out-arm64
+        if: matrix.arch == 'arm64'
+        run: echo "digest=${{ steps.build.outputs.digest }}" >> "$GITHUB_OUTPUT"
+
+  publish:
+    name: Publish and sign multi-arch manifest
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Install regctl
+        uses: regclient/actions/regctl-installer@main
+
+      - name: Publish multi-arch manifest by digest
+        id: publish-manifest
+        run: |
+          set -euo pipefail
+
+          manifest_json="$(
+            docker buildx imagetools create \
+              --dry-run \
+              "${IMAGE_REF}@${DIGEST_AMD64}" \
+              "${IMAGE_REF}@${DIGEST_ARM64}"
+          )"
+
+          final_digest="$(
+            regctl manifest put \
+              --by-digest \
+              "${IMAGE_REF}" \
+              --format '{{ ( .Manifest.GetDescriptor ).Digest }}' \
+              <<<"${manifest_json}"
+          )"
+
+          test -n "${final_digest}"
+          echo "digest=${final_digest}" >> "$GITHUB_OUTPUT"
+        env:
+          DIGEST_AMD64: ${{ needs.build.outputs.digest_amd64 }}
+          DIGEST_ARM64: ${{ needs.build.outputs.digest_arm64 }}
+
+      - name: Resolve manifest and image digests
+        id: digests
+        run: |
+          set -euo pipefail
+
+          amd64_json="$(docker buildx imagetools inspect --raw "${IMAGE_REF}@${AMD64_INDEX_DIGEST}")"
+          arm64_json="$(docker buildx imagetools inspect --raw "${IMAGE_REF}@${ARM64_INDEX_DIGEST}")"
+
+          amd64_platform_digest="$(jq -r '.manifests[] | select(.platform.os == "linux" and .platform.architecture == "amd64") | .digest' <<<"${amd64_json}")"
+          arm64_platform_digest="$(jq -r '.manifests[] | select(.platform.os == "linux" and .platform.architecture == "arm64") | .digest' <<<"${arm64_json}")"
+
+          test -n "${amd64_platform_digest}"
+          test -n "${arm64_platform_digest}"
+
+          echo "amd64_platform_digest=${amd64_platform_digest}" >> "$GITHUB_OUTPUT"
+          echo "arm64_platform_digest=${arm64_platform_digest}" >> "$GITHUB_OUTPUT"
+        env:
+          AMD64_INDEX_DIGEST: ${{ needs.build.outputs.digest_amd64 }}
+          ARM64_INDEX_DIGEST: ${{ needs.build.outputs.digest_arm64 }}
+
+      - name: Sign manifest and image digests
+        run: |
+          set -euo pipefail
+          cosign sign --yes "${IMAGE_REF}@${FINAL_DIGEST}"
+          cosign sign --yes "${IMAGE_REF}@${AMD64_PLATFORM_DIGEST}"
+          cosign sign --yes "${IMAGE_REF}@${ARM64_PLATFORM_DIGEST}"
+        env:
+          FINAL_DIGEST: ${{ steps.publish-manifest.outputs.digest }}
+          AMD64_PLATFORM_DIGEST: ${{ steps.digests.outputs.amd64_platform_digest }}
+          ARM64_PLATFORM_DIGEST: ${{ steps.digests.outputs.arm64_platform_digest }}
+
+      # Add verification steps
+      # Verify platform-manifest-digest signature
+      # Verify image index-digest signature
+      # Verify image attestation (?)
+      # Verify provenance is present (and pinned by the signed index)
+
+      - name: Publish final multi-arch manifest tag
+        run: |
+          set -euo pipefail
+          docker buildx imagetools create \
+            --tag "${IMAGE_REF}:${FINAL_TAG}" \
+            "${IMAGE_REF}@${FINAL_DIGEST}"
+        env:
+          FINAL_DIGEST: ${{ steps.publish-manifest.outputs.digest }}
+
+      - name: Write summary
+        run: |
+          {
+            echo "## Issue 104 Repro Seed"
+            echo
+            echo "- Final tag: \`${IMAGE_REF}:${FINAL_TAG}\`"
+            echo "- amd64 build tag: \`${IMAGE_REF}:${RUN_ID}-amd64-test\`"
+            echo "- arm64 build tag: \`${IMAGE_REF}:${RUN_ID}-arm64-test\`"
+            echo "- Final multi-arch digest: \`${FINAL_DIGEST}\`"
+            echo "- amd64 platform digest: \`${AMD64_PLATFORM_DIGEST}\`"
+            echo "- arm64 platform digest: \`${ARM64_PLATFORM_DIGEST}\`"
+            echo
+            echo "This workflow mirrors the actions 'gh-workflow/multiarch-image-publish' shape:"
+            echo
+            echo "- build amd64 and arm64 separately"
+            echo "- push each build with provenance enabled"
+            echo "- do not publish final tags while the images and manifest are still unverified"
+            echo "- publish the multi-arch manifest by digest first"
+            echo "- explicitly cosign-sign the final multi-arch digest and both child platform digests"
+            echo "- only attach the final kept multi-arch tag after signing and verification work is complete"
+            echo "- do not publish final platform tags"
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          RUN_ID: ${{ github.run_id }}
+          FINAL_DIGEST: ${{ steps.publish-manifest.outputs.digest }}
+          AMD64_PLATFORM_DIGEST: ${{ steps.digests.outputs.amd64_platform_digest }}
+          ARM64_PLATFORM_DIGEST: ${{ steps.digests.outputs.arm64_platform_digest }}

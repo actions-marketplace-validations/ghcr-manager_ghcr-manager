@@ -258,6 +258,11 @@ This section is the canonical place for session-to-session continuity.
     - `untag-only-single-shared-root`
     - `untag-only-multiarch-shared-root`
     - `docker-manifest-list-untag-only-shared-root`
+  - `.github/workflows/repro-issue-104-seed.yml` is a repo-local manual repro helper that uses only the current
+    repository's `GITHUB_TOKEN` plus `id-token: write` to publish one kept multi-arch GHCR tag under this repo's owner,
+    then explicitly `cosign sign`s the final index digest and both child platform digests without going through the
+    separate `gh-workflow/multiarch-image-publish` action; its order now mirrors the older explicit publish flow by
+    delaying the final tag until after the digest-level publish and signing steps
     - `exclude-tag-protected-root`
     - `keep-n-tagged-overflow`
     - `keep-n-untagged-overflow`
