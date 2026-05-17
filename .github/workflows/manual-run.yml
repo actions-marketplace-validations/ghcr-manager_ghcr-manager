@@ -1,4 +1,4 @@
-name: Manual Run
+name: Manual Run Release
 run-name: Manual Run for ${{ inputs.owner }}/${{ inputs.package }}
 
 "on":
@@ -41,11 +41,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
+      - name: Resolve GitHub token
+        id: token
+        shell: bash
+        env:
+          GHCR_TEST_OWNER: ${{ vars.GHCR_TEST_OWNER }}
+          GHCR_TEST_PAT: ${{ secrets.GHCR_TEST_PAT }}
+          INPUT_OWNER: ${{ inputs.owner }}
+        run: |
+          set -euo pipefail
+          token="${{ github.token }}"
+          if [[ -n "$GHCR_TEST_OWNER" && "$INPUT_OWNER" == "$GHCR_TEST_OWNER" ]]; then
+            [[ -n "$GHCR_TEST_PAT" ]] || { echo "Missing repo secret GHCR_TEST_PAT for private test-org scan" >&2; exit 1; }
+            token="$GHCR_TEST_PAT"
+          fi
+          echo "token=$token" >> "$GITHUB_OUTPUT"
+
       - name: Run ghcr-manager action
         id: ghcr-manager
         uses: gh-workflow/ghcr-manager@0.0.6
         with:
-          github-token: ${{ github.token }}
+          github-token: ${{ steps.token.outputs.token }}
           owner: ${{ inputs.owner }}
           package: ${{ inputs.package }}
           upload-db-artifact: ${{ inputs.upload_db_artifact }}
