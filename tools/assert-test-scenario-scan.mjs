@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global process */
 
 import assert from "node:assert/strict";
 import Database from "better-sqlite3";

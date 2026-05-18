@@ -1,3 +1,6 @@
+#!/usr/bin/env node
+/* global console, process */
+
 import { access, readdir } from "node:fs/promises";
 import path from "node:path";
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global fetch, process, URL */
 
 const owner = process.argv[2];
 const packageName = process.argv[3];

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global process */
 
 import { scenarios } from "./test-scenarios/_definitions.mjs";
 
