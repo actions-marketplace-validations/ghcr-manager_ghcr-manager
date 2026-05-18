@@ -5,7 +5,9 @@ import YAML from "yaml";
 import { scenarioIds } from "./test-scenarios/_definitions.mjs";
 
 const workflow = YAML.parse(readFileSync(".github/workflows/test-scenario-executor.yml", "utf8"));
-const workflowOptions = workflow.on.workflow_dispatch.inputs.scenario.options;
+const workflowOn = workflow?.on;
+const workflowDispatch = workflowOn?.workflow_dispatch ?? workflowOn?.["workflow_dispatch"];
+const workflowOptions = workflowDispatch?.inputs?.scenario?.options;
 
 if (JSON.stringify(workflowOptions) !== JSON.stringify(scenarioIds)) {
   throw new Error(
