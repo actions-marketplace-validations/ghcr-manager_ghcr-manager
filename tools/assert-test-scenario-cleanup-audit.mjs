@@ -5,6 +5,17 @@ import assert from "node:assert/strict";
 import Database from "better-sqlite3";
 import { scenarios } from "./test-scenarios/_definitions.mjs";
 
+/**
+ * @typedef {{
+ *   cleanup_run_id: number;
+ *   scan_id: number;
+ *   directTargetRootCount: number;
+ *   fullyDeletableRootCount: number;
+ *   blockedDeleteRootCount: number;
+ *   protectedRootCount: number;
+ * }} CleanupRunRow
+ */
+
 const scenarioId = process.argv[2];
 const dbPath = process.argv[3];
 
