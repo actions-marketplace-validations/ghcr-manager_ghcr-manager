@@ -112,6 +112,10 @@ This section is the canonical place for session-to-session continuity.
   another high-cardinality table.
 - ☐ Decide whether any further cleanup-audit read surface beyond repo-local tools and SQL views is still needed.
 - ☑ Add package scopes to the DB schema so one SQLite database can store multiple owner/package scans.
+- ☑ Split the oversized planner repository into focused internal DB helpers for typed row mapping, selector handling,
+  direct-target queries, and closure/blocking analysis while keeping `PlannerRepository` as the only public entrypoint.
+- ☑ Split tagged-target planning again so direct tag enumeration and tagged root selection live in separate internal DB
+  helpers.
 - ☑ Add a real GitHub Packages and GHCR ingest adapter beside the fixture loader.
 - ☑ Normalize live package, version, tag, manifest, and edge data into the existing SQLite schema.
 - ☑ Refactor ingest so GitHub and fixture input write incrementally into SQLite instead of assembling package-level
@@ -205,6 +209,14 @@ This section is the canonical place for session-to-session continuity.
   - `tools/report-cleanup-run.mjs` can now render one persisted cleanup run back into planner-shaped JSON, either by
     explicit `--cleanup-run-id` or by latest run for `--owner` plus `--package`
   - this first slice intentionally does not persist `closureManifests` or per-manifest execution effects yet
+- Planner repository structure:
+  - `src/db/_planner-repository.ts` now coordinates smaller internal helpers instead of owning all SQL and mapping code
+  - row-shape mapping, selector handling, direct-target selection, and closure/blocking analysis each live in their own
+    internal planner modules under `src/db/`
+  - tagged planner internals are now split again: `_planner-direct-target-tags.ts` handles direct tag enumeration, and
+    `_planner-tagged-root-targets.ts` handles tagged root selection / keep-overflow logic
+  - the public `src/db/index.ts` surface is unchanged; mirror tests for the new files stay public-API based to respect
+    the repo's cross-folder import rule
 - Current CLI shape:
   - `scan` imports live GitHub Packages + GHCR state into SQLite
   - `cleanup --dry-run ...` emits the dry-run delete plan for the latest completed scan of one owner/package
