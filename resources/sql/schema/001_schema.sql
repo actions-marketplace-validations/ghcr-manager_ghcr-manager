@@ -108,6 +108,7 @@ CREATE TABLE IF NOT EXISTS manifest_reachability (
 CREATE TABLE IF NOT EXISTS cleanup_runs (
   cleanup_run_id INTEGER PRIMARY KEY,
   scan_id INTEGER NOT NULL,
+  cleanup_uuid TEXT NOT NULL,
   cleanup_started_at TEXT NOT NULL,
   dry_run INTEGER NOT NULL,
   planner_inputs_json TEXT NOT NULL,
@@ -164,6 +165,7 @@ CREATE TABLE IF NOT EXISTS cleanup_protected_root_blocks (
 
 CREATE INDEX IF NOT EXISTS idx_package_versions_scan_created_at ON package_versions(scan_id, created_at);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_package_scans_scan_uuid ON package_scans(scan_uuid);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cleanup_runs_cleanup_uuid ON cleanup_runs(cleanup_uuid);
 CREATE INDEX IF NOT EXISTS idx_package_scans_owner_name_started_at
   ON package_scans(owner, package_name, scan_started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_cleanup_runs_scan_id ON cleanup_runs(scan_id);

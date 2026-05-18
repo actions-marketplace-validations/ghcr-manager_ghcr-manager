@@ -192,9 +192,13 @@ This section is the canonical place for session-to-session continuity.
   - `command: scan` always uploads the resulting DB artifact
   - `command: cleanup` always runs an implicit pre-scan and optionally uploads the resulting DB
   - live `cleanup` only runs the second post-mutation scan when the caller opts into `scan-after-cleanup`
+  - DB merge now lives in a separate sub-action at `db-merge/action.yml`, so the root action keeps strict required
+    inputs for `scan` / `cleanup`
 - Current cleanup audit persistence:
   - every CLI `cleanup` invocation now stores one `cleanup_runs` row linked to the exact latest completed scan used by
     the planner
+  - each persisted cleanup run now also stores a stable `cleanup_uuid`, which is used only as cleanup-run identity for
+    DB merge history comparisons
   - the first persisted slice stores planner inputs plus summary counts in `cleanup_runs`
   - root-level planner decisions are stored in `cleanup_root_decisions` as digest-based rows scoped by explicit
     `scan_id`, with digest foreign keys back to `manifests(scan_id, digest)` instead of hidden `package_versions` joins
@@ -233,6 +237,9 @@ This section is the canonical place for session-to-session continuity.
     every case
 - Current CLI shape:
   - `scan` imports live GitHub Packages + GHCR state into SQLite
+  - `db-merge --db <target> --source-db <path> [--source-db <path> ...]` merges local SQLite files into one target DB,
+    using `scan_uuid` identity plus per-scan ordered `cleanup_uuid` history checks to allow only flat append-only
+    cleanup history
   - `cleanup --dry-run ...` emits the dry-run delete plan for the latest completed scan of one owner/package
   - `cleanup ...` applies that same planner contract against the latest completed scan of one owner/package
   - `cleanup --keep-n-tagged <count> [--older-than <interval>]` keeps the newest eligible tagged roots and applies or

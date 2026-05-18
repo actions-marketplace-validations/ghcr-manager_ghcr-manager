@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import { randomUUID } from "node:crypto";
 import type { DeletePlan } from "./planner/index.js";
 
 export class CleanupRunWriter {
@@ -81,6 +82,7 @@ export class CleanupRunWriter {
         `
           INSERT INTO cleanup_runs(
             scan_id,
+            cleanup_uuid,
             cleanup_started_at,
             dry_run,
             planner_inputs_json,
@@ -92,11 +94,12 @@ export class CleanupRunWriter {
             blocked_delete_root_count,
             protected_root_count
           )
-          VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `
       )
       .run(
         scanId,
+        randomUUID(),
         options.cleanupStartedAt,
         options.dryRun ? 1 : 0,
         JSON.stringify(plan.plannerInputs),

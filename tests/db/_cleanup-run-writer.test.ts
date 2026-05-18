@@ -122,13 +122,14 @@ test("cleanup run writer stores planner decisions and protected roots", () => {
   const cleanupRun = database
     .prepare(
       `
-        SELECT scan_id, cleanup_started_at, dry_run, planner_inputs_json, protected_root_count
+        SELECT scan_id, cleanup_uuid, cleanup_started_at, dry_run, planner_inputs_json, protected_root_count
         FROM cleanup_runs
         WHERE cleanup_run_id = ?
       `
     )
     .get(cleanupRunId) as {
     scan_id: number;
+    cleanup_uuid: string;
     cleanup_started_at: string;
     dry_run: number;
     planner_inputs_json: string;
@@ -136,6 +137,7 @@ test("cleanup run writer stores planner decisions and protected roots", () => {
   };
 
   assert.equal(cleanupRun.scan_id, scanId);
+  assert.match(cleanupRun.cleanup_uuid, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   assert.equal(cleanupRun.cleanup_started_at, "2026-05-17T09:01:00.000Z");
   assert.equal(cleanupRun.dry_run, 1);
   assert.deepEqual(JSON.parse(cleanupRun.planner_inputs_json), plan.plannerInputs);
@@ -304,6 +306,7 @@ test("cleanup audit rows must use the same scan as their cleanup run", () => {
         `
           INSERT INTO cleanup_runs(
             scan_id,
+            cleanup_uuid,
             cleanup_started_at,
             dry_run,
             planner_inputs_json,
@@ -315,10 +318,23 @@ test("cleanup audit rows must use the same scan as their cleanup run", () => {
             blocked_delete_root_count,
             protected_root_count
           )
-          VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `
       )
-      .run(firstScanId, "2026-05-17T10:01:00.000Z", 1, "{}", 0, 0, 0, 0, 0, 0, 0).lastInsertRowid
+      .run(
+        firstScanId,
+        "0196db62-c240-7000-8000-000000000001",
+        "2026-05-17T10:01:00.000Z",
+        1,
+        "{}",
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ).lastInsertRowid
   );
 
   assert.throws(

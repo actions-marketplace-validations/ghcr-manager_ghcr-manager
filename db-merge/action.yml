@@ -1,0 +1,88 @@
+name: ghcr-manager db-merge
+description: Merge one or more ghcr-manager SQLite databases into a single target database.
+
+branding:
+  icon: package
+  color: blue
+
+inputs:
+  db-path:
+    description: Optional local SQLite DB path to write the merged database into
+    required: false
+    default: ""
+  source-db-paths:
+    description: Newline-separated local SQLite DB paths to merge into db-path
+    required: true
+  log-level:
+    description: Log level passed to the shared CLI
+    required: false
+    default: info
+
+outputs:
+  db-path:
+    description: Path to the merged SQLite database in the GitHub action runner
+    value: ${{ steps.prepare-db.outputs.db_path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+      with:
+        node-version: "24"
+        cache: npm
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        set -euo pipefail
+        npm ci
+
+    - name: Build ghcr-manager
+      shell: bash
+      run: |
+        set -euo pipefail
+        npm run build
+
+    - name: Prepare merge DB path
+      id: prepare-db
+      shell: bash
+      env:
+        INPUT_DB_PATH: ${{ inputs.db-path }}
+        RUNNER_TEMP: ${{ runner.temp }}
+      run: |
+        set -euo pipefail
+        db_file="merged.sqlite"
+        if [[ -n "$INPUT_DB_PATH" ]]; then
+          db_path="$INPUT_DB_PATH"
+          db_dir="$(dirname "$db_path")"
+          db_file="$(basename "$db_path")"
+        else
+          merge_uuid="$(cat /proc/sys/kernel/random/uuid)"
+          db_dir="$RUNNER_TEMP/ghcr-manager/$merge_uuid"
+          db_path="$db_dir/$db_file"
+        fi
+        mkdir -p "$db_dir"
+        echo "db_file=$db_file" >> "$GITHUB_OUTPUT"
+        echo "db_path=$db_path" >> "$GITHUB_OUTPUT"
+
+    - name: Run DB merge
+      shell: bash
+      env:
+        SOURCE_DB_PATHS: ${{ inputs.source-db-paths }}
+      run: |
+        set -euo pipefail
+
+        merge_args=(
+          --db "${{ steps.prepare-db.outputs.db_path }}"
+        )
+
+        while IFS= read -r source_db_path; do
+          source_db_path="${source_db_path#"${source_db_path%%[![:space:]]*}"}"
+          source_db_path="${source_db_path%"${source_db_path##*[![:space:]]}"}"
+          if [[ -n "$source_db_path" ]]; then
+            merge_args+=(--source-db "$source_db_path")
+          fi
+        done <<< "$SOURCE_DB_PATHS"
+
+        npm run ghcr-manager:dist -- db-merge "${merge_args[@]}"

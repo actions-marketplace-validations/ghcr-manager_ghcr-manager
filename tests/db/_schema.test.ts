@@ -191,8 +191,15 @@ test("initializeSchema creates cleanup audit tables", () => {
     )
     .get() as { sql?: string } | undefined;
   assert.match(cleanupRunsRow?.sql ?? "", /dry_run INTEGER NOT NULL/);
+  assert.match(cleanupRunsRow?.sql ?? "", /cleanup_uuid TEXT NOT NULL/);
   assert.match(cleanupRunsRow?.sql ?? "", /planner_inputs_json TEXT NOT NULL/);
   assert.match(cleanupRunsRow?.sql ?? "", /UNIQUE\(cleanup_run_id, scan_id\)/);
+
+  const cleanupRunIndexes = database.prepare("PRAGMA index_list(cleanup_runs)").all() as Array<{
+    name: string;
+    unique: number;
+  }>;
+  assert.ok(cleanupRunIndexes.some((index) => index.name === "idx_cleanup_runs_cleanup_uuid" && index.unique === 1));
 
   const cleanupRootDecisionsRow = database
     .prepare(

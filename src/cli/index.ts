@@ -3,6 +3,7 @@
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { handleCleanup } from "./_cleanup-command.js";
+import { handleDbMerge } from "./_db-merge-command.js";
 import { handleScan } from "./_scan-command.js";
 
 export async function main(argv: string[]): Promise<number> {
@@ -15,6 +16,8 @@ export async function main(argv: string[]): Promise<number> {
   switch (command) {
     case "cleanup":
       return handleCleanup(rest);
+    case "db-merge":
+      return handleDbMerge(rest);
     case "scan":
       return handleScan(rest);
     default:
@@ -31,6 +34,7 @@ function printUsage(): void {
   ghcr-manager cleanup --db <path> [--log-level <trace|debug|info|warn|error|silent>] [--dry-run] --owner <org> --package <name> [--token <token>] --keep-n-tagged <count> [--older-than <interval>]
   ghcr-manager cleanup --db <path> [--log-level <trace|debug|info|warn|error|silent>] [--dry-run] --owner <org> --package <name> [--token <token>] --keep-n-untagged <count> [--older-than <interval>]
   ghcr-manager cleanup --db <path> [--log-level <trace|debug|info|warn|error|silent>] [--dry-run] --owner <org> --package <name> [--token <token>] --delete-tag <tag> [--delete-tag <tag> ...] [--exclude-tag <tag> ...] [--use-regex] [--older-than <interval>]
+  ghcr-manager db-merge --db <target-path> --source-db <path> [--source-db <path> ...]
   ghcr-manager scan --db <path> [--log-level <trace|debug|info|warn|error|silent>] [--github-output <path>] --owner <org> --package <name> --token <token>`);
 }
 
