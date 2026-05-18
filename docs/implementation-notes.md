@@ -32,6 +32,7 @@ This section is the canonical place for session-to-session continuity.
 - ☑ `c61c531` Refine tag foreign keys and trim schema tests.
 - ☑ `0a5f620` Extract matrix DB artifact download script.
 - ☑ `0969bff` Add DB merge artifact upload support.
+- ☑ `7109662` Tighten cleanup block reachability constraints.
 
 ### Completed Plan
 
