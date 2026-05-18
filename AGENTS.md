@@ -15,6 +15,8 @@ Audience: AI coding agents working in this repo.
 - Do not print `git diff` output or patch hunks in normal progress updates unless explicitly requested.
 - Summarize code changes briefly and rely on commit hashes, file paths, and test results instead.
 - The repository uses Node.js and TypeScript for build, test, and lint tasks.
+- Do not embed non-trivial code inline inside bash blocks, especially not inline heredoc/one-liner Node, Python, Ruby,
+  Perl, or shell helper programs inside YAML `run:` steps; put that logic in repo-local script files instead.
 - Disabling linters via comments is a last resort; fix first and only suppress with explicit approval.
 - For any substantial work, update [docs/implementation-notes.md](docs/implementation-notes.md) before ending the
   session.

@@ -110,17 +110,7 @@ runs:
       run: |
         set -euo pipefail
 
-        has_non_public_scan="$(node --input-type=module <<'EOF'
-        import Database from "better-sqlite3";
-
-        const db = new Database(process.env.DB_PATH, { readonly: true });
-        const row = db
-          .prepare("SELECT EXISTS(SELECT 1 FROM package_scans WHERE is_public = 0) AS has_non_public_scan")
-          .get();
-        db.close();
-        process.stdout.write(row.has_non_public_scan === 1 ? "true" : "false");
-        EOF
-        )"
+        has_non_public_scan="$(node tools/db-has-non-public-scans.mjs "$DB_PATH")"
 
         artifact_path="${{ steps.prepare-db.outputs.db_path }}"
         artifact_file="${{ steps.prepare-db.outputs.db_file }}"
