@@ -35,6 +35,7 @@ This section is the canonical place for session-to-session continuity.
 - ☑ `7109662` Tighten cleanup block reachability constraints.
 - ☑ `3dd031a` Split matrix artifact helper scripts.
 - ☑ `3fd550d` Add merge run artifacts sub-action.
+- ☑ `c473526` Extract DB artifact visibility helper.
 
 ### Completed Plan
 
