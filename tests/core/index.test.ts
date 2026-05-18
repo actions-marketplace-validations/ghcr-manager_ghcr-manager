@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { PackageSnapshot } from "../../src/core/index.js";
+import { buildHttpErrorMessage, type PackageSnapshot } from "../../src/core/index.js";
 
 test("core index re-exports public types", () => {
   const snapshot: PackageSnapshot = {
@@ -13,4 +13,22 @@ test("core index re-exports public types", () => {
   };
 
   assert.equal(snapshot.packageName, "acme/example");
+});
+
+test("core index re-exports http error formatting", async () => {
+  const message = await buildHttpErrorMessage(
+    {
+      status: 404,
+      headers: new Headers({ "content-type": "application/json" }),
+      async json() {
+        return {
+          message: "Not Found",
+          documentation_url: "https://docs.example.test"
+        };
+      }
+    },
+    "fallback"
+  );
+
+  assert.equal(message, "fallback - status 404 - Not Found - https://docs.example.test");
 });

@@ -1,4 +1,5 @@
 import { ingestRequestRetryCount, ingestRequestRetryDelayMs } from "../../tuning/index.js";
+export { buildHttpErrorMessage } from "../../core/index.js";
 
 export interface GitHubScanOptions {
   owner: string;
@@ -41,26 +42,6 @@ export function buildFetchTransportErrorMessage(error: unknown, fallback: string
   return details.join(" - ");
 }
 
-export async function buildHttpErrorMessage(response: FetchLikeResponse, fallback: string): Promise<string> {
-  const details: string[] = [fallback, `status ${response.status}`];
-  const body = await _readJsonErrorBody(response);
-  const message = typeof body?.message === "string" ? body.message : undefined;
-  const documentationUrl = typeof body?.documentation_url === "string" ? body.documentation_url : undefined;
-  const authenticateHeader = response.headers.get("www-authenticate") ?? undefined;
-
-  if (message) {
-    details.push(message);
-  }
-  if (documentationUrl) {
-    details.push(documentationUrl);
-  }
-  if (authenticateHeader) {
-    details.push(`www-authenticate: ${authenticateHeader}`);
-  }
-
-  return details.join(" - ");
-}
-
 export async function withFetchRetry<T>(
   run: () => Promise<T>,
   options: {
@@ -87,30 +68,6 @@ export async function withFetchRetry<T>(
       await _sleep(ingestRequestRetryDelayMs);
     }
   }
-}
-
-async function _readJsonErrorBody(response: FetchLikeResponse): Promise<
-  | {
-      message?: unknown;
-      documentation_url?: unknown;
-    }
-  | undefined
-> {
-  const contentType = response.headers.get("content-type")?.split(";")[0];
-  if (contentType && contentType !== "application/json" && !contentType.endsWith("+json")) {
-    return undefined;
-  }
-
-  try {
-    const body = await response.json();
-    if (body && typeof body === "object") {
-      return body as { message?: unknown; documentation_url?: unknown };
-    }
-  } catch {
-    return undefined;
-  }
-
-  return undefined;
 }
 
 function _sleep(delayMs: number): Promise<void> {
