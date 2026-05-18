@@ -34,6 +34,7 @@ This section is the canonical place for session-to-session continuity.
 - ☑ `0969bff` Add DB merge artifact upload support.
 - ☑ `7109662` Tighten cleanup block reachability constraints.
 - ☑ `3dd031a` Split matrix artifact helper scripts.
+- ☑ `3fd550d` Add merge run artifacts sub-action.
 
 ### Completed Plan
 
