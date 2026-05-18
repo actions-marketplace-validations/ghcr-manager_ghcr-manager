@@ -30,3 +30,63 @@ test("planner repository enumerates direct target tags through the dedicated dir
 
   database.close();
 });
+
+test("planner repository matches regex delete and exclude selectors in SQL", () => {
+  const database = openDatabase(":memory:");
+  const writer = new ScanWriter(database);
+  const repository = new PlannerRepository(database);
+
+  writer.resetScan("acme", "regex-tags", "2026-05-14T10:00:00.000Z");
+  writer.insertPackageVersion({
+    versionId: 1,
+    createdAt: "2026-05-01T10:00:00.000Z",
+    updatedAt: "2026-05-01T10:00:00.000Z"
+  });
+  writer.insertManifest({
+    versionId: 1,
+    digest: "sha256:protected-root",
+    manifestKind: "image_manifest",
+    mediaType: "application/vnd.oci.image.manifest.v1+json"
+  });
+  writer.insertTag({ tag: "latest", versionId: 1 });
+  writer.insertTag({ tag: "keep-me", versionId: 1 });
+  writer.markScanCompleted("2026-05-14T10:00:00.000Z");
+
+  const plan = repository.getDeleteTagsPlanWithCutoff("acme", "regex-tags", ["^l.*"], [".*me$"], {
+    useRegex: true
+  });
+
+  assert.deepEqual(plan.directTargetTags, []);
+  assert.deepEqual(plan.directTargetRoots, []);
+
+  database.close();
+});
+
+test("planner repository lets exclude-tags protect a matched root", () => {
+  const database = openDatabase(":memory:");
+  const writer = new ScanWriter(database);
+  const repository = new PlannerRepository(database);
+
+  writer.resetScan("acme", "exclude-tags", "2026-05-14T10:00:00.000Z");
+  writer.insertPackageVersion({
+    versionId: 1,
+    createdAt: "2026-05-01T10:00:00.000Z",
+    updatedAt: "2026-05-01T10:00:00.000Z"
+  });
+  writer.insertManifest({
+    versionId: 1,
+    digest: "sha256:protected-root",
+    manifestKind: "image_manifest",
+    mediaType: "application/vnd.oci.image.manifest.v1+json"
+  });
+  writer.insertTag({ tag: "latest", versionId: 1 });
+  writer.insertTag({ tag: "keep-me", versionId: 1 });
+  writer.markScanCompleted("2026-05-14T10:00:00.000Z");
+
+  const plan = repository.getDeleteTagsPlan("acme", "exclude-tags", ["latest"], ["keep-me"]);
+
+  assert.deepEqual(plan.directTargetTags, []);
+  assert.deepEqual(plan.directTargetRoots, []);
+
+  database.close();
+});

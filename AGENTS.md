@@ -27,6 +27,8 @@ Audience: AI coding agents working in this repo.
 - Test files may exceed those sizes when scenario readability or fixture-heavy structure benefits from it.
 - Evaluate file size together with cohesion, abstraction level, and testability, not line count alone.
 - Cross-folder TypeScript imports must go through the target folder's `index.ts`.
+- Exception for mirrored tests: a file under `tests/` may directly import the exact `src/` file it mirrors; it must
+  still use `index.ts` for any other cross-folder import.
 - Non-`index.ts` files are internal to their folder and must not be imported from outside that folder.
 - In `src/`, every non-public TypeScript implementation file must be named `_*.ts`.
 - The `tests/` tree must mirror the `src/` tree with a one-to-one file mapping: `src/foo/bar.ts` ->

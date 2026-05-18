@@ -221,6 +221,11 @@ This section is the canonical place for session-to-session continuity.
     classification
   - the public `src/db/index.ts` surface is still the entrypoint; it now re-exports planner API from
     `src/db/planner/index.ts`, and mirror tests live under `tests/db/planner/`
+  - planner scenario coverage has now been redistributed across the mirrored planner test files, so
+    `tests/db/planner/_planner-repository.test.ts` is back to repository-level wiring coverage instead of being the
+    catch-all scenario file for the whole planner subsystem
+  - the mirrored planner tests currently give the most value when they each own one planner behavior slice, even when
+    they still exercise that slice through the public `PlannerRepository` API
 - Current CLI shape:
   - `scan` imports live GitHub Packages + GHCR state into SQLite
   - `cleanup --dry-run ...` emits the dry-run delete plan for the latest completed scan of one owner/package
@@ -395,6 +400,8 @@ This section is the canonical place for session-to-session continuity.
   - above about 220 lines is generally not acceptable outside repetitive or low-risk code
 - Cross-folder import rule: imports from outside a folder must go through that folder's `index.ts`.
 - Enforcement: the cross-folder `index.ts` rule is mechanically enforced by a local ESLint rule.
+- Mirrored-test import exception: a file under `tests/` may directly import the exact `src/` file it mirrors; it must
+  still use the target folder's `index.ts` for any other cross-folder import.
 - File naming rule in `src/`: every non-public implementation file must be named `_*.ts`.
 - Test mapping rule: `tests/` mirrors `src/` one-to-one, with `src/.../*.ts` mapped to `tests/.../*.test.ts`.
 - Cleanup planning roadmap: [docs/cleanup-roadmap.md](cleanup-roadmap.md)
