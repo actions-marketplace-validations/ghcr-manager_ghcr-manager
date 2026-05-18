@@ -228,6 +228,9 @@ This section is the canonical place for session-to-session continuity.
     they still exercise that slice through the public `PlannerRepository` API
   - `tests/db/planner/_planner-plan-artifacts.test.ts` now uses the mirrored-test import exception directly by importing
     `src/db/planner/_planner-plan-artifacts.ts`, while still relying on `src/db/index.ts` for shared DB test setup
+  - `tests/cli/_tag-selector-resolver.test.ts` was trimmed by extracting shared temporary-DB and input-builder helpers;
+    the scenario coverage is unchanged, but the file no longer repeats temp-directory and `PlanCommandInputs` setup in
+    every case
 - Current CLI shape:
   - `scan` imports live GitHub Packages + GHCR state into SQLite
   - `cleanup --dry-run ...` emits the dry-run delete plan for the latest completed scan of one owner/package
