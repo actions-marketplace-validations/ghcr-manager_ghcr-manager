@@ -30,7 +30,7 @@ This section is the canonical place for session-to-session continuity.
 - ☑ `5160246` Enforce foreign keys in the scan schema.
 - ☑ `1166d0c` Improve GitHub and GHCR error reporting.
 - ☑ `c61c531` Refine tag foreign keys and trim schema tests.
-- ☑ `fc15543` Extract matrix DB artifact download script.
+- ☑ `0a5f620` Extract matrix DB artifact download script.
 
 ### Completed Plan
 
