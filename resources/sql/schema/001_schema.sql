@@ -158,9 +158,10 @@ CREATE TABLE IF NOT EXISTS cleanup_protected_root_blocks (
   PRIMARY KEY(cleanup_run_id, protected_digest, blocked_digest, overlap_digest),
   CHECK(block_reason_code IN ('overlap-with-retained-root')),
   FOREIGN KEY(cleanup_run_id, scan_id) REFERENCES cleanup_runs(cleanup_run_id, scan_id),
-  FOREIGN KEY(scan_id, protected_digest) REFERENCES manifests(scan_id, digest),
-  FOREIGN KEY(scan_id, blocked_digest) REFERENCES manifests(scan_id, digest),
-  FOREIGN KEY(scan_id, overlap_digest) REFERENCES manifests(scan_id, digest)
+  FOREIGN KEY(scan_id, protected_digest, overlap_digest)
+    REFERENCES manifest_reachability(scan_id, ancestor_digest, descendant_digest),
+  FOREIGN KEY(scan_id, blocked_digest, overlap_digest)
+    REFERENCES manifest_reachability(scan_id, ancestor_digest, descendant_digest)
 );
 
 CREATE INDEX IF NOT EXISTS idx_package_versions_scan_created_at ON package_versions(scan_id, created_at);

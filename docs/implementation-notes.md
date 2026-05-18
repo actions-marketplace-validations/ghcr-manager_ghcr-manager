@@ -213,6 +213,9 @@ This section is the canonical place for session-to-session continuity.
     `v_cleanup_blocking_overlaps` materializes protected/blocking overlap evidence from the persisted audit rows
   - protected-root blocking relations are normalized into `cleanup_protected_root_blocks` as
     `protected_digest`/`blocked_digest`/`overlap_digest` rows, again scoped by explicit `scan_id`
+  - `cleanup_protected_root_blocks` now enforces block evidence through two composite foreign keys into
+    `manifest_reachability` (`protected_digest -> overlap_digest` and `blocked_digest -> overlap_digest`) rather than
+    three looser manifest-existence foreign keys
   - the separate `cleanup_protected_roots` table has been removed again; the protected-root set is now derived as
     `DISTINCT protected_digest` from `cleanup_protected_root_blocks`
   - `tools/report-cleanup-run.mjs` can now render one persisted cleanup run back into planner-shaped JSON, either by
