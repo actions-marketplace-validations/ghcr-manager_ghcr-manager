@@ -200,6 +200,9 @@ This section is the canonical place for session-to-session continuity.
     inputs for `scan` / `cleanup`
   - the `db-merge` sub-action now also supports optional DB artifact upload with the same retention-day override and the
     same encryption rule as `scan`: if the merged DB contains any non-public scan, plaintext upload is refused
+  - current-run artifact collection plus merge now also lives in `merge-run-artifacts/action.yml`, which wraps the
+    helper scripts plus the nested `db-merge` sub-action into one user-facing "collect current-run DB artifacts and
+    merge them" entrypoint and exposes the resulting merged DB path as output rather than requiring callers to pick one
 - Current cleanup audit persistence:
   - every CLI `cleanup` invocation now stores one `cleanup_runs` row linked to the exact latest completed scan used by
     the planner
@@ -283,14 +286,13 @@ This section is the canonical place for session-to-session continuity.
     centralized
   - `test-scenario-executor-matrix.yml` fans out the reusable scenario workflow in parallel with executor-isolated
     package-name suffixes, so same-scenario runs do not race on one GHCR package
-  - after the matrix fan-out completes, the matrix workflow now downloads the per-scenario action-owned DB artifacts,
-    decrypts them when needed, merges them into one SQLite file via the dedicated `db-merge` sub-action, lets that
-    sub-action enforce optional encryption plus final artifact upload, and deletes the intermediate per-scenario DB
-    artifacts from the run
-  - the matrix workflow now calls `tools/download-run-artifacts.sh`, `tools/decrypt-db-artifacts.sh`, and
-    `tools/delete-run-artifacts.sh` in separate steps; the helpers rediscover matching current-run artifacts by the same
-    name-pattern filter instead of passing artifact ID lists through temporary files, and the download/decrypt helpers
-    emit only the next folder path on stdout
+  - after the matrix fan-out completes, the matrix workflow now delegates the bundle step to
+    `merge-run-artifacts/action.yml`, which downloads matching current-run DB artifacts, decrypts them when needed,
+    merges them into one SQLite file, lets the nested `db-merge` sub-action enforce optional encryption plus final
+    artifact upload, and deletes the intermediate per-scenario DB artifacts from the run
+  - the `merge-run-artifacts` sub-action uses `tools/download-run-artifacts.sh`, `tools/decrypt-db-artifacts.sh`, and
+    `tools/delete-run-artifacts.sh` internally; the helpers rediscover matching current-run artifacts by the same
+    name-pattern filter instead of passing artifact ID lists through temporary files
   - the matrix DB bundle job now runs under `always()` so successful scenario DB artifacts are still collected when one
     or more matrix legs fail
   - `manual-run-test.yml` now switches to `GHCR_TEST_PAT` automatically when the requested owner matches

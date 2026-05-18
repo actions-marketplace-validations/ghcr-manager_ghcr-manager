@@ -1,0 +1,109 @@
+name: ghcr-manager merge-run-artifacts
+description:
+  Download matching current-run DB artifacts, optionally decrypt them, merge them, upload the merged DB, and optionally
+  delete the source artifacts.
+
+branding:
+  icon: package
+  color: blue
+
+inputs:
+  artifact-name-pattern:
+    description: Regular expression used to select current-run artifact names for download and optional deletion
+    required: false
+    default: \.sqlite(\.enc)?$
+  upload-db-artifact:
+    description: Whether to upload the merged database as a workflow run artifact
+    required: false
+    default: "true"
+  db-artifact-encryption-passphrase:
+    description:
+      Optional passphrase used to decrypt source DB artifacts and encrypt uploaded merged DB artifacts; required when
+      source artifacts are encrypted or when the merged DB contains non-public scans
+    required: false
+    default: ""
+  db-artifact-retention-days:
+    description: Optional retention days override for uploaded database artifacts
+    required: false
+    default: ""
+  delete-source-artifacts:
+    description: Whether to delete the matching source artifacts from the current workflow run after a successful merge
+    required: false
+    default: "true"
+  log-level:
+    description: Log level passed through to the nested db-merge action
+    required: false
+    default: info
+
+outputs:
+  db-path:
+    description: Path to the merged SQLite database in the GitHub action runner
+    value: ${{ steps.merge.outputs.db-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Download matching run artifacts
+      id: download
+      shell: bash
+      env:
+        ARTIFACT_NAME_PATTERN: ${{ inputs.artifact-name-pattern }}
+        GH_TOKEN: ${{ github.token }}
+        GITHUB_API_VERSION: "2022-11-28"
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
+        RUNNER_TEMP: ${{ runner.temp }}
+      run: |
+        set -euo pipefail
+
+        extract_dir="$(tools/download-run-artifacts.sh)"
+        echo "extract_dir=$extract_dir" >> "$GITHUB_OUTPUT"
+
+    - name: Decrypt downloaded DB artifacts
+      id: decrypt
+      shell: bash
+      env:
+        DB_ARTIFACT_ENCRYPTION_PASSPHRASE: ${{ inputs.db-artifact-encryption-passphrase }}
+        SOURCE_DIR: ${{ steps.download.outputs.extract_dir }}
+      run: |
+        set -euo pipefail
+
+        source_db_dir="$(tools/decrypt-db-artifacts.sh)"
+        echo "source_db_dir=$source_db_dir" >> "$GITHUB_OUTPUT"
+
+    - name: Collect merged DB source paths
+      id: source-paths
+      shell: bash
+      env:
+        SOURCE_DB_DIR: ${{ steps.decrypt.outputs.source_db_dir }}
+      run: |
+        set -euo pipefail
+
+        {
+          echo "source_db_paths<<EOF"
+          find "$SOURCE_DB_DIR" -maxdepth 2 -type f -name '*.sqlite' | sort
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Merge DB artifacts
+      id: merge
+      uses: ./db-merge
+      with:
+        upload-db-artifact: ${{ inputs.upload-db-artifact }}
+        db-artifact-encryption-passphrase: ${{ inputs.db-artifact-encryption-passphrase }}
+        db-artifact-retention-days: ${{ inputs.db-artifact-retention-days }}
+        source-db-paths: ${{ steps.source-paths.outputs.source_db_paths }}
+        log-level: ${{ inputs.log-level }}
+
+    - name: Delete source artifacts
+      if: ${{ inputs.delete-source-artifacts == 'true' }}
+      shell: bash
+      env:
+        ARTIFACT_NAME_PATTERN: ${{ inputs.artifact-name-pattern }}
+        GH_TOKEN: ${{ github.token }}
+        GITHUB_API_VERSION: "2022-11-28"
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
+      run: |
+        set -euo pipefail
+        tools/delete-run-artifacts.sh

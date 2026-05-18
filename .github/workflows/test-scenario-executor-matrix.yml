@@ -68,70 +68,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Download scenario DB artifacts
-        id: download
-        shell: bash
-        env:
-          ARTIFACT_NAME_PATTERN: \.sqlite(\.enc)?$
-          GH_TOKEN: ${{ github.token }}
-          GITHUB_API_VERSION: "2022-11-28"
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_RUN_ID: ${{ github.run_id }}
-          RUNNER_TEMP: ${{ runner.temp }}
-        run: |
-          set -euo pipefail
-
-          extract_dir="$(tools/download-run-artifacts.sh)"
-
-          echo "extract_dir=$extract_dir" >> "$GITHUB_OUTPUT"
-
-      - name: Decrypt scenario DB artifacts
-        id: decrypt
-        shell: bash
-        env:
-          DB_ARTIFACT_ENCRYPTION_PASSPHRASE: ${{ inputs.db_artifact_encryption_passphrase }}
-          SOURCE_DIR: ${{ steps.download.outputs.extract_dir }}
-        run: |
-          set -euo pipefail
-
-          source_db_dir="$(tools/decrypt-db-artifacts.sh)"
-
-          echo "source_db_dir=$source_db_dir" >> "$GITHUB_OUTPUT"
-
-      - name: Collect scenario DB source paths
-        id: source-paths
-        shell: bash
-        env:
-          MERGED_DB_PATH: ${{ runner.temp }}/ghcr-manager/scenario-matrix-db-merge/scenario-matrix.sqlite
-          SOURCE_DB_DIR: ${{ steps.decrypt.outputs.source_db_dir }}
-        run: |
-          set -euo pipefail
-
-          echo "merged_db_path=$MERGED_DB_PATH" >> "$GITHUB_OUTPUT"
-          {
-            echo "source_db_paths<<EOF"
-            find "$SOURCE_DB_DIR" -maxdepth 2 -type f -name '*.sqlite' | sort
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Merge scenario DB artifacts
+      - name: Merge current-run scenario DB artifacts
         id: merge
-        uses: ./db-merge
+        uses: ./merge-run-artifacts
         with:
-          db-path: ${{ steps.source-paths.outputs.merged_db_path }}
           upload-db-artifact: "true"
           db-artifact-encryption-passphrase: ${{ inputs.db_artifact_encryption_passphrase }}
           db-artifact-retention-days: ${{ inputs.artifact_retention_days }}
-          source-db-paths: ${{ steps.source-paths.outputs.source_db_paths }}
-
-      - name: Delete per-scenario DB artifacts
-        shell: bash
-        env:
-          ARTIFACT_NAME_PATTERN: \.sqlite(\.enc)?$
-          GH_TOKEN: ${{ github.token }}
-          GITHUB_API_VERSION: "2022-11-28"
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_RUN_ID: ${{ github.run_id }}
-        run: |
-          set -euo pipefail
-          tools/delete-run-artifacts.sh
+          delete-source-artifacts: "true"
