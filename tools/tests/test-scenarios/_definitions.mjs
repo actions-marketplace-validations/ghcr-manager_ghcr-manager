@@ -38,6 +38,34 @@ export const scenarios = {
       protectedRootBlocks: []
     }
   },
+  "digest-fully-deletable": {
+    id: "digest-fully-deletable",
+    packageSuffix: "scenario--digest-fully-deletable",
+    seedStrategy: "tagged-fully-deletable",
+    supportedExecutors: ["ghcr-manager"],
+    ghcrManagerArgs: ["--delete-tag", "{deleteTag}"],
+    dataaxiomInputs: {},
+    digestSelectorTagNameKey: "deleteTag",
+    tagNames: {
+      deleteTag: "delete-me"
+    },
+    cleanupAuditAssertions: {
+      validationSummary: {
+        directTargetRootCount: 1,
+        fullyDeletableRootCount: 1,
+        blockedDeleteRootCount: 0,
+        protectedRootCount: 0
+      },
+      rootDecisions: [
+        {
+          tagNameKey: "deleteTag",
+          validationStatus: "fully-deletable"
+        }
+      ],
+      protectedTagNameKeys: [],
+      protectedRootBlocks: []
+    }
+  },
   "untag-only-single-shared-root": {
     id: "untag-only-single-shared-root",
     packageSuffix: "scenario--untag-only-single-shared-root",

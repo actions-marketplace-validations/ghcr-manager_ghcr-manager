@@ -12,6 +12,7 @@ run-name: Test Scenario Scan (${{ inputs.scenario }})
         options:
           - delete-untagged-noop
           - tagged-fully-deletable
+          - digest-fully-deletable
           - untag-only-single-shared-root
           - untag-only-multiarch-shared-root
           - docker-manifest-list-untag-only-shared-root

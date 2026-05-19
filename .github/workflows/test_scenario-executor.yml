@@ -12,6 +12,7 @@ run-name: Test Scenario Executor (${{ inputs.scenario }} / ${{ inputs.executor }
         options:
           - delete-untagged-noop
           - tagged-fully-deletable
+          - digest-fully-deletable
           - untag-only-single-shared-root
           - untag-only-multiarch-shared-root
           - docker-manifest-list-untag-only-shared-root
@@ -140,6 +141,7 @@ jobs:
           echo "summary_path=$summary_path" >> "$GITHUB_OUTPUT"
           echo "package_name=$package_name" >> "$GITHUB_OUTPUT"
           echo "seed_strategy=$(jq -r '.seedStrategy' "$resolution_path")" >> "$GITHUB_OUTPUT"
+          echo "digest_selector_tag_name_key=$(jq -r '.digestSelectorTagNameKey // \"\"' "$resolution_path")" >> "$GITHUB_OUTPUT"
           echo "image_ref=ghcr.io/${TEST_OWNER}/${package_name}" >> "$GITHUB_OUTPUT"
 
       - name: Clear scenario package
@@ -176,7 +178,7 @@ jobs:
           npm run build
 
       - name: Scan before execution
-        if: ${{ inputs.executor == 'ghcr-cleanup-action' }}
+        if: ${{ inputs.executor == 'ghcr-cleanup-action' || steps.scenario.outputs.digest_selector_tag_name_key != '' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -190,6 +192,7 @@ jobs:
         id: cleanup-inputs
         shell: bash
         env:
+          DB_PATH: ${{ steps.scenario.outputs.db_path }}
           RESOLUTION_PATH: ${{ steps.scenario.outputs.resolution_path }}
         run: |
           set -euo pipefail
@@ -202,6 +205,10 @@ jobs:
           delete_partial_images="$(jq -r '.dataaxiomInputs["delete-partial-images"] // ""' "$RESOLUTION_PATH")"
           delete_orphaned_images="$(jq -r '.dataaxiomInputs["delete-orphaned-images"] // ""' "$RESOLUTION_PATH")"
           use_regex="$(jq -r '.dataaxiomInputs["use-regex"] // ""' "$RESOLUTION_PATH")"
+          digest_selector_tag_name_key="$(jq -r '.digestSelectorTagNameKey // ""' "$RESOLUTION_PATH")"
+          if [[ -n "$digest_selector_tag_name_key" ]]; then
+            delete_tags="$(node tools/tests/resolve-test-scenario-delete-digests.mjs "$RESOLUTION_PATH" "$DB_PATH")"
+          fi
           echo "delete_untagged=$delete_untagged" >> "$GITHUB_OUTPUT"
           echo "keep_n_tagged=$keep_n_tagged" >> "$GITHUB_OUTPUT"
           echo "keep_n_untagged=$keep_n_untagged" >> "$GITHUB_OUTPUT"
