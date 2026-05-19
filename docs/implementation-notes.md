@@ -55,6 +55,9 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
   - remaining hardening gap: `--use-regex` selectors are not pre-validated for pathological / ReDoS-prone patterns
 - Scenario executor workflow note:
   - digest-selector scenarios require repo dependencies before pre-scan and digest resolution helper scripts run
+- Test maintenance workflow note:
+  - manual workflow `test_delete-test-org-packages.yml` deletes container packages from `GHCR_TEST_OWNER`,
+    optionally filtered by a JavaScript regex on package name
 
 ## Current Action / DB Notes
 

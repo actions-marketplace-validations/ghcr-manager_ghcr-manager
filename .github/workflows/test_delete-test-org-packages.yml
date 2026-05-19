@@ -1,0 +1,60 @@
+name: "Test: Delete Test Org Packages"
+run-name: Test Delete Test Org Packages
+
+"on":
+  workflow_dispatch:
+    inputs:
+      confirm_test_org:
+        description: Must exactly match GHCR_TEST_OWNER to confirm deletion.
+        required: true
+        default: ""
+        type: string
+      package_name_regex:
+        description: Optional JavaScript regex used to filter package names before deletion.
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  delete:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Require test org configuration
+        shell: bash
+        env:
+          CONFIRM_TEST_ORG: ${{ inputs.confirm_test_org }}
+          GHCR_TEST_OWNER: ${{ vars.GHCR_TEST_OWNER }}
+          GHCR_TEST_PAT: ${{ secrets.GHCR_TEST_PAT }}
+        run: |
+          set -euo pipefail
+          [[ -n "$GHCR_TEST_OWNER" ]] || { echo "Missing repo variable GHCR_TEST_OWNER" >&2; exit 1; }
+          [[ -n "$GHCR_TEST_PAT" ]] || { echo "Missing repo secret GHCR_TEST_PAT" >&2; exit 1; }
+          [[ "$CONFIRM_TEST_ORG" == "$GHCR_TEST_OWNER" ]] || {
+            echo "confirm_test_org must exactly match GHCR_TEST_OWNER." >&2
+            exit 1
+          }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+
+      - name: Delete matching test-org packages
+        shell: bash
+        env:
+          GHCR_TEST_OWNER: ${{ vars.GHCR_TEST_OWNER }}
+          GHCR_TEST_PAT: ${{ secrets.GHCR_TEST_PAT }}
+          PACKAGE_NAME_REGEX: ${{ inputs.package_name_regex }}
+        run: |
+          set -euo pipefail
+          node tools/tests/delete-ghcr-test-org-packages.mjs \
+            "$GHCR_TEST_OWNER" \
+            "$GHCR_TEST_PAT" \
+            "$PACKAGE_NAME_REGEX"
