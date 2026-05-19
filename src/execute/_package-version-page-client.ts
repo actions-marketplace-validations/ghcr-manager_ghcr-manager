@@ -1,3 +1,4 @@
+import { getOwnerURIComponent } from "../core/index.js";
 import {
   buildHttpErrorMessage,
   buildTransportErrorMessage,
@@ -72,7 +73,7 @@ async function _findPackageVersionByDigestAndTagOnce(
   fetchImpl: DeleteExecutionFetchLike
 ): Promise<number | undefined> {
   for (let page = 1; ; page += 1) {
-    const items = await loadPackageVersionPage(owner, packageName, page, token, logger, {
+    const items = await loadPackageVersionPage(owner, packageName, page, token, logger, fetchImpl, {
       githubApiBaseUrl,
       fetchImpl
     });
@@ -97,13 +98,15 @@ async function loadPackageVersionPage(
   page: number,
   token: string,
   logger: DeleteExecutionLogger,
+  fetchImpl: DeleteExecutionFetchLike,
   runtime: {
     githubApiBaseUrl: string;
     fetchImpl: DeleteExecutionFetchLike;
   }
 ): Promise<_GitHubPackageVersionPageItem[]> {
+  const ownerURIComponent = await getOwnerURIComponent(fetchImpl, runtime.githubApiBaseUrl, owner, token, logger);
   const url = new URL(
-    `/orgs/${encodeURIComponent(owner)}/packages/container/${encodeURIComponent(packageName)}/versions`,
+    `/${ownerURIComponent}/packages/container/${encodeURIComponent(packageName)}/versions`,
     runtime.githubApiBaseUrl
   );
   url.searchParams.set("per_page", "100");

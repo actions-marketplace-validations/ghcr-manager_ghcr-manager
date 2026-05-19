@@ -1,3 +1,4 @@
+import { getOwnerURIComponent } from "../../core/index.js";
 import {
   buildFetchTransportErrorMessage,
   buildHttpErrorMessage,
@@ -25,7 +26,7 @@ export async function loadPackageVersionPage(
   page: number
 ): Promise<GitHubPackageVersionPageItem[]> {
   const startTime = Date.now();
-  const url = buildPackageVersionPageUrl(githubApiBaseUrl, options, page);
+  const url = await buildPackageVersionPageUrl(fetchImpl, githubApiBaseUrl, options, page);
   let response;
   try {
     response = await withFetchRetry(
@@ -66,9 +67,21 @@ export async function loadPackageVersionPage(
   return pageItems;
 }
 
-function buildPackageVersionPageUrl(githubApiBaseUrl: string, options: GitHubScanOptions, page: number): string {
+async function buildPackageVersionPageUrl(
+  fetchImpl: FetchLike,
+  githubApiBaseUrl: string,
+  options: GitHubScanOptions,
+  page: number
+): Promise<string> {
+  const ownerURIComponent = await getOwnerURIComponent(
+    fetchImpl,
+    githubApiBaseUrl,
+    options.owner,
+    options.token,
+    options.logger
+  );
   const url = new URL(
-    `/orgs/${encodeURIComponent(options.owner)}/packages/container/${encodeURIComponent(options.packageName)}/versions`,
+    `/${ownerURIComponent}/packages/container/${encodeURIComponent(options.packageName)}/versions`,
     githubApiBaseUrl
   );
   url.searchParams.set("per_page", "100");

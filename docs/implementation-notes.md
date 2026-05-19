@@ -157,7 +157,7 @@ This section is the canonical place for session-to-session continuity.
 - Linting: ESLint, `eslint-plugin-yml`, `markdownlint-cli2`, and Prettier.
 - Persistence model: local SQLite database per run.
 - Current ingest sources:
-  - live GitHub Packages plus GHCR manifest scan for one org-owned container package
+  - live GitHub Packages plus GHCR manifest scan for one org-owned or user-owned container package
   - local JSON snapshot fixture in `tests/helpers` as a test helper only
 - Current ingest implementation:
   - writes fixture and live GitHub/GHCR results incrementally into SQLite
@@ -171,6 +171,10 @@ This section is the canonical place for session-to-session continuity.
   - avoid package-level in-memory aggregate models as the ingest contract
   - repeated paginated API ingestion should use one generic request -> normalize -> write pipeline, with per-endpoint
     hooks only where necessary
+- GitHub package owner routing:
+  - container package API calls now resolve owner kind explicitly through `GET /users/{owner}` and then choose the
+    `orgs/...` vs `users/...` package route family once
+  - do not probe one package route and then fall back to the other; explicit owner-kind lookup is the chosen behavior
 - Relational integrity direction:
   - add FKs by default and satisfy them via ingest order
   - only relax constraints later if a demonstrated ingest problem requires it

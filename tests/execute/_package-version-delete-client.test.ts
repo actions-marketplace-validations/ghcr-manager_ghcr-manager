@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { deletePackageVersionForOrg } from "../../src/execute/_package-version-delete-client.js";
+import { deletePackageVersion } from "../../src/execute/_package-version-delete-client.js";
 
-test("deletePackageVersionForOrg deletes a package version via the org endpoint", async () => {
+test("deletePackageVersion deletes a package version via the org endpoint", async () => {
   const calls: Array<{ url: string; method?: string }> = [];
 
-  await deletePackageVersionForOrg(
+  await deletePackageVersion(
     "acme",
     "example",
     42,
@@ -19,6 +19,16 @@ test("deletePackageVersionForOrg deletes a package version via the org endpoint"
     {
       githubApiBaseUrl: "https://api.github.test",
       fetchImpl: async (input, init) => {
+        if (input === "https://api.github.test/users/acme") {
+          return {
+            ok: true,
+            status: 200,
+            headers: new Headers(),
+            async json() {
+              return { type: "Organization" };
+            }
+          };
+        }
         calls.push({
           url: String(input),
           method: init?.method
@@ -43,10 +53,61 @@ test("deletePackageVersionForOrg deletes a package version via the org endpoint"
   ]);
 });
 
-test("deletePackageVersionForOrg surfaces GitHub error details", async () => {
+test("deletePackageVersion deletes a package version via the user endpoint", async () => {
+  const calls: Array<{ url: string; method?: string }> = [];
+
+  await deletePackageVersion(
+    "wuodan",
+    "example",
+    42,
+    "token",
+    {
+      debug() {},
+      info() {},
+      warn() {},
+      error() {}
+    },
+    {
+      githubApiBaseUrl: "https://api.github.test",
+      fetchImpl: async (input, init) => {
+        if (input === "https://api.github.test/users/wuodan") {
+          return {
+            ok: true,
+            status: 200,
+            headers: new Headers(),
+            async json() {
+              return { type: "User" };
+            }
+          };
+        }
+        calls.push({
+          url: String(input),
+          method: init?.method
+        });
+        return {
+          ok: true,
+          status: 204,
+          headers: new Headers(),
+          async json() {
+            return {};
+          }
+        };
+      }
+    }
+  );
+
+  assert.deepEqual(calls, [
+    {
+      url: "https://api.github.test/users/wuodan/packages/container/example/versions/42",
+      method: "DELETE"
+    }
+  ]);
+});
+
+test("deletePackageVersion surfaces GitHub error details", async () => {
   await assert.rejects(
     () =>
-      deletePackageVersionForOrg(
+      deletePackageVersion(
         "acme",
         "example",
         42,
@@ -59,27 +120,37 @@ test("deletePackageVersionForOrg surfaces GitHub error details", async () => {
         },
         {
           githubApiBaseUrl: "https://api.github.test",
-          fetchImpl: async () => ({
-            ok: false,
-            status: 404,
-            headers: new Headers({ "content-type": "application/json" }),
-            async json() {
-              return {
-                message: "Not Found",
-                documentation_url: "https://docs.github.com/rest/packages/packages"
-              };
-            }
-          })
+          fetchImpl: async (input) =>
+            input === "https://api.github.test/users/acme"
+              ? {
+                  ok: true,
+                  status: 200,
+                  headers: new Headers(),
+                  async json() {
+                    return { type: "Organization" };
+                  }
+                }
+              : {
+                  ok: false,
+                  status: 404,
+                  headers: new Headers({ "content-type": "application/json" }),
+                  async json() {
+                    return {
+                      message: "Not Found",
+                      documentation_url: "https://docs.github.com/rest/packages/packages"
+                    };
+                  }
+                }
         }
       ),
     /GitHub package delete request failed for version 42 - status 404 - Not Found - https:\/\/docs\.github\.com\/rest\/packages\/packages/
   );
 });
 
-test("deletePackageVersionForOrg sends the expected headers and surfaces transport failures", async () => {
+test("deletePackageVersion sends the expected headers and surfaces transport failures", async () => {
   const headersSeen: Headers[] = [];
 
-  await deletePackageVersionForOrg(
+  await deletePackageVersion(
     "acme",
     "example",
     42,
@@ -92,7 +163,17 @@ test("deletePackageVersionForOrg sends the expected headers and surfaces transpo
     },
     {
       githubApiBaseUrl: "https://api.github.test",
-      fetchImpl: async (_input, init) => {
+      fetchImpl: async (input, init) => {
+        if (input === "https://api.github.test/users/acme") {
+          return {
+            ok: true,
+            status: 200,
+            headers: new Headers(),
+            async json() {
+              return { type: "Organization" };
+            }
+          };
+        }
         headersSeen.push(new Headers(init?.headers));
         return {
           ok: true,
@@ -114,7 +195,7 @@ test("deletePackageVersionForOrg sends the expected headers and surfaces transpo
 
   await assert.rejects(
     () =>
-      deletePackageVersionForOrg(
+      deletePackageVersion(
         "acme",
         "example",
         42,
@@ -127,7 +208,17 @@ test("deletePackageVersionForOrg sends the expected headers and surfaces transpo
         },
         {
           githubApiBaseUrl: "https://api.github.test",
-          fetchImpl: async () => {
+          fetchImpl: async (input) => {
+            if (input === "https://api.github.test/users/acme") {
+              return {
+                ok: true,
+                status: 200,
+                headers: new Headers(),
+                async json() {
+                  return { type: "Organization" };
+                }
+              };
+            }
             throw new TypeError("fetch failed", {
               cause: Object.assign(new Error("socket hang up"), { code: "ECONNRESET" })
             });
@@ -138,7 +229,7 @@ test("deletePackageVersionForOrg sends the expected headers and surfaces transpo
   );
 });
 
-test("deletePackageVersionForOrg retries retryable HTTP failures", async () => {
+test("deletePackageVersion retries retryable HTTP failures", async () => {
   const originalSetTimeout = globalThis.setTimeout;
   const warnings: string[] = [];
   let attempts = 0;
@@ -148,7 +239,7 @@ test("deletePackageVersionForOrg retries retryable HTTP failures", async () => {
   }) as unknown as typeof setTimeout;
 
   try {
-    await deletePackageVersionForOrg(
+    await deletePackageVersion(
       "acme",
       "example",
       42,
@@ -163,7 +254,17 @@ test("deletePackageVersionForOrg retries retryable HTTP failures", async () => {
       },
       {
         githubApiBaseUrl: "https://api.github.test",
-        fetchImpl: async () => {
+        fetchImpl: async (input) => {
+          if (input === "https://api.github.test/users/acme") {
+            return {
+              ok: true,
+              status: 200,
+              headers: new Headers(),
+              async json() {
+                return { type: "Organization" };
+              }
+            };
+          }
           attempts += 1;
           if (attempts === 1) {
             return {

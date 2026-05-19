@@ -1,5 +1,5 @@
 import type { DeletePlan } from "../db/index.js";
-import { deletePackageVersionForOrg } from "./_package-version-delete-client.js";
+import { deletePackageVersion } from "./_package-version-delete-client.js";
 import { untagRootTags } from "./_untag-client.js";
 import {
   type DeleteExecutionOptions,
@@ -44,7 +44,7 @@ export async function executeDeletePlan(
     options.logger.info(
       `Deleting package version ${root.versionId} for ${plan.owner}/${plan.packageName} (${root.digest})`
     );
-    await deletePackageVersionForOrg(plan.owner, plan.packageName, root.versionId, options.token, options.logger, {
+    await deletePackageVersion(plan.owner, plan.packageName, root.versionId, options.token, options.logger, {
       githubApiBaseUrl: options.githubApiBaseUrl,
       fetchImpl: options.fetchImpl
     });

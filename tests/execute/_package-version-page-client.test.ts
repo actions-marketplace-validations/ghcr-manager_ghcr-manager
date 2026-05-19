@@ -19,6 +19,16 @@ test("findPackageVersionByDigestAndTag finds a temporary version by digest and t
     {
       githubApiBaseUrl: "https://api.github.test",
       fetchImpl: async (input) => {
+        if (input === "https://api.github.test/users/acme") {
+          return {
+            ok: true,
+            status: 200,
+            headers: new Headers({ "content-type": "application/json" }),
+            async json() {
+              return { type: "Organization" };
+            }
+          };
+        }
         calls.push(String(input));
         return {
           ok: true,
@@ -66,6 +76,16 @@ test("findPackageVersionByDigestAndTag scans additional pages and matches tag me
     {
       githubApiBaseUrl: "https://api.github.test",
       fetchImpl: async (input) => {
+        if (input === "https://api.github.test/users/acme") {
+          return {
+            ok: true,
+            status: 200,
+            headers: new Headers({ "content-type": "application/json" }),
+            async json() {
+              return { type: "Organization" };
+            }
+          };
+        }
         const url = String(input);
         calls.push(url);
         if (url.endsWith("page=1")) {
@@ -138,7 +158,17 @@ test("findPackageVersionByDigestAndTag retries visibility polling until the temp
       },
       {
         githubApiBaseUrl: "https://api.github.test",
-        fetchImpl: async () => {
+        fetchImpl: async (input) => {
+          if (input === "https://api.github.test/users/acme") {
+            return {
+              ok: true,
+              status: 200,
+              headers: new Headers({ "content-type": "application/json" }),
+              async json() {
+                return { type: "Organization" };
+              }
+            };
+          }
           outerAttempts += 1;
           return {
             ok: true,
@@ -200,14 +230,24 @@ test("findPackageVersionByDigestAndTag fails after exhausting visibility polling
           },
           {
             githubApiBaseUrl: "https://api.github.test",
-            fetchImpl: async () => ({
-              ok: true,
-              status: 200,
-              headers: new Headers({ "content-type": "application/json" }),
-              async json() {
-                return [];
-              }
-            })
+            fetchImpl: async (input) =>
+              input === "https://api.github.test/users/acme"
+                ? {
+                    ok: true,
+                    status: 200,
+                    headers: new Headers({ "content-type": "application/json" }),
+                    async json() {
+                      return { type: "Organization" };
+                    }
+                  }
+                : {
+                    ok: true,
+                    status: 200,
+                    headers: new Headers({ "content-type": "application/json" }),
+                    async json() {
+                      return [];
+                    }
+                  }
           }
         ),
       /could not find temporary package version for acme\/example:latest \(sha256:detached\)/
@@ -234,14 +274,24 @@ test("findPackageVersionByDigestAndTag surfaces non-retryable HTTP failures and 
         },
         {
           githubApiBaseUrl: "https://api.github.test",
-          fetchImpl: async () => ({
-            ok: false,
-            status: 404,
-            headers: new Headers({ "content-type": "application/json" }),
-            async json() {
-              return { message: "Not Found" };
-            }
-          })
+          fetchImpl: async (input) =>
+            input === "https://api.github.test/users/acme"
+              ? {
+                  ok: true,
+                  status: 200,
+                  headers: new Headers({ "content-type": "application/json" }),
+                  async json() {
+                    return { type: "Organization" };
+                  }
+                }
+              : {
+                  ok: false,
+                  status: 404,
+                  headers: new Headers({ "content-type": "application/json" }),
+                  async json() {
+                    return { message: "Not Found" };
+                  }
+                }
         }
       ),
     /GitHub Packages request for page 1 failed - status 404 - Not Found/
@@ -263,7 +313,17 @@ test("findPackageVersionByDigestAndTag surfaces non-retryable HTTP failures and 
         },
         {
           githubApiBaseUrl: "https://api.github.test",
-          fetchImpl: async () => {
+          fetchImpl: async (input) => {
+            if (input === "https://api.github.test/users/acme") {
+              return {
+                ok: true,
+                status: 200,
+                headers: new Headers({ "content-type": "application/json" }),
+                async json() {
+                  return { type: "Organization" };
+                }
+              };
+            }
             throw new TypeError("fetch failed", {
               cause: Object.assign(new Error("socket hang up"), { code: "ECONNRESET" })
             });
@@ -272,4 +332,61 @@ test("findPackageVersionByDigestAndTag surfaces non-retryable HTTP failures and 
       ),
     /GitHub Packages request for page 1 failed - fetch failed/
   );
+});
+
+test("findPackageVersionByDigestAndTag supports user-owned packages", async () => {
+  const calls: string[] = [];
+
+  const versionId = await findPackageVersionByDigestAndTag(
+    "wuodan",
+    "example",
+    "sha256:detached",
+    "latest",
+    "token",
+    {
+      debug() {},
+      info() {},
+      warn() {},
+      error() {}
+    },
+    {
+      githubApiBaseUrl: "https://api.github.test",
+      fetchImpl: async (input) => {
+        if (input === "https://api.github.test/users/wuodan") {
+          return {
+            ok: true,
+            status: 200,
+            headers: new Headers({ "content-type": "application/json" }),
+            async json() {
+              return { type: "User" };
+            }
+          };
+        }
+        calls.push(String(input));
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers({ "content-type": "application/json" }),
+          async json() {
+            return [
+              {
+                id: 42,
+                name: "sha256:detached",
+                metadata: {
+                  container: {
+                    tags: ["latest"]
+                  }
+                }
+              }
+            ];
+          }
+        };
+      }
+    }
+  );
+
+  assert.equal(versionId, 42);
+  assert.deepEqual(calls, [
+    "https://api.github.test/users/wuodan/packages/container/example/versions?per_page=100&page=1"
+  ]);
 });

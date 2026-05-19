@@ -1,3 +1,4 @@
+import { getOwnerURIComponent } from "../core/index.js";
 import {
   buildHttpErrorMessage,
   buildTransportErrorMessage,
@@ -10,7 +11,7 @@ import type { DeleteExecutionFetchLike, DeleteExecutionLogger } from "./_types.j
 const _DEFAULT_GITHUB_API_BASE_URL = "https://api.github.com";
 const _GITHUB_API_VERSION = "2022-11-28";
 
-export async function deletePackageVersionForOrg(
+export async function deletePackageVersion(
   owner: string,
   packageName: string,
   versionId: number,
@@ -23,8 +24,9 @@ export async function deletePackageVersionForOrg(
 ): Promise<void> {
   const githubApiBaseUrl = runtime?.githubApiBaseUrl ?? _DEFAULT_GITHUB_API_BASE_URL;
   const fetchImpl = resolveFetch(runtime?.fetchImpl);
+  const ownerURIComponent = await getOwnerURIComponent(fetchImpl, githubApiBaseUrl, owner, token, logger);
   const url = new URL(
-    `/orgs/${encodeURIComponent(owner)}/packages/container/${encodeURIComponent(packageName)}/versions/${versionId}`,
+    `/${ownerURIComponent}/packages/container/${encodeURIComponent(packageName)}/versions/${versionId}`,
     githubApiBaseUrl
   ).toString();
 

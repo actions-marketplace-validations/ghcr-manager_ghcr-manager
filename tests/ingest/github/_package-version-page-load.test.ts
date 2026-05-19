@@ -7,6 +7,16 @@ test("package version page loader requests the expected page", async () => {
 
   const items = await loadPackageVersionPage(
     async (input, init) => {
+      if (input === "https://api.github.test/users/acme") {
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          async json() {
+            return { type: "Organization" };
+          }
+        };
+      }
       seenUrl = input;
       assert.equal((init?.headers as Record<string, string>)["X-GitHub-Api-Version"], "2022-11-28");
       return {
@@ -44,7 +54,17 @@ test("package version page loader surfaces fetch transport failures with page co
   await assert.rejects(
     () =>
       loadPackageVersionPage(
-        async () => {
+        async (input) => {
+          if (input === "https://api.github.test/users/acme") {
+            return {
+              ok: true,
+              status: 200,
+              headers: new Headers(),
+              async json() {
+                return { type: "Organization" };
+              }
+            };
+          }
           throw new TypeError("fetch failed");
         },
         "https://api.github.test",
@@ -58,4 +78,42 @@ test("package version page loader surfaces fetch transport failures with page co
       ),
     /GitHub Packages request for page 9 failed - fetch failed/
   );
+});
+
+test("package version page loader supports user-owned packages", async () => {
+  let seenUrl = "";
+
+  await loadPackageVersionPage(
+    async (input) => {
+      if (input === "https://api.github.test/users/wuodan") {
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          async json() {
+            return { type: "User" };
+          }
+        };
+      }
+      seenUrl = input;
+      return {
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        async json() {
+          return [];
+        }
+      };
+    },
+    "https://api.github.test",
+    {
+      owner: "wuodan",
+      packageName: "example",
+      token: "token",
+      logger: { debug() {}, info() {}, warn() {}, error() {} }
+    },
+    1
+  );
+
+  assert.equal(seenUrl, "https://api.github.test/users/wuodan/packages/container/example/versions?per_page=100&page=1");
 });

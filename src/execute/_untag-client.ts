@@ -1,6 +1,6 @@
 import { buildDetachedManifestClone } from "./_manifest-detach.js";
 import { findPackageVersionByDigestAndTag } from "./_package-version-page-client.js";
-import { deletePackageVersionForOrg } from "./_package-version-delete-client.js";
+import { deletePackageVersion } from "./_package-version-delete-client.js";
 import { loadRegistryManifestByDigest, putRegistryManifestForTag } from "./_registry-manifest-client.js";
 import { loadRegistryPushToken } from "./_registry-token-client.js";
 import type { DeleteExecutionOptions, UntagTagOperation } from "./_types.js";
@@ -61,7 +61,7 @@ export async function untagRootTags(
         fetchImpl: options.fetchImpl
       }
     );
-    await deletePackageVersionForOrg(owner, packageName, detachedVersionId, options.token, options.logger, {
+    await deletePackageVersion(owner, packageName, detachedVersionId, options.token, options.logger, {
       githubApiBaseUrl: options.githubApiBaseUrl,
       fetchImpl: options.fetchImpl
     });

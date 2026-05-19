@@ -9,6 +9,16 @@ function _createLogger() {
 test("package metadata loader returns whether the package is public", async () => {
   const metadata = await loadPackageMetadata(
     async (input, init) => {
+      if (input === "https://api.github.test/users/acme") {
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          async json() {
+            return { type: "Organization" };
+          }
+        };
+      }
       assert.equal(input, "https://api.github.test/orgs/acme/packages/container/example");
       assert.deepEqual(init?.headers, {
         Accept: "application/vnd.github+json",
@@ -46,16 +56,26 @@ test("package metadata loader rejects unsupported visibility values", async () =
   await assert.rejects(
     () =>
       loadPackageMetadata(
-        async () => ({
-          ok: true,
-          status: 200,
-          headers: new Headers(),
-          async json() {
-            return {
-              visibility: "secret"
-            };
-          }
-        }),
+        async (input) =>
+          input === "https://api.github.test/users/acme"
+            ? {
+                ok: true,
+                status: 200,
+                headers: new Headers(),
+                async json() {
+                  return { type: "Organization" };
+                }
+              }
+            : {
+                ok: true,
+                status: 200,
+                headers: new Headers(),
+                async json() {
+                  return {
+                    visibility: "secret"
+                  };
+                }
+              },
         "https://api.github.test",
         {
           owner: "acme",
@@ -70,16 +90,26 @@ test("package metadata loader rejects unsupported visibility values", async () =
 
 test("package metadata loader returns true for public packages", async () => {
   const metadata = await loadPackageMetadata(
-    async () => ({
-      ok: true,
-      status: 200,
-      headers: new Headers(),
-      async json() {
-        return {
-          visibility: "public"
-        };
-      }
-    }),
+    async (input) =>
+      input === "https://api.github.test/users/acme"
+        ? {
+            ok: true,
+            status: 200,
+            headers: new Headers(),
+            async json() {
+              return { type: "Organization" };
+            }
+          }
+        : {
+            ok: true,
+            status: 200,
+            headers: new Headers(),
+            async json() {
+              return {
+                visibility: "public"
+              };
+            }
+          },
     "https://api.github.test",
     {
       owner: "acme",
@@ -99,16 +129,26 @@ test("package metadata loader surfaces non-retryable HTTP failures", async () =>
   await assert.rejects(
     () =>
       loadPackageMetadata(
-        async () => ({
-          ok: false,
-          status: 404,
-          headers: new Headers({ "content-type": "application/json" }),
-          async json() {
-            return {
-              message: "Not Found"
-            };
-          }
-        }),
+        async (input) =>
+          input === "https://api.github.test/users/acme"
+            ? {
+                ok: true,
+                status: 200,
+                headers: new Headers(),
+                async json() {
+                  return { type: "Organization" };
+                }
+              }
+            : {
+                ok: false,
+                status: 404,
+                headers: new Headers({ "content-type": "application/json" }),
+                async json() {
+                  return {
+                    message: "Not Found"
+                  };
+                }
+              },
         "https://api.github.test",
         {
           owner: "acme",
@@ -124,7 +164,7 @@ test("package metadata loader surfaces non-retryable HTTP failures", async () =>
 test("package metadata loader retries retryable statuses", async () => {
   const originalSetTimeout = globalThis.setTimeout;
   const warnings: string[] = [];
-  let attempts = 0;
+  let packageAttempts = 0;
   globalThis.setTimeout = ((callback: (...args: unknown[]) => void) => {
     callback();
     return 0;
@@ -132,9 +172,19 @@ test("package metadata loader retries retryable statuses", async () => {
 
   try {
     const metadata = await loadPackageMetadata(
-      async () => {
-        attempts += 1;
-        if (attempts === 1) {
+      async (input) => {
+        if (input === "https://api.github.test/users/acme") {
+          return {
+            ok: true,
+            status: 200,
+            headers: new Headers(),
+            async json() {
+              return { type: "Organization" };
+            }
+          };
+        }
+        packageAttempts += 1;
+        if (packageAttempts === 1) {
           return {
             ok: false,
             status: 429,
@@ -178,7 +228,7 @@ test("package metadata loader retries retryable statuses", async () => {
       isPublic: false,
       rawJson: JSON.stringify({ visibility: "private" })
     });
-    assert.equal(attempts, 2);
+    assert.equal(packageAttempts, 2);
     assert.match(warnings[0] ?? "", /GitHub package metadata request failed on attempt 1\/4; retrying in 1000ms/);
   } finally {
     globalThis.setTimeout = originalSetTimeout;
@@ -189,7 +239,17 @@ test("package metadata loader surfaces transport failures", async () => {
   await assert.rejects(
     () =>
       loadPackageMetadata(
-        async () => {
+        async (input) => {
+          if (input === "https://api.github.test/users/acme") {
+            return {
+              ok: true,
+              status: 200,
+              headers: new Headers(),
+              async json() {
+                return { type: "Organization" };
+              }
+            };
+          }
           throw new TypeError("fetch failed", {
             cause: Object.assign(new Error("socket hang up"), { code: "ECONNRESET" })
           });
@@ -204,4 +264,44 @@ test("package metadata loader surfaces transport failures", async () => {
       ),
     /GitHub package metadata request failed - fetch failed - socket hang up \(ECONNRESET\)/
   );
+});
+
+test("package metadata loader supports user-owned packages", async () => {
+  let seenUrl = "";
+
+  const metadata = await loadPackageMetadata(
+    async (input) => {
+      if (input === "https://api.github.test/users/wuodan") {
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          async json() {
+            return { type: "User" };
+          }
+        };
+      }
+      seenUrl = String(input);
+      return {
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        async json() {
+          return {
+            visibility: "public"
+          };
+        }
+      };
+    },
+    "https://api.github.test",
+    {
+      owner: "wuodan",
+      packageName: "example",
+      token: "token",
+      logger: _createLogger()
+    }
+  );
+
+  assert.equal(seenUrl, "https://api.github.test/users/wuodan/packages/container/example");
+  assert.equal(metadata.isPublic, true);
 });
