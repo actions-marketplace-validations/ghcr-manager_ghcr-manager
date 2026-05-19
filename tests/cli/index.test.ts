@@ -63,7 +63,8 @@ test("main dispatches the cleanup command", async () => {
   const originalFetch = globalThis.fetch;
   const originalLog = console.log;
   const writes: string[] = [];
-  globalThis.fetch = async (input: string | URL) => {
+
+  globalThis.fetch = async (input) => {
     if (String(input) === "https://api.github.com/users/acme") {
       return {
         ok: true,
