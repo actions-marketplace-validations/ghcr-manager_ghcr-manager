@@ -1,0 +1,86 @@
+name: "Test: Untag Matrix"
+run-name: Test Untag Matrix
+
+"on":
+  workflow_dispatch:
+    inputs:
+      upload_db_artifact:
+        description: Upload the final rescan DB artifact from inside the action.
+        required: false
+        default: true
+        type: boolean
+      db_artifact_encryption_passphrase:
+        description: Optional passphrase for encrypting uploaded DB artifacts; required for non-public registries.
+        required: false
+        default: ""
+        type: string
+      artifact_retention_days:
+        description: Optional artifact retention-days override for action-owned DB uploads.
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+  actions: write
+  id-token: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Render untag matrix
+        id: matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "matrix=$(node tools/render-test-untag-matrix.mjs)" >> "$GITHUB_OUTPUT"
+
+  execute:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    uses: ./.github/workflows/test_untag.yml
+    secrets: inherit
+    with:
+      scenario: ${{ matrix.scenario }}
+      upload_db_artifact: ${{ inputs.upload_db_artifact }}
+      db_artifact_encryption_passphrase: ${{ inputs.db_artifact_encryption_passphrase }}
+      artifact_retention_days: ${{ inputs.artifact_retention_days }}
+
+  bundle-db-artifacts:
+    if: ${{ always() && inputs.upload_db_artifact }}
+    needs: execute
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Merge current-run untag DB artifacts
+        id: merge
+        uses: ./merge-run-artifacts
+        with:
+          upload-db-artifact: "true"
+          db-artifact-encryption-passphrase: ${{ inputs.db_artifact_encryption_passphrase }}
+          db-artifact-retention-days: ${{ inputs.artifact_retention_days }}
+          delete-source-artifacts: "true"
+          artifact-name-pattern: '\.sqlite(\.enc)?$'
+
+      - name: Print merged artifact outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "db-path: ${{ steps.merge.outputs.db-path }}"
+          echo "artifact-id: ${{ steps.merge.outputs.artifact-id }}"
+          echo "artifact-url: ${{ steps.merge.outputs.artifact-url }}"
+          echo "artifact-digest: ${{ steps.merge.outputs.artifact-digest }}"

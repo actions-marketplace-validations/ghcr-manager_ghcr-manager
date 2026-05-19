@@ -205,6 +205,8 @@ This section is the canonical place for session-to-session continuity.
   - root-action `delete-tags` and `exclude-tags` now use newline-separated values instead of comma-separated values
   - `command: untag` is now supported as a direct no-DB side command; it uses explicit tag inputs, rejects
     scan/cleanup-only knobs, and does not support DB artifact upload
+  - direct `untag` live validation now lives in its own executor plus matrix workflow pair, separate from the broader
+    cleanup scenario matrix
 - Current action DB handling:
   - by default the action creates a fresh DB path under runner temp storage
   - the action also supports an optional local `db-path` input so later scans can append to the same SQLite file
