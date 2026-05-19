@@ -1,10 +1,11 @@
 # Planner Data Model
 
-This note defines the result sets the dry-run cleanup planner must produce.
+This note defines the cleanup planner result sets in human terms.
 
-It is the bridge between [docs/cleanup-semantics.md](cleanup-semantics.md) and any future CLI/action output. It does not
-define final SQL text, but it does define the canonical planner terms, their intended row shape, and how they map to the
-current schema.
+It is the bridge between [docs/cleanup-semantics.md](cleanup-semantics.md) and the persisted cleanup audit data.
+
+It does not define final SQL text, but it does define the canonical planner terms, their intended row shape, and how
+they map to the current schema.
 
 ## Scope
 
@@ -19,21 +20,37 @@ They assume planner inputs have already been resolved to one scan plus one expli
 - `delete-untagged`
 - `keep-n-untagged`
 
-The planner data model is about the dry-run output only. Execution can add operational details later.
+This is a real planner-facing model reflected in the persisted cleanup audit data:
 
-## Why A New Model Is Needed
+- `cleanup_runs`
+- `cleanup_root_decisions`
+- `cleanup_protected_root_blocks`
+- `v_cleanup_root_closure_members`
+- `v_cleanup_blocking_overlaps`
 
-The planner output must be request-scoped and explanation-first.
+now persist or derive much of this shape already.
+
+## Why This Model Exists
+
+The cleanup planner has to be request-scoped and explanation-first.
+
+It is not enough to say "delete these versions". The useful output is:
+
+- which tags were directly selected
+- which roots became candidates
+- which roots are only untaggable
+- which roots are blocked
+- what overlap caused that block
 
 ## Planner Layers
 
-The planner should be read as six layers, each feeding the next.
+The planner is best read as six layers, each feeding the next.
 
 ### 1. Eligible roots
 
 The base unit is one root manifest backed by one `package_versions` row.
 
-Suggested row shape:
+Row shape:
 
 - `scan_id`
 - `version_id`
@@ -57,13 +74,13 @@ Notes:
 
 - one row per root digest
 - this is where `exclude-tags` and `older-than` first become visible as booleans
-- this layer should not include closure expansion yet
+- this layer does not include closure expansion
 
 ### 2. Direct target tags
 
 These rows represent user intent at tag granularity.
 
-Suggested row shape:
+Row shape:
 
 - `scan_id`
 - `target_tag`
@@ -84,8 +101,8 @@ Schema sources:
 Notes:
 
 - one row per selected tag
-- this layer should be explicit even when later planning deletes a whole root
-- digest-literal selectors may bypass tags and go directly to the next layer
+- this layer stays explicit even when later planning deletes a whole root
+- digest-literal selectors bypass tags and go directly to the next layer
 - when `delete-tags` is combined with `keep-n-tagged`, this layer still records the matched tag intent before keep-rule
   retention removes some roots from actionable selection
 
@@ -93,7 +110,7 @@ Notes:
 
 These rows represent roots directly selected for possible cleanup after applying keep/exclude/age logic.
 
-Suggested row shape:
+Row shape:
 
 - `scan_id`
 - `version_id`
@@ -119,7 +136,7 @@ Notes:
 
 - this is the first canonical "candidate root" set
 - roots protected by exclusions or retained by keep rules must not appear here as `delete-root`
-- a multi-tagged root with only some tags selected should appear here as `untag-only`, not `delete-root`
+- a multi-tagged root with only some tags selected appears here as `untag-only`, not `delete-root`
 - in combined `delete-tags` + `keep-n-tagged` mode, the keep count is applied once per matched root, not once per
   matched tag
 
@@ -127,7 +144,7 @@ Notes:
 
 These rows expand each direct delete-root candidate into the in-package closure that would be removed with it.
 
-Suggested row shape:
+Row shape:
 
 - `scan_id`
 - `source_version_id`
@@ -159,7 +176,7 @@ Notes:
 
 These rows explain why a direct delete-root candidate cannot be fully deleted.
 
-Suggested row shape:
+Row shape:
 
 - `scan_id`
 - `blocked_version_id`
@@ -187,7 +204,7 @@ Notes:
 These rows expose tags that would disappear because they live on a fully deletable root, even though the user did not
 directly select them.
 
-Suggested row shape:
+Row shape:
 
 - `scan_id`
 - `source_version_id`
@@ -209,7 +226,7 @@ Notes:
 
 ## Final Planner Outputs
 
-The planner should emit these canonical result sets:
+The planner emits these canonical result sets:
 
 1. `direct_target_tags`
 2. `direct_target_roots`
@@ -223,7 +240,7 @@ The planner should emit these canonical result sets:
 - all `direct_target_roots` with `selection_mode = 'delete-root'`
 - minus any root present in `blocked_roots`
 
-Suggested row shape:
+Row shape:
 
 - `scan_id`
 - `version_id`
@@ -233,7 +250,7 @@ Suggested row shape:
 
 ## SQL Shape Direction
 
-The SQL should probably be built in two tiers.
+The SQL is built in two tiers.
 
 ### Tier 1: stable reusable base views
 
@@ -249,7 +266,7 @@ Purpose:
 
 ### Tier 2: planner-request CTEs or temporary views
 
-These should incorporate the actual cleanup request:
+These incorporate the actual cleanup request:
 
 - selected tags
 - excluded tags
@@ -261,26 +278,25 @@ Purpose:
 - produce request-specific planner outputs
 - keep policy out of the generic schema layer
 
-This split matters because the current `v_tags_delete_*` views hard-code one policy shape into globally named views.
+This split matters because policy stays request-scoped instead of being baked into globally named views.
 
 ## Mapping To Current Prototypes
 
-The current runtime and debugging surfaces should stay request-scoped where possible. Avoid reintroducing globally named
-latest-scan views that bake one cleanup-policy shape into the schema layer.
+The current runtime and debugging surfaces stay request-scoped where possible. Avoid reintroducing globally named views
+that bake one cleanup-policy shape into the schema layer.
 
-## Minimal Implementation Order
+## Current Implementation Shape
 
-The next implementation step should be:
+The current implementation follows this shape:
 
-1. add scan-scoped root base views
-2. add one request-scoped planner query for `direct_target_roots`
-3. add one request-scoped planner query for `blocked_roots`
-4. derive `fully_deletable_roots` and `collateral_tags`
-5. expose the planner summary via CLI
+1. scan-scoped base views such as `v_scan_root_manifests`
+2. request-scoped planner queries and temporary tables
+3. persisted explanation-first cleanup audit rows
+4. derived read views for closure members and blocking overlaps
 
 ## Test Implications
 
-The first planner-output tests should verify:
+Planner-output tests verify:
 
 - partial tag selection produces `untag-only` direct targets, not false delete-root candidates
 - sibling wrapper indexes do not block or delete each other unless they truly overlap through reachability

@@ -47,6 +47,8 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
 - Untag live tests reuse the shared seed implementation underneath rather than carrying a separate seed action.
 - Test-only helper scripts now live under `tools/tests`; `tools/` root is reserved for runtime, repo-maintenance, and
   action-facing helpers.
+- Older design-stage documents were archived from `docs/` into `docs/archive/`; active docs in `docs/` should describe
+  the current product shape rather than early planning history.
 
 ## Current Action / DB Notes
 

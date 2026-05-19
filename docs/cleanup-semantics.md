@@ -1,12 +1,15 @@
 # Cleanup Semantics
 
-This note fixes the intended cleanup behavior before planner and execution work continue.
+This note fixes the intended cleanup behavior for the current cleanup planner and executor.
 
-It does not define the final CLI or action inputs. It defines what those inputs must mean once they exist.
+It does not try to document every CLI or action input. It defines what the cleanup-related inputs mean.
 
 ## Scope
 
-These semantics are for one scanned GHCR package in one SQLite scan.
+These semantics are for one selected GHCR package snapshot in one SQLite scan.
+
+The database may contain many scans and many packages. Cleanup planning always chooses one exact completed scan as its
+input.
 
 They assume the current repo model:
 
@@ -15,6 +18,11 @@ They assume the current repo model:
 - `manifests` stores the fetched root manifest for each package version
 - `manifest_edges` and `manifest_reachability` describe known in-package closure
 
+This note is about `cleanup`.
+
+Direct `untag` also exists as a separate public command, but it is outside this document because it does not use the
+cleanup planner or a scan DB.
+
 ## Core Decision
 
 Cleanup planning is rooted in package-version-backed manifests, not in free-floating tags and not in arbitrary internal
@@ -22,10 +30,10 @@ child manifests.
 
 In practice that means:
 
-- user-facing selectors may mention tags or digests
+- user-facing selectors mention tags or digests
 - the planner resolves those selectors to root digests from `manifests`
 - the planner reasons about deletion safety using the full manifest closure below each selected root digest
-- execution deletes GitHub package versions, and may also need explicit untag operations for partial tag matches
+- execution deletes GitHub package versions and uses explicit untag operations for partial tag matches
 
 ## Deletion Units
 
@@ -61,7 +69,7 @@ A root is a digest in `manifests` that came directly from one `package_versions`
 A closure is the root plus every reachable descendant or attached referrer that is still inside the fetched package
 manifest set.
 
-Current planner rules should be:
+Current planner rules are:
 
 1. Selection happens on roots only.
 2. Child manifests and referrers are never selected directly just because they are untagged.
@@ -74,15 +82,15 @@ Current planner rules should be:
 Rule 5 is intentional. It matches the current schema and the observed `single` / `single-amd64` / `single-arm64`
 registry shape.
 
-## Supported Cleanup Inputs For The First Planner Track
+## Supported Cleanup Inputs
 
-These are the behaviors this project should plan for first.
+These are the core cleanup behaviors currently supported.
 
 ### `delete-tags`
 
 - Select roots by tag match.
-- Digest literals may also be accepted, but they must resolve to root digests.
-- If every tag on a matched root is selected for removal, that root may become a delete candidate.
+- Digest literals are accepted when they resolve to root digests.
+- If every tag on a matched root is selected for removal, that root becomes a delete candidate.
 - If only some tags on a matched root are selected, the planner must report an untag action rather than pretending the
   whole root can be deleted.
 
@@ -133,7 +141,7 @@ Examples using the current `complex` fixture shape:
 - Example: `--delete-tag gamma --keep-n-tagged 0`
   - the matched subset consists only of roots carrying `gamma`
   - roots carrying `gamma` plus additional non-matched tags become `untag-only`
-  - a `gamma`-only root may become `delete-root`
+  - a `gamma`-only root becomes `delete-root`
 - Example: `--delete-tag gamma --keep-n-tagged 1`
   - among roots touched by `gamma`, the newest root is retained
   - older matched roots are selected
@@ -149,12 +157,12 @@ Examples using the current `complex` fixture shape:
 
 Planner output implications:
 
-- `direct_target_tags` should continue to represent matched delete intent, even when some of those matched tags later
-  disappear from actionable roots because a whole root was retained by `keep-n-tagged`.
+- `direct_target_tags` continue to represent matched delete intent, even when some of those matched tags later disappear
+  from actionable roots because a whole root was retained by `keep-n-tagged`.
 - `direct_target_roots` are the actionable result after combining delete-match, exclusion, age filtering, and keep
   ranking.
-- This project keeps the combined policy explanation-first and set-based; it should not depend on iterative mutation
-  order to be understandable.
+- This project keeps the combined policy explanation-first and set-based; it does not depend on iterative mutation order
+  to be understandable.
 
 ### `delete-untagged`
 
@@ -170,7 +178,7 @@ Planner output implications:
 
 ## Explicit Non-Goals
 
-The following behaviors remain intentionally out of scope until the planner and execution model above are stable.
+The following behaviors are out of scope for the current product:
 
 - multi-package expansion or package-name pattern selection
 - validate-mode parity with the upstream action
@@ -179,11 +187,11 @@ The following behaviors remain intentionally out of scope until the planner and 
 
 - No destructive default equivalent to "if no options are set, delete all untagged images."
 
-This project should require explicit cleanup intent before planning destructive actions.
+This project requires explicit cleanup intent before planning destructive actions.
 
 ## Planning Order
 
-The planner should follow this order conceptually:
+The planner follows this order conceptually:
 
 1. Start from all root digests for the chosen scan.
 2. Remove roots protected by `exclude-tags`.
@@ -205,15 +213,15 @@ The planner should follow this order conceptually:
 The upstream action mixes selector expansion, safety decisions, untagging, and package deletion while mutating live
 registry state.
 
-This project should keep those stages separate:
+This project keeps those stages separate:
 
 - SQLite is the source of truth for the dry-run plan
 - planner outputs must explain why a root is deletable or blocked
-- execution should consume an already-decided plan instead of re-deciding policy during deletion
+- execution consumes an already-decided plan instead of re-deciding policy during deletion
 
-## Follow-Up Work
+## Ongoing Maintenance
 
-This note sets up the next two tasks:
+Keep this note aligned with:
 
-1. define concrete planner output terms and SQL-backed result sets
-2. add tests that lock the wrapper-index, referrer, and tag-overlap behavior
+1. the persisted cleanup audit model
+2. the live behavior locked by tests
