@@ -1,0 +1,75 @@
+name: "Test: ghcr-cleanup-action Cross-Owner"
+run-name: Test ghcr-cleanup-action Cross-Owner
+
+"on":
+  workflow_dispatch:
+    inputs:
+      package_owner:
+        description: GHCR package owner (organization/user)
+        required: true
+        type: string
+      package_name:
+        description: Test package name
+        required: true
+        type: string
+        default: "ghcr-cleanup-action-cross-owner-test"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require test org configuration
+        shell: bash
+        env:
+          GHCR_TEST_OWNER: ${{ inputs.package_owner }}
+          GHCR_TEST_PAT_USERNAME: ${{ vars.GHCR_TEST_PAT_USERNAME }}
+          GHCR_TEST_PAT: ${{ secrets.GHCR_TEST_PAT }}
+        run: |
+          set -euo pipefail
+          [[ -n "$GHCR_TEST_OWNER" ]] || { echo "Missing package owner" >&2; exit 1; }
+          [[ -n "$GHCR_TEST_PAT_USERNAME" ]] || { echo "Missing repo variable GHCR_TEST_PAT_USERNAME" >&2; exit 1; }
+          [[ -n "$GHCR_TEST_PAT" ]] || { echo "Missing repo secret GHCR_TEST_PAT" >&2; exit 1; }
+
+      - name: Normalize owner and package
+        id: names
+        shell: bash
+        env:
+          PACKAGE_OWNER: ${{ inputs.package_owner }}
+          PACKAGE_NAME: ${{ inputs.package_name }}
+        run: |
+          set -euo pipefail
+          echo "package_owner=$(tr '[:upper:]' '[:lower:]' <<< "$PACKAGE_OWNER")" >> "$GITHUB_OUTPUT"
+          echo "package_name=$(tr '[:upper:]' '[:lower:]' <<< "$PACKAGE_NAME")" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ vars.GHCR_TEST_PAT_USERNAME }}
+          password: ${{ secrets.GHCR_TEST_PAT }}
+
+      - name: Push repro image
+        shell: bash
+        env:
+          IMAGE_REF: ghcr.io/${{ steps.names.outputs.package_owner }}/${{ steps.names.outputs.package_name }}
+          ALPINE_REF: alpine:3.22
+        run: |
+          set -euo pipefail
+          # 2 tags to prevent error "cannot delete last tagged version of package"
+          docker pull -q --platform linux/amd64 "${ALPINE_REF}"
+          docker tag "${ALPINE_REF}" "${IMAGE_REF}:keep-me"
+          docker tag "${ALPINE_REF}" "${IMAGE_REF}:delete-me"
+          docker push "${IMAGE_REF}:keep-me"
+          docker push "${IMAGE_REF}:delete-me"
+
+      - name: Execute ghcr-cleanup-action action
+        uses: dataaxiom/ghcr-cleanup-action@34a2b6c814b9c6bcb92f78cba3e56a7ab9ca7a86 # v1.1.0
+        with:
+          token: ${{ secrets.GHCR_TEST_PAT }}
+          owner: ${{ steps.names.outputs.package_owner }}
+          package: ${{ steps.names.outputs.package_name }}
+          delete-tags: delete-me
