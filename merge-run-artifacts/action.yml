@@ -39,6 +39,15 @@ outputs:
   db-path:
     description: Path to the merged SQLite database in the GitHub action runner
     value: ${{ steps.merge.outputs.db-path }}
+  artifact-id:
+    description: Artifact ID returned by the nested db-merge upload
+    value: ${{ steps.merge.outputs.artifact-id }}
+  artifact-url:
+    description: Artifact download URL returned by the nested db-merge upload
+    value: ${{ steps.merge.outputs.artifact-url }}
+  artifact-digest:
+    description: Artifact digest returned by the nested db-merge upload
+    value: ${{ steps.merge.outputs.artifact-digest }}
 
 runs:
   using: composite
@@ -70,28 +79,15 @@ runs:
         source_db_dir="$(tools/decrypt-db-artifacts.sh)"
         echo "source_db_dir=$source_db_dir" >> "$GITHUB_OUTPUT"
 
-    - name: Collect merged DB source paths
-      id: source-paths
-      shell: bash
-      env:
-        SOURCE_DB_DIR: ${{ steps.decrypt.outputs.source_db_dir }}
-      run: |
-        set -euo pipefail
-
-        {
-          echo "source_db_paths<<EOF"
-          find "$SOURCE_DB_DIR" -maxdepth 2 -type f -name '*.sqlite' | sort
-          echo "EOF"
-        } >> "$GITHUB_OUTPUT"
-
     - name: Merge DB artifacts
       id: merge
       uses: ./db-merge
       with:
+        source-db-dir: ${{ steps.decrypt.outputs.source_db_dir }}
+        db-file: merged.sqlite
         upload-db-artifact: ${{ inputs.upload-db-artifact }}
         db-artifact-encryption-passphrase: ${{ inputs.db-artifact-encryption-passphrase }}
         db-artifact-retention-days: ${{ inputs.db-artifact-retention-days }}
-        source-db-paths: ${{ steps.source-paths.outputs.source_db_paths }}
         log-level: ${{ inputs.log-level }}
 
     - name: Delete source artifacts

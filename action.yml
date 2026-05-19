@@ -151,8 +151,7 @@ runs:
           db_dir="$(dirname "$db_path")"
           db_file="$(basename "$db_path")"
         else
-          scan_uuid="$(cat /proc/sys/kernel/random/uuid)"
-          db_dir="$RUNNER_TEMP/ghcr-manager/$scan_uuid"
+          db_dir="$(mktemp -d -p "$RUNNER_TEMP")"
           db_path="$db_dir/$db_file"
         fi
         mkdir -p "$db_dir"

@@ -6,10 +6,12 @@ branding:
   color: blue
 
 inputs:
-  db-path:
-    description: Optional local SQLite DB path to write the merged database into
-    required: false
-    default: ""
+  source-db-dir:
+    description: Local directory containing the SQLite DB files to merge
+    required: true
+  db-file:
+    description: Artifact filename and local filename for the merged database
+    required: true
   upload-db-artifact:
     description: Whether to upload the merged database as a workflow run artifact
     required: false
@@ -23,9 +25,6 @@ inputs:
     description: Optional retention days override for uploaded database artifacts
     required: false
     default: ""
-  source-db-paths:
-    description: Newline-separated local SQLite DB paths to merge into db-path
-    required: true
   log-level:
     description: Log level passed to the shared CLI
     required: false
@@ -35,6 +34,15 @@ outputs:
   db-path:
     description: Path to the merged SQLite database in the GitHub action runner
     value: ${{ steps.prepare-db.outputs.db_path }}
+  artifact-id:
+    description: Artifact ID returned by the DB artifact upload action
+    value: ${{ steps.upload.outputs.artifact-id }}
+  artifact-url:
+    description: Artifact download URL returned by the DB artifact upload action
+    value: ${{ steps.upload.outputs.artifact-url }}
+  artifact-digest:
+    description: Artifact digest returned by the DB artifact upload action
+    value: ${{ steps.upload.outputs.artifact-digest }}
 
 runs:
   using: composite
@@ -61,28 +69,18 @@ runs:
       id: prepare-db
       shell: bash
       env:
-        INPUT_DB_PATH: ${{ inputs.db-path }}
+        INPUT_DB_FILE: ${{ inputs.db-file }}
         RUNNER_TEMP: ${{ runner.temp }}
       run: |
         set -euo pipefail
-        db_file="merged.sqlite"
-        if [[ -n "$INPUT_DB_PATH" ]]; then
-          db_path="$INPUT_DB_PATH"
-          db_dir="$(dirname "$db_path")"
-          db_file="$(basename "$db_path")"
-        else
-          merge_uuid="$(cat /proc/sys/kernel/random/uuid)"
-          db_dir="$RUNNER_TEMP/ghcr-manager/$merge_uuid"
-          db_path="$db_dir/$db_file"
-        fi
-        mkdir -p "$db_dir"
-        echo "db_file=$db_file" >> "$GITHUB_OUTPUT"
+        db_dir="$(mktemp -d -p "$RUNNER_TEMP")"
+        db_path="$db_dir/$INPUT_DB_FILE"
         echo "db_path=$db_path" >> "$GITHUB_OUTPUT"
 
     - name: Run DB merge
       shell: bash
       env:
-        SOURCE_DB_PATHS: ${{ inputs.source-db-paths }}
+        SOURCE_DB_DIR: ${{ inputs.source-db-dir }}
       run: |
         set -euo pipefail
 
@@ -91,20 +89,17 @@ runs:
         )
 
         while IFS= read -r source_db_path; do
-          source_db_path="${source_db_path#"${source_db_path%%[![:space:]]*}"}"
-          source_db_path="${source_db_path%"${source_db_path##*[![:space:]]}"}"
-          if [[ -n "$source_db_path" ]]; then
-            merge_args+=(--source-db "$source_db_path")
-          fi
-        done <<< "$SOURCE_DB_PATHS"
+          merge_args+=(--source-db "$source_db_path")
+        done < <(find "$SOURCE_DB_DIR" -maxdepth 1 -type f -name '*.sqlite' | sort)
 
         npm run ghcr-manager:dist -- db-merge "${merge_args[@]}"
 
     - name: Upload DB artifact
+      id: upload
       if: ${{ inputs.upload-db-artifact == 'true' }}
       uses: ./.github/actions/upload-db-artifact
       with:
         db-path: ${{ steps.prepare-db.outputs.db_path }}
-        db-file: ${{ steps.prepare-db.outputs.db_file }}
+        db-file: ${{ inputs.db-file }}
         db-artifact-encryption-passphrase: ${{ inputs.db-artifact-encryption-passphrase }}
         db-artifact-retention-days: ${{ inputs.db-artifact-retention-days }}
