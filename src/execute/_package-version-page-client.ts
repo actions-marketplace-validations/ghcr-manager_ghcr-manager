@@ -9,7 +9,7 @@ import {
 } from "./_http.js";
 import type { DeleteExecutionLogger, GitHubPackageFetch } from "./_types.js";
 
-interface _GitHubPackageVersionPageItem {
+export interface GitHubPackageVersionPageItem {
   id: number;
   name?: string;
   metadata?: {
@@ -57,40 +57,14 @@ export async function findPackageVersionByDigestAndTag(
   throw new Error(`could not find temporary package version for ${owner}/${packageName}:${tag} (${digest})`);
 }
 
-async function _findPackageVersionByDigestAndTagOnce(
-  owner: string,
-  packageName: string,
-  digest: string,
-  tag: string,
-  token: string,
-  logger: DeleteExecutionLogger,
-  fetchImpl: GitHubPackageFetch
-): Promise<number | undefined> {
-  for (let page = 1; ; page += 1) {
-    const items = await loadPackageVersionPage(owner, packageName, page, token, logger, fetchImpl);
-    if (items.length === 0) {
-      return undefined;
-    }
-
-    const match = items.find((item) => item.name === digest && item.metadata?.container?.tags?.includes(tag));
-    if (match) {
-      return match.id;
-    }
-
-    if (items.length < 100) {
-      return undefined;
-    }
-  }
-}
-
-async function loadPackageVersionPage(
+export async function loadPackageVersionPage(
   owner: string,
   packageName: string,
   page: number,
   token: string,
   logger: DeleteExecutionLogger,
   fetchImpl: GitHubPackageFetch
-): Promise<_GitHubPackageVersionPageItem[]> {
+): Promise<GitHubPackageVersionPageItem[]> {
   const ownerURIComponent = await getOwnerURIComponent(fetchImpl, owner, token, logger);
   const url = new URL(
     `/${ownerURIComponent}/packages/container/${encodeURIComponent(packageName)}/versions`,
@@ -125,5 +99,31 @@ async function loadPackageVersionPage(
     throw new Error(await buildHttpErrorMessage(response, `GitHub Packages request for page ${page} failed`));
   }
 
-  return (await response.json()) as _GitHubPackageVersionPageItem[];
+  return (await response.json()) as GitHubPackageVersionPageItem[];
+}
+
+async function _findPackageVersionByDigestAndTagOnce(
+  owner: string,
+  packageName: string,
+  digest: string,
+  tag: string,
+  token: string,
+  logger: DeleteExecutionLogger,
+  fetchImpl: GitHubPackageFetch
+): Promise<number | undefined> {
+  for (let page = 1; ; page += 1) {
+    const items = await loadPackageVersionPage(owner, packageName, page, token, logger, fetchImpl);
+    if (items.length === 0) {
+      return undefined;
+    }
+
+    const match = items.find((item) => item.name === digest && item.metadata?.container?.tags?.includes(tag));
+    if (match) {
+      return match.id;
+    }
+
+    if (items.length < 100) {
+      return undefined;
+    }
+  }
 }

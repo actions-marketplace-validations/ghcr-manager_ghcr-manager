@@ -203,6 +203,8 @@ This section is the canonical place for session-to-session continuity.
 - Action interface direction:
   - `command` is explicit and required; the action no longer defaults to `scan` when callers omit it
   - root-action `delete-tags` and `exclude-tags` now use newline-separated values instead of comma-separated values
+  - `command: untag` is now supported as a direct no-DB side command; it uses explicit tag inputs, rejects
+    scan/cleanup-only knobs, and does not support DB artifact upload
 - Current action DB handling:
   - by default the action creates a fresh DB path under runner temp storage
   - the action also supports an optional local `db-path` input so later scans can append to the same SQLite file
@@ -217,8 +219,10 @@ This section is the canonical place for session-to-session continuity.
   - the duplicated final DB-artifact upload tail is now shared through the internal composite action
     `.github/actions/upload-db-artifact/action.yml`, which keeps the validate/resolve/encrypt/upload flow readable in
     YAML while removing duplicate logic from `action.yml` and `db-merge/action.yml`
-- the `db-merge` sub-action now also supports optional DB artifact upload with the same retention-day override and the
-  same encryption rule as `scan`: if the merged DB contains any non-public scan, plaintext upload is refused
+  - the `db-merge` sub-action now also supports optional DB artifact upload with the same retention-day override and the
+    same encryption rule as `scan`: if the merged DB contains any non-public scan, plaintext upload is refused
+  - `untag` uses direct GitHub Packages plus GHCR calls instead of a full scan DB; after the rewrite-delete sequence it
+    verifies that the requested tag is gone and that the temporary package version is no longer visible
   - `merge-run-artifacts` now names its merged output `ghcr-manager-merged.sqlite` and excludes the just-uploaded merged
     artifact from source-artifact cleanup by using the nested `db-merge` upload artifact ID
   - `merge-run-artifacts` now exposes `db-file` as an input, defaulting to `ghcr-manager-merged.sqlite`, while
@@ -319,7 +323,7 @@ This section is the canonical place for session-to-session continuity.
     artifact upload, and deletes the intermediate per-scenario DB artifacts from the run
   - `.github/workflows/test_upstream-cross-org-bug.yml` is a deliberately minimal upstream-action repro that pushes one
     unique tagged image into the test org and then runs `dataaxiom/ghcr-cleanup-action` against it without a
-    `repository` input, so the current cross-orgsitory lookup bug can be reproduced without the larger scenario harness
+    `repository` input, so the current cross-org lookup issue can be reproduced without the larger scenario harness
   - the `merge-run-artifacts` sub-action uses `tools/download-run-artifacts.sh`, `tools/decrypt-db-artifacts.sh`, and
     `tools/delete-run-artifacts.sh` internally; the helpers rediscover matching current-run artifacts by the same
     name-pattern filter instead of passing artifact ID lists through temporary files

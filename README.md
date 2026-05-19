@@ -40,11 +40,13 @@ packages and correct handling of multi-arch images, referrers, and attestations.
 
 ## Usage
 
-The action supports two commands:
+The action supports three commands:
 
 - `scan`: scan one package and always upload the resulting DB artifact
 - `cleanup`: scan first, then simulate or apply cleanup selectors; DB upload stays optional here, and a second
   post-cleanup scan is opt-in
+- `untag`: remove one or more tags directly without a full DB scan or DB artifact upload; because GHCR has no native
+  untag API, this works by rewriting tag association and verifying the result
 
 ```yaml
 concurrency:
@@ -76,35 +78,35 @@ jobs:
 ```
 
 > Copy the [Manual Run Workflow](.github/workflows/manual-run_scan.yml) as a ready-to-run workflow and switch `command`
-> between `scan` and `cleanup` as needed.
+> between `scan`, `cleanup`, and `untag` as needed.
 
 ## Inputs
 
 <!-- markdownlint-disable MD013 MD060 -->
 
-| Input                               | Description                                                                                                      | Required | Default                        |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------ |
-| `command`                           | Action command: `scan` or `cleanup`                                                                              | Yes      |                                |
-| `github-token`                      | GitHub token used for GitHub/GHCR API calls                                                                      | Yes      | `${{ github.token }}`          |
-| `owner`                             | GitHub owner of the container package (user or org)                                                              | Yes      |                                |
-| `package`                           | Container package name                                                                                           | Yes      |                                |
-| `db-path`                           | Optional local SQLite DB path so multiple action steps can append to the same DB                                 | No       |                                |
-| `upload-db-artifact`                | Whether `cleanup` should upload the resulting DB artifact. `scan` always uploads regardless of this setting      | No       | `false`                        |
-| `scan-after-cleanup`                | Whether live `cleanup` should run a second full scan so the DB reflects post-mutation state                      | No       | `false`                        |
-| `db-artifact-encryption-passphrase` | Optional passphrase for encrypting uploaded DB artifacts; required for non-public registries when upload happens | No       |                                |
-| `db-artifact-retention-days`        | Optional retention days override for uploaded database artifact                                                  | No       | `${{ github.retention_days }}` |
-| `delete-tags`                       | Optional newline-separated tags to delete during `cleanup`                                                       | No       |                                |
-| `exclude-tags`                      | Optional newline-separated tags to exclude during `cleanup`                                                      | No       |                                |
-| `keep-n-tagged`                     | Optional number of tagged roots to keep during `cleanup`                                                         | No       |                                |
-| `keep-n-untagged`                   | Optional number of untagged roots to keep during `cleanup`                                                       | No       |                                |
-| `delete-untagged`                   | Whether `cleanup` should target untagged roots                                                                   | No       | `false`                        |
-| `delete-ghost-images`               | Whether `cleanup` should target ghost multi-arch roots                                                           | No       | `false`                        |
-| `delete-partial-images`             | Whether `cleanup` should target partial multi-arch roots                                                         | No       | `false`                        |
-| `delete-orphaned-images`            | Whether `cleanup` should target orphaned digest-derived tags                                                     | No       | `false`                        |
-| `older-than`                        | Optional age cutoff for `cleanup` selectors                                                                      | No       |                                |
-| `use-regex`                         | Whether `cleanup` tag selectors should be treated as regular expressions                                         | No       | `false`                        |
-| `dry-run`                           | Whether `cleanup` should simulate the plan without mutating GHCR                                                 | No       | `false`                        |
-| `log-level`                         | Log level passed to the shared CLI                                                                               | No       | `info`                         |
+| Input                               | Description                                                                                                         | Required | Default                        |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------ |
+| `command`                           | Action command: `scan`, `cleanup`, or `untag`                                                                       | Yes      |                                |
+| `github-token`                      | GitHub token used for GitHub/GHCR API calls                                                                         | Yes      | `${{ github.token }}`          |
+| `owner`                             | GitHub owner of the container package (user or org)                                                                 | Yes      |                                |
+| `package`                           | Container package name                                                                                              | Yes      |                                |
+| `db-path`                           | Optional local SQLite DB path so multiple action steps can append to the same DB                                    | No       |                                |
+| `upload-db-artifact`                | Whether `cleanup` should upload the resulting DB artifact. `scan` always uploads; `untag` does not support it       | No       | `false`                        |
+| `scan-after-cleanup`                | Whether live `cleanup` should run a second full scan so the DB reflects post-mutation state; unsupported by `untag` | No       | `false`                        |
+| `db-artifact-encryption-passphrase` | Optional passphrase for encrypting uploaded DB artifacts; required for non-public registries when upload happens    | No       |                                |
+| `db-artifact-retention-days`        | Optional retention days override for uploaded database artifact                                                     | No       | `${{ github.retention_days }}` |
+| `delete-tags`                       | Optional newline-separated tags to delete during `cleanup` or `untag`; required for `untag`                         | No       |                                |
+| `exclude-tags`                      | Optional newline-separated tags to exclude during `cleanup`                                                         | No       |                                |
+| `keep-n-tagged`                     | Optional number of tagged roots to keep during `cleanup`                                                            | No       |                                |
+| `keep-n-untagged`                   | Optional number of untagged roots to keep during `cleanup`                                                          | No       |                                |
+| `delete-untagged`                   | Whether `cleanup` should target untagged roots                                                                      | No       | `false`                        |
+| `delete-ghost-images`               | Whether `cleanup` should target ghost multi-arch roots                                                              | No       | `false`                        |
+| `delete-partial-images`             | Whether `cleanup` should target partial multi-arch roots                                                            | No       | `false`                        |
+| `delete-orphaned-images`            | Whether `cleanup` should target orphaned digest-derived tags                                                        | No       | `false`                        |
+| `older-than`                        | Optional age cutoff for `cleanup` selectors                                                                         | No       |                                |
+| `use-regex`                         | Whether `cleanup` tag selectors should be treated as regular expressions                                            | No       | `false`                        |
+| `dry-run`                           | Whether `cleanup` or `untag` should simulate changes without mutating GHCR                                          | No       | `false`                        |
+| `log-level`                         | Log level passed to the shared CLI                                                                                  | No       | `info`                         |
 
 <!-- markdownlint-enable MD013 MD060 -->
 
