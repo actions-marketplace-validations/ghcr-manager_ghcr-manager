@@ -56,9 +56,13 @@ read it anyway when we check if the package is non-public.~~
 
 ~~=> Result: no, at least for now~~
 
-## Expose "untag" as command
+## ~~Expose "untag" as command~~
 
-ghcr-workflow implements a nice hack for the missing untag functionality in GH and GCHR API: untag
+~~ghcr-workflow implements a nice hack for the missing untag functionality in GH and GCHR API: untag~~
 
-The trick is to assign the tag to a dummy pkg-version/manifest then delete that. Afaik ghcr-manager even makes near
-clones for most manifests instead of dummies.
+~~The trick is to assign the tag to a dummy pkg-version/manifest then delete that. Afaik ghcr-manager even makes near
+clones for most manifests instead of dummies.~~
+
+## Test selection by digest
+
+`Digest literals are accepted when they resolve to root digests.` we have to test this in scenario(s).
