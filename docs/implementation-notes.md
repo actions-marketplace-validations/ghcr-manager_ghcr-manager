@@ -45,6 +45,8 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
 - Direct untag live validation stays separate from cleanup scenarios.
 - Untag live tests now use dedicated untag scenario IDs/package suffixes/tag prefixes so uploaded DBs are readable.
 - Untag live tests reuse the shared seed implementation underneath rather than carrying a separate seed action.
+- Test-only helper scripts now live under `tools/tests`; `tools/` root is reserved for runtime, repo-maintenance, and
+  action-facing helpers.
 
 ## Current Action / DB Notes
 

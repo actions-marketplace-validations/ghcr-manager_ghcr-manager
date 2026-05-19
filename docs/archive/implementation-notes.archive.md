@@ -663,7 +663,8 @@ src/
   - stable scan-scoped base views for roots, closures, and overlaps
   - request-scoped CTEs or temporary views for actual cleanup inputs
   - existing `v_tags_delete_*` views remain exploratory and should not become the canonical planner interface
-- Added [docs/cleanup-semantics.md](../cleanup-semantics.md) to lock the cleanup model before planner and execution work.
+- Added [docs/cleanup-semantics.md](../cleanup-semantics.md) to lock the cleanup model before planner and execution
+  work.
 - Chosen cleanup semantics for the first planner track:
   - planning is rooted in package-version-backed root manifests
   - deletion safety is decided on manifest closures, not on tag names alone

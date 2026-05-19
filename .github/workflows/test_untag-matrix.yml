@@ -40,7 +40,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "matrix=$(node tools/render-test-untag-matrix.mjs)" >> "$GITHUB_OUTPUT"
+          echo "matrix=$(node tools/tests/render-test-untag-matrix.mjs)" >> "$GITHUB_OUTPUT"
 
   execute:
     needs: prepare

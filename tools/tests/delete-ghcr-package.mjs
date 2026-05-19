@@ -6,7 +6,7 @@ const packageName = process.argv[3];
 const token = process.argv[4];
 
 if (!owner || !packageName || !token) {
-  throw new Error("usage: node tools/delete-ghcr-package.mjs <owner> <package-name> <token>");
+  throw new Error("usage: node tools/tests/delete-ghcr-package.mjs <owner> <package-name> <token>");
 }
 
 const url = new URL(

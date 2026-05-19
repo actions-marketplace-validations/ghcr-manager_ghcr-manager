@@ -9,7 +9,7 @@ const scenarioId = process.argv[2];
 const dbPath = process.argv[3];
 
 if (!scenarioId || !dbPath) {
-  throw new Error("usage: node tools/assert-untag-scenario-scan.mjs <scenario> <db-path>");
+  throw new Error("usage: node tools/tests/assert-untag-scenario-scan.mjs <scenario> <db-path>");
 }
 
 const scenario = untagScenarios[scenarioId];

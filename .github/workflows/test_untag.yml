@@ -86,7 +86,7 @@ jobs:
           work_dir="$RUNNER_TEMP/ghcr-manager/untag-${SCENARIO}"
           mkdir -p "$work_dir"
           resolution_path="$work_dir/scenario.json"
-          node tools/resolve-untag-scenario.mjs "$SCENARIO" "$REPOSITORY_NAME" > "$resolution_path"
+          node tools/tests/resolve-untag-scenario.mjs "$SCENARIO" "$REPOSITORY_NAME" > "$resolution_path"
           package_name="$(jq -r '.packageName' "$resolution_path")"
           db_path="$work_dir/${TEST_OWNER}__${package_name}__untag__scan-history.sqlite"
           {
@@ -108,7 +108,7 @@ jobs:
           PACKAGE: ${{ steps.scenario.outputs.package_name }}
         run: |
           set -euo pipefail
-          node tools/delete-ghcr-package.mjs "$OWNER" "$PACKAGE" "$GITHUB_TOKEN"
+          node tools/tests/delete-ghcr-package.mjs "$OWNER" "$PACKAGE" "$GITHUB_TOKEN"
 
       - name: Seed untag scenario package
         uses: ./.github/actions/test-scenario-seed
@@ -166,10 +166,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node tools/assert-untag-scenario.mjs "${{ inputs.scenario }}" "${{ steps.scenario.outputs.db_path }}"
+          node tools/tests/assert-untag-scenario.mjs "${{ inputs.scenario }}" "${{ steps.scenario.outputs.db_path }}"
 
       - name: Assert untag scenario scan
         shell: bash
         run: |
           set -euo pipefail
-          node tools/assert-untag-scenario-scan.mjs "${{ inputs.scenario }}" "${{ steps.scenario.outputs.db_path }}"
+          node tools/tests/assert-untag-scenario-scan.mjs "${{ inputs.scenario }}" "${{ steps.scenario.outputs.db_path }}"

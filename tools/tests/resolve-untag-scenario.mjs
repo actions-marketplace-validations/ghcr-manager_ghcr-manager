@@ -7,7 +7,7 @@ const scenarioId = process.argv[2];
 const repositoryName = process.argv[3];
 
 if (!scenarioId || !repositoryName) {
-  throw new Error("usage: node tools/resolve-untag-scenario.mjs <scenario> <repository-name>");
+  throw new Error("usage: node tools/tests/resolve-untag-scenario.mjs <scenario> <repository-name>");
 }
 
 const scenario = untagScenarios[scenarioId];
