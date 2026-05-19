@@ -40,11 +40,11 @@ inputs:
     required: false
     default: ""
   delete-tags:
-    description: Optional comma-separated tags to delete during cleanup
+    description: Optional newline-separated tags to delete during cleanup
     required: false
     default: ""
   exclude-tags:
-    description: Optional comma-separated tags to exclude from cleanup
+    description: Optional newline-separated tags to exclude from cleanup
     required: false
     default: ""
   keep-n-tagged:
@@ -248,26 +248,25 @@ runs:
           cleanup_args+=(--older-than "$OLDER_THAN")
         fi
 
-        append_csv_args() {
+        append_line_args() {
           local option="$1"
           local raw_values="$2"
-          local values=()
           local value=""
           if [[ -z "$raw_values" ]]; then
             return
           fi
-          IFS=',' read -r -a values <<< "$raw_values"
-          for value in "${values[@]}"; do
+          while IFS= read -r value || [[ -n "$value" ]]; do
+            # left and right trim
             value="${value#"${value%%[![:space:]]*}"}"
             value="${value%"${value##*[![:space:]]}"}"
             if [[ -n "$value" ]]; then
               cleanup_args+=("$option" "$value")
             fi
-          done
+          done <<< "$raw_values"
         }
 
-        append_csv_args --delete-tag "$DELETE_TAGS"
-        append_csv_args --exclude-tag "$EXCLUDE_TAGS"
+        append_line_args --delete-tag "$DELETE_TAGS"
+        append_line_args --exclude-tag "$EXCLUDE_TAGS"
 
         npm run ghcr-manager:dist -- cleanup "${cleanup_args[@]}"
 

@@ -93,8 +93,8 @@ jobs:
 | `scan-after-cleanup`                | Whether live `cleanup` should run a second full scan so the DB reflects post-mutation state                      | No       | `false`                        |
 | `db-artifact-encryption-passphrase` | Optional passphrase for encrypting uploaded DB artifacts; required for non-public registries when upload happens | No       |                                |
 | `db-artifact-retention-days`        | Optional retention days override for uploaded database artifact                                                  | No       | `${{ github.retention_days }}` |
-| `delete-tags`                       | Optional comma-separated tags to delete during `cleanup`                                                         | No       |                                |
-| `exclude-tags`                      | Optional comma-separated tags to exclude during `cleanup`                                                        | No       |                                |
+| `delete-tags`                       | Optional newline-separated tags to delete during `cleanup`                                                       | No       |                                |
+| `exclude-tags`                      | Optional newline-separated tags to exclude during `cleanup`                                                      | No       |                                |
 | `keep-n-tagged`                     | Optional number of tagged roots to keep during `cleanup`                                                         | No       |                                |
 | `keep-n-untagged`                   | Optional number of untagged roots to keep during `cleanup`                                                       | No       |                                |
 | `delete-untagged`                   | Whether `cleanup` should target untagged roots                                                                   | No       | `false`                        |

@@ -202,6 +202,7 @@ This section is the canonical place for session-to-session continuity.
     core
 - Action interface direction:
   - `command` is explicit and required; the action no longer defaults to `scan` when callers omit it
+  - root-action `delete-tags` and `exclude-tags` now use newline-separated values instead of comma-separated values
 - Current action DB handling:
   - by default the action creates a fresh DB path under runner temp storage
   - the action also supports an optional local `db-path` input so later scans can append to the same SQLite file
