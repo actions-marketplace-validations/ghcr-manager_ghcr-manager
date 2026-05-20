@@ -9,8 +9,8 @@ run-name: Test Delete Test Org Packages
         required: true
         default: ""
         type: string
-      package_name_regex:
-        description: Optional JavaScript regex used to filter package names before deletion.
+      package_name_contains:
+        description: Optional literal substring used to filter package names before deletion.
         required: false
         default: ""
         type: string
@@ -51,10 +51,10 @@ jobs:
         env:
           GHCR_TEST_OWNER: ${{ vars.GHCR_TEST_OWNER }}
           GHCR_TEST_PAT: ${{ secrets.GHCR_TEST_PAT }}
-          PACKAGE_NAME_REGEX: ${{ inputs.package_name_regex }}
+          PACKAGE_NAME_CONTAINS: ${{ inputs.package_name_contains }}
         run: |
           set -euo pipefail
           node tools/tests/delete-ghcr-test-org-packages.mjs \
             "$GHCR_TEST_OWNER" \
             "$GHCR_TEST_PAT" \
-            "$PACKAGE_NAME_REGEX"
+            "$PACKAGE_NAME_CONTAINS"

@@ -3,15 +3,16 @@
 
 const owner = process.argv[2];
 const token = process.argv[3];
-const regexFilter = process.argv[4] ?? "";
+const nameContains = process.argv[4] ?? "";
 
 if (!owner || !token) {
-  throw new Error("usage: node tools/tests/delete-ghcr-test-org-packages.mjs <owner> <token> [regex-filter]");
+  throw new Error("usage: node tools/tests/delete-ghcr-test-org-packages.mjs <owner> <token> [name-contains]");
 }
 
-const filter = regexFilter ? new RegExp(regexFilter) : undefined;
 const packageNames = await listContainerPackageNames(owner, token);
-const matchingPackageNames = filter ? packageNames.filter((name) => filter.test(name)) : packageNames;
+const matchingPackageNames = nameContains
+  ? packageNames.filter((packageName) => packageName.includes(nameContains))
+  : packageNames;
 
 if (matchingPackageNames.length === 0) {
   process.stdout.write(`No matching container packages found for ${owner}.\n`);

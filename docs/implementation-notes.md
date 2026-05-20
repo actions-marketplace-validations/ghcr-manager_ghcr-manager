@@ -57,7 +57,7 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
   - digest-selector scenarios require repo dependencies before pre-scan and digest resolution helper scripts run
 - Test maintenance workflow note:
   - manual workflow `test_delete-test-org-packages.yml` deletes container packages from `GHCR_TEST_OWNER`, optionally
-    filtered by a JavaScript regex on package name
+    filtered by a literal substring on package name
 - User-owner workflow note:
   - `test_user-owner-cleanup.yml` now clears a fixed user-owned package, seeds two tagged images, deletes `delete-me`,
     and asserts the post-cleanup DB keeps only `keep-me`
@@ -112,6 +112,7 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
 ## Current Next Plan
 
 - [ ] Clean up remaining repo rough edges before first public release.
+- [x] Remove regex-based package filtering from the manual test-org package cleanup workflow.
 - [ ] Port regex selector validation hardening for `--use-regex` cleanup selectors.
 - [ ] Update documentation for the first public release:
   - action usage
