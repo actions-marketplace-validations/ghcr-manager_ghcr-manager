@@ -103,6 +103,45 @@ runs:
           --tag "$IMAGE_REF:${SCENARIO_ID}--keep-me" \
           "$context_dir"
 
+    - name: Seed untag-one-of-two-tags-single-root
+      if: ${{ inputs.seed_strategy == 'untag-one-of-two-tags-single-root' }}
+      shell: bash
+      env:
+        IMAGE_REF: ${{ inputs.image_ref }}
+        SCENARIO_ID: untag-one-of-two-tags-single-root
+      run: |
+        set -euo pipefail
+        echo "GHCR_MANAGER_SCENARIO_SEED_HANDLED=true" >> "$GITHUB_ENV"
+        context_dir="$(mktemp -d)"
+        cp "$GITHUB_ACTION_PATH/../../../tools/tests/fixtures/minimal-image/Dockerfile" "$context_dir/Dockerfile"
+        printf '%s\n' "$SCENARIO_ID" > "$context_dir/payload.txt"
+        docker buildx build \
+          --platform linux/amd64 \
+          --provenance=false \
+          --push \
+          --tag "$IMAGE_REF:${SCENARIO_ID}--delete-me" \
+          --tag "$IMAGE_REF:${SCENARIO_ID}--keep-me" \
+          "$context_dir"
+
+    - name: Seed untag single-tag single-root
+      if: ${{ inputs.seed_strategy == 'untag-single-tag-single-root' }}
+      shell: bash
+      env:
+        IMAGE_REF: ${{ inputs.image_ref }}
+        SCENARIO_ID: untag-single-tag-single-root
+      run: |
+        set -euo pipefail
+        echo "GHCR_MANAGER_SCENARIO_SEED_HANDLED=true" >> "$GITHUB_ENV"
+        context_dir="$(mktemp -d)"
+        cp "$GITHUB_ACTION_PATH/../../../tools/tests/fixtures/minimal-image/Dockerfile" "$context_dir/Dockerfile"
+        printf '%s\n' "$SCENARIO_ID" > "$context_dir/payload.txt"
+        docker buildx build \
+          --platform linux/amd64 \
+          --provenance=false \
+          --push \
+          --tag "$IMAGE_REF:${SCENARIO_ID}--delete-me" \
+          "$context_dir"
+
     - name: Prepare blocked-shared-closure contexts
       if: ${{ inputs.seed_strategy == 'blocked-shared-closure' }}
       id: blocked-contexts
@@ -220,7 +259,7 @@ runs:
           --tag "$IMAGE_REF:${SCENARIO_ID}--keep-me" \
           "$context_dir"
 
-    - name: Prepare docker-manifest-list shared-root contexts
+    - name: Prepare docker-manifest-list-untag-only-shared-root contexts
       if: ${{ inputs.seed_strategy == 'docker-manifest-list-untag-only-shared-root' }}
       id: docker-manifest-list-contexts
       shell: bash
@@ -244,7 +283,7 @@ runs:
         echo "amd64_dir=$amd64_dir" >> "$GITHUB_OUTPUT"
         echo "arm64_dir=$arm64_dir" >> "$GITHUB_OUTPUT"
 
-    - name: Build docker-manifest-list amd64 child
+    - name: Build docker-manifest-list-untag-only-shared-root amd64 child
       if: ${{ inputs.seed_strategy == 'docker-manifest-list-untag-only-shared-root' }}
       shell: bash
       env:
@@ -262,7 +301,7 @@ runs:
           --tag "$IMAGE_REF:${GITHUB_RUN_ID}-${SCENARIO_ID}-amd64-test" \
           "$AMD64_DIR"
 
-    - name: Build docker-manifest-list arm64 child
+    - name: Build docker-manifest-list-untag-only-shared-root arm64 child
       if: ${{ inputs.seed_strategy == 'docker-manifest-list-untag-only-shared-root' }}
       shell: bash
       env:
@@ -280,13 +319,93 @@ runs:
           --tag "$IMAGE_REF:${GITHUB_RUN_ID}-${SCENARIO_ID}-arm64-test" \
           "$ARM64_DIR"
 
-    - name: Publish docker manifest-list shared root
+    - name: Publish docker manifest-list-untag-only-shared-root
       if: ${{ inputs.seed_strategy == 'docker-manifest-list-untag-only-shared-root' }}
       shell: bash
       env:
         GITHUB_RUN_ID: ${{ github.run_id }}
         IMAGE_REF: ${{ inputs.image_ref }}
         SCENARIO_ID: docker-manifest-list-untag-only-shared-root
+      run: |
+        set -euo pipefail
+        echo "GHCR_MANAGER_SCENARIO_SEED_HANDLED=true" >> "$GITHUB_ENV"
+
+        source_amd64_ref="$IMAGE_REF:${GITHUB_RUN_ID}-${SCENARIO_ID}-amd64-test"
+        source_arm64_ref="$IMAGE_REF:${GITHUB_RUN_ID}-${SCENARIO_ID}-arm64-test"
+
+        for target_tag in delete-me keep-me; do
+          target_ref="$IMAGE_REF:${SCENARIO_ID}--${target_tag}"
+          docker manifest create "$target_ref" "$source_amd64_ref" "$source_arm64_ref"
+          docker manifest push "$target_ref"
+        done
+
+    - name: Prepare untag-one-of-two-tags-docker-manifest-list contexts
+      if: ${{ inputs.seed_strategy == 'untag-one-of-two-tags-docker-manifest-list' }}
+      id: untag-docker-manifest-list-contexts
+      shell: bash
+      env:
+        SCENARIO_ID: untag-one-of-two-tags-docker-manifest-list
+      run: |
+        set -euo pipefail
+        echo "GHCR_MANAGER_SCENARIO_SEED_HANDLED=true" >> "$GITHUB_ENV"
+        base_dir="$(mktemp -d)"
+
+        amd64_dir="$base_dir/amd64"
+        mkdir -p "$amd64_dir"
+        cp "$GITHUB_ACTION_PATH/../../../tools/tests/fixtures/minimal-image/Dockerfile" "$amd64_dir/Dockerfile"
+        printf '%s\n' "${SCENARIO_ID} amd64" > "$amd64_dir/payload.txt"
+
+        arm64_dir="$base_dir/arm64"
+        mkdir -p "$arm64_dir"
+        cp "$GITHUB_ACTION_PATH/../../../tools/tests/fixtures/minimal-image/Dockerfile" "$arm64_dir/Dockerfile"
+        printf '%s\n' "${SCENARIO_ID} arm64" > "$arm64_dir/payload.txt"
+
+        echo "amd64_dir=$amd64_dir" >> "$GITHUB_OUTPUT"
+        echo "arm64_dir=$arm64_dir" >> "$GITHUB_OUTPUT"
+
+    - name: Build untag-one-of-two-tags-docker-manifest-list amd64 child
+      if: ${{ inputs.seed_strategy == 'untag-one-of-two-tags-docker-manifest-list' }}
+      shell: bash
+      env:
+        AMD64_DIR: ${{ steps.untag-docker-manifest-list-contexts.outputs.amd64_dir }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
+        IMAGE_REF: ${{ inputs.image_ref }}
+        SCENARIO_ID: untag-one-of-two-tags-docker-manifest-list
+      run: |
+        set -euo pipefail
+        echo "GHCR_MANAGER_SCENARIO_SEED_HANDLED=true" >> "$GITHUB_ENV"
+        docker buildx build \
+          --platform linux/amd64 \
+          --provenance=false \
+          --push \
+          --tag "$IMAGE_REF:${GITHUB_RUN_ID}-${SCENARIO_ID}-amd64-test" \
+          "$AMD64_DIR"
+
+    - name: Build untag-one-of-two-tags-docker-manifest-list arm64 child
+      if: ${{ inputs.seed_strategy == 'untag-one-of-two-tags-docker-manifest-list' }}
+      shell: bash
+      env:
+        ARM64_DIR: ${{ steps.untag-docker-manifest-list-contexts.outputs.arm64_dir }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
+        IMAGE_REF: ${{ inputs.image_ref }}
+        SCENARIO_ID: untag-one-of-two-tags-docker-manifest-list
+      run: |
+        set -euo pipefail
+        echo "GHCR_MANAGER_SCENARIO_SEED_HANDLED=true" >> "$GITHUB_ENV"
+        docker buildx build \
+          --platform linux/arm64 \
+          --provenance=false \
+          --push \
+          --tag "$IMAGE_REF:${GITHUB_RUN_ID}-${SCENARIO_ID}-arm64-test" \
+          "$ARM64_DIR"
+
+    - name: Publish untag-one-of-two-tags-docker-manifest-list
+      if: ${{ inputs.seed_strategy == 'untag-one-of-two-tags-docker-manifest-list' }}
+      shell: bash
+      env:
+        GITHUB_RUN_ID: ${{ github.run_id }}
+        IMAGE_REF: ${{ inputs.image_ref }}
+        SCENARIO_ID: untag-one-of-two-tags-docker-manifest-list
       run: |
         set -euo pipefail
         echo "GHCR_MANAGER_SCENARIO_SEED_HANDLED=true" >> "$GITHUB_ENV"

@@ -56,8 +56,10 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
 - Scenario executor workflow note:
   - digest-selector scenarios require repo dependencies before pre-scan and digest resolution helper scripts run
 - Test maintenance workflow note:
-  - manual workflow `test_delete-test-org-packages.yml` deletes container packages from `GHCR_TEST_OWNER`,
-    optionally filtered by a JavaScript regex on package name
+  - manual workflow `test_delete-test-org-packages.yml` deletes container packages from `GHCR_TEST_OWNER`, optionally
+    filtered by a JavaScript regex on package name
+- Untag seed note:
+  - direct untag scenarios now use dedicated seed strategy IDs instead of borrowing cleanup scenario IDs for tag names
 
 ## Current Action / DB Notes
 
