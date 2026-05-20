@@ -5,7 +5,6 @@ interface _ScanRow {
   owner: string;
   package_name: string;
   scan_completed_at: string;
-  is_public: number;
 }
 
 interface _PackageVersionPayloadRow {
@@ -28,18 +27,17 @@ export class SnapshotRepository {
   getPackageMetadata(scanId: number): {
     owner: string;
     packageName: string;
-    isPublic: boolean;
     scanCompletedAt: string;
   } {
     const row = this.#database
       .prepare(
         `
-          SELECT owner, package_name, is_public, scan_completed_at
+          SELECT owner, package_name, scan_completed_at
           FROM package_scans
           WHERE scan_id = ?
         `
       )
-      .get(scanId) as Pick<_ScanRow, "owner" | "package_name" | "is_public" | "scan_completed_at"> | undefined;
+      .get(scanId) as Pick<_ScanRow, "owner" | "package_name" | "scan_completed_at"> | undefined;
     if (!row) {
       throw new Error(`database does not contain package scan for scan_id=${scanId}`);
     }
@@ -50,26 +48,8 @@ export class SnapshotRepository {
     return {
       owner: row.owner,
       packageName: row.package_name,
-      isPublic: row.is_public === 1,
       scanCompletedAt: row.scan_completed_at
     };
-  }
-
-  hasAnyNonPublicPackageScan(owner: string, packageName: string): boolean {
-    const row = this.#database
-      .prepare(
-        `
-          SELECT 1 AS has_non_public
-          FROM package_scans
-          WHERE owner = ?
-            AND package_name = ?
-            AND is_public = 0
-          LIMIT 1
-        `
-      )
-      .get(owner, packageName) as { has_non_public: 1 } | undefined;
-
-    return row !== undefined;
   }
 
   countPackageVersions(scanId: number): number {

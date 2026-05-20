@@ -15,7 +15,6 @@ test("scan writer stores scan metadata and rows incrementally", () => {
 
   try {
     writer.startScan("acme", "example", "2026-04-20T12:00:00.000Z", {
-      isPublic: false,
       rawJson: JSON.stringify({ visibility: "private" })
     });
     writer.insertPackageVersion({
@@ -68,7 +67,6 @@ test("scan writer stores scan metadata and rows incrementally", () => {
     };
     assert.equal(metadata.owner, "acme");
     assert.equal(metadata.packageName, "example");
-    assert.equal(metadata.isPublic, false);
     assert.deepEqual(JSON.parse(scanRow.package_metadata_json ?? ""), { visibility: "private" });
     assert.equal(scanRow.github_actions_run_url, "https://github.com/acme/example-repo/actions/runs/123456");
     assert.equal(repository.countPackageVersions(scanId), 2);
@@ -92,7 +90,6 @@ test("markScanFailed records failed status and completion timestamp", () => {
   const writer = new ScanWriter(database);
 
   writer.startScan("acme", "example", "2026-04-20T12:00:00.000Z", {
-    isPublic: false,
     rawJson: JSON.stringify({ visibility: "private" })
   });
   writer.markScanFailed("2026-04-20T12:00:42.000Z");
@@ -102,7 +99,6 @@ test("markScanFailed records failed status and completion timestamp", () => {
     .prepare(
       `
         SELECT owner, package_name, scan_uuid, status, scan_completed_at
-             , is_public
         FROM package_scans
         WHERE scan_id = ?
       `
@@ -113,7 +109,6 @@ test("markScanFailed records failed status and completion timestamp", () => {
     scan_uuid: string;
     status: string;
     scan_completed_at: string | null;
-    is_public: number;
   };
 
   assert.equal(scanRow.owner, "acme");
@@ -121,7 +116,6 @@ test("markScanFailed records failed status and completion timestamp", () => {
   assert.match(scanRow.scan_uuid, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
   assert.equal(scanRow.status, "failed");
   assert.equal(scanRow.scan_completed_at, "2026-04-20T12:00:42.000Z");
-  assert.equal(scanRow.is_public, 0);
 
   database.close();
 });

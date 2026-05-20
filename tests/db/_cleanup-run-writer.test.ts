@@ -15,7 +15,6 @@ test("cleanup run writer stores planner decisions and protected roots", () => {
   process.env.GITHUB_RUN_ID = "987654";
 
   scanWriter.startScan("acme", "example", "2026-05-17T09:00:00.000Z", {
-    isPublic: false,
     rawJson: JSON.stringify({ visibility: "private" })
   });
   scanWriter.insertPackageVersion({
@@ -303,7 +302,6 @@ test("cleanup audit rows must use the same scan as their cleanup run", () => {
   const scanWriter = new ScanWriter(database);
 
   scanWriter.startScan("acme", "example", "2026-05-17T09:00:00.000Z", {
-    isPublic: false,
     rawJson: JSON.stringify({ visibility: "private" })
   });
   scanWriter.insertPackageVersion({
@@ -320,7 +318,6 @@ test("cleanup audit rows must use the same scan as their cleanup run", () => {
   const firstScanId = scanWriter.getActiveScanId();
 
   scanWriter.startScan("acme", "example", "2026-05-17T10:00:00.000Z", {
-    isPublic: false,
     rawJson: JSON.stringify({ visibility: "private" })
   });
   scanWriter.insertPackageVersion({

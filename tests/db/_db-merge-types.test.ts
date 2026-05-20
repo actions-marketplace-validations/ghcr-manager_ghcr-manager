@@ -13,7 +13,6 @@ test("db merge types describe the expected row and summary shapes", () => {
     scan_uuid: "scan-uuid",
     owner: "acme",
     package_name: "example",
-    is_public: 1,
     package_metadata_json: '{"visibility":"public"}',
     github_actions_run_url: null,
     scan_started_at: "2026-05-17T09:00:00.000Z",

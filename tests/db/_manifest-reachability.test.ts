@@ -8,7 +8,6 @@ test("rebuildManifestReachability builds reachability bottom-up from direct mani
   const writer = new ScanWriter(database);
 
   writer.startScan("acme", "example", "2026-04-20T12:00:00.000Z", {
-    isPublic: false,
     rawJson: JSON.stringify({ visibility: "private" })
   });
   writer.insertPackageVersion({
@@ -148,7 +147,6 @@ test("rebuildManifestReachability rejects cycles in manifest edges", () => {
   const writer = new ScanWriter(database);
 
   writer.startScan("acme", "example", "2026-04-20T12:00:00.000Z", {
-    isPublic: false,
     rawJson: JSON.stringify({ visibility: "private" })
   });
   writer.insertPackageVersion({

@@ -8,7 +8,6 @@ test("planner repository resolves keep-tagged root targets through the dedicated
   const repository = new PlannerRepository(database);
 
   writer.startScan("acme", "pkg", "2026-05-14T10:00:00.000Z", {
-    isPublic: false,
     rawJson: JSON.stringify({ visibility: "private" })
   });
   writer.insertPackageVersion({
@@ -58,7 +57,6 @@ test("planner repository keeps the newest eligible tagged roots and selects only
   const repository = new PlannerRepository(database);
 
   writer.startScan("acme", "keep-tagged", "2026-05-14T10:00:00.000Z", {
-    isPublic: false,
     rawJson: JSON.stringify({ visibility: "private" })
   });
   writer.insertPackageVersion({
@@ -124,7 +122,6 @@ test("planner repository applies older-than before keep-n-tagged recency selecti
   const repository = new PlannerRepository(database);
 
   writer.startScan("acme", "keep-tagged-age", "2026-05-14T10:00:00.000Z", {
-    isPublic: false,
     rawJson: JSON.stringify({ visibility: "private" })
   });
   writer.insertPackageVersion({

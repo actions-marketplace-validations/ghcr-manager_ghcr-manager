@@ -201,7 +201,6 @@ test("handleCleanup live mode applies untag-only roots and records cleanup audit
   const writer = new ScanWriter(database);
 
   writer.startScan("acme", "example", "2026-05-17T09:00:00.000Z", {
-    isPublic: false,
     rawJson: JSON.stringify({ visibility: "private" })
   });
   writer.insertPackageVersion({

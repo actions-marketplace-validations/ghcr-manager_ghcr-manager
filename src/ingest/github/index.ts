@@ -30,9 +30,6 @@ export async function importGitHubScan(
   options.logger.info(`Starting GitHub package scan for ${fullPackageName}`);
   try {
     options.logger.info(`Starting remote data pull for ${fullPackageName}`);
-    options.logger.info(
-      `Detected GitHub package visibility ${packageMetadata.isPublic ? "public" : "non-public"} for ${fullPackageName}`
-    );
     const counts = await ingestPackageVersions(fetchImpl, options, writer);
     options.logger.info(`Loaded ${counts.packageVersions} package versions and ${counts.tags} tags`);
     await ingestManifests(fetchImpl, ghcrRegistryBaseUrl, options, writer, repository, scanId);

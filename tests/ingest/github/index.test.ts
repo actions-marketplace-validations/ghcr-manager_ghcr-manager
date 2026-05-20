@@ -170,7 +170,6 @@ test("GitHub ingest writes package and manifest data directly into SQLite", asyn
   const metadata = repository.getPackageMetadata(scanId);
   assert.equal(metadata.owner, "acme");
   assert.equal(metadata.packageName, "example");
-  assert.equal(metadata.isPublic, false);
   assert.deepEqual(repository.listPackageVersionManifestRefs(scanId), [
     { versionId: 101, digest: "sha256:index" },
     { versionId: 102, digest: "sha256:attestation" }
@@ -230,7 +229,6 @@ test("GitHub ingest writes package and manifest data directly into SQLite", asyn
     [
       "info:Starting GitHub package scan for acme/example",
       "info:Starting remote data pull for acme/example",
-      "info:Detected GitHub package visibility non-public for acme/example",
       "info:Loaded GitHub package-version pages 1 (2 items total)",
       "info:Loaded 2 package versions and 1 tags",
       "info:Fetching manifests for 2 package versions",

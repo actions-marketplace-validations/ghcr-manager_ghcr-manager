@@ -9,7 +9,6 @@ import {
 } from "./_shared.js";
 
 export interface GitHubPackageMetadata {
-  isPublic: boolean;
   rawJson: string;
 }
 
@@ -54,13 +53,8 @@ export async function loadPackageMetadata(
     throw new Error(await buildHttpErrorMessage(response, "GitHub package metadata request failed"));
   }
 
-  const payload = (await response.json()) as { visibility?: unknown };
-  const visibility = payload.visibility;
-  if (visibility !== "public" && visibility !== "private" && visibility !== "internal") {
-    throw new Error(`GitHub package metadata response did not include a supported visibility value`);
-  }
-
-  return { isPublic: visibility === "public", rawJson: JSON.stringify(payload) };
+  const payload = (await response.json()) as object;
+  return { rawJson: JSON.stringify(payload) };
 }
 
 function _shouldRetryStatus(status: number): boolean {

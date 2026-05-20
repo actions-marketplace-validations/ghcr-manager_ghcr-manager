@@ -8,7 +8,6 @@ function _createHarness(packageName: string) {
   const database = openDatabase(":memory:");
   const writer = new ScanWriter(database);
   writer.startScan("acme", packageName, "2026-05-14T10:00:00.000Z", {
-    isPublic: false,
     rawJson: JSON.stringify({ visibility: "private" })
   });
   const scanRow = database.prepare("SELECT scan_id FROM package_scans").get() as { scan_id: number };

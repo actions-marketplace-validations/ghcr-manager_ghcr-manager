@@ -138,7 +138,6 @@ test("handleScan imports a live scan and writes GitHub output", async () => {
   const summary = JSON.parse(writes[0] as string) as {
     owner: string;
     packageName: string;
-    isPublic: boolean;
     scanCompletedAt: string;
     packageVersions: number;
     tags: number;
@@ -148,7 +147,6 @@ test("handleScan imports a live scan and writes GitHub output", async () => {
   assert.deepEqual(summary, {
     owner: "acme",
     packageName: "example",
-    isPublic: true,
     scanCompletedAt: summary.scanCompletedAt,
     packageVersions: 1,
     tags: 1,
@@ -160,7 +158,6 @@ test("handleScan imports a live scan and writes GitHub output", async () => {
   const githubOutput = readFileSync(githubOutputPath, "utf8");
   assert.match(githubOutput, /owner=acme/);
   assert.match(githubOutput, /package_name=example/);
-  assert.match(githubOutput, /is_public=true/);
   assert.match(githubOutput, /package_versions=1/);
 
   rmSync(tempDirectory, { recursive: true, force: true });

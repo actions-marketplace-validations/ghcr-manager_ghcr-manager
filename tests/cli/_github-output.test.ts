@@ -17,8 +17,7 @@ test("writeGitHubScanOutputs writes GitHub output lines for scan summary fields"
       packageVersions: 3,
       tags: 2,
       manifests: 4,
-      manifestEdges: 5,
-      isPublic: false
+      manifestEdges: 5
     });
 
     assert.equal(
@@ -31,7 +30,6 @@ test("writeGitHubScanOutputs writes GitHub output lines for scan summary fields"
         "tags=2",
         "manifests=4",
         "manifest_edges=5",
-        "is_public=false",
         ""
       ].join("\n")
     );

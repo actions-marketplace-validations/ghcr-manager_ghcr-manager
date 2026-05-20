@@ -47,7 +47,6 @@ function _seedDatabase(databasePath: string, cleanupStartedAtTimestamps: string[
   const scanWriter = new ScanWriter(database);
 
   scanWriter.startScan("acme", "example", "2026-05-17T09:00:00.000Z", {
-    isPublic: false,
     rawJson: JSON.stringify({ visibility: "private" })
   });
   scanWriter.insertPackageVersion({

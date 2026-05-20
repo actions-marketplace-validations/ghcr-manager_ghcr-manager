@@ -16,21 +16,19 @@ export class DbMergeScanCopy {
             scan_uuid,
             owner,
             package_name,
-            is_public,
             package_metadata_json,
             github_actions_run_url,
             scan_started_at,
             scan_completed_at,
             status
           )
-          VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES(?, ?, ?, ?, ?, ?, ?, ?)
         `
       )
       .run(
         sourceScan.scan_uuid,
         sourceScan.owner,
         sourceScan.package_name,
-        sourceScan.is_public,
         sourceScan.package_metadata_json,
         sourceScan.github_actions_run_url,
         sourceScan.scan_started_at,
@@ -75,7 +73,6 @@ export class DbMergeScanCopy {
       "scan_uuid",
       "owner",
       "package_name",
-      "is_public",
       "package_metadata_json",
       "github_actions_run_url",
       "scan_started_at",

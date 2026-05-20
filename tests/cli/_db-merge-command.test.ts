@@ -18,7 +18,6 @@ test("handleDbMerge merges source databases and prints a summary", async () => {
   const writer = new ScanWriter(sourceDatabase);
 
   writer.startScan("acme", "example", "2026-05-17T09:00:00.000Z", {
-    isPublic: false,
     rawJson: JSON.stringify({ visibility: "private" })
   });
   writer.insertPackageVersion({

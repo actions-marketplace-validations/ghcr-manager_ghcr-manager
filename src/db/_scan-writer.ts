@@ -18,12 +18,7 @@ export class ScanWriter {
     this.#database = database;
   }
 
-  startScan(
-    owner: string,
-    packageName: string,
-    scanStartedAt: string,
-    packageMetadata: { isPublic: boolean; rawJson: string }
-  ): void {
+  startScan(owner: string, packageName: string, scanStartedAt: string, packageMetadata: { rawJson: string }): void {
     const result = this.#database
       .prepare(
         `
@@ -31,25 +26,16 @@ export class ScanWriter {
           scan_uuid,
           owner,
           package_name,
-          is_public,
           package_metadata_json,
           github_actions_run_url,
           scan_started_at,
           scan_completed_at,
           status
         )
-        VALUES(?, ?, ?, ?, ?, ?, ?, NULL, 'running')
+        VALUES(?, ?, ?, ?, ?, ?, NULL, 'running')
       `
       )
-      .run(
-        randomUUID(),
-        owner,
-        packageName,
-        packageMetadata.isPublic ? 1 : 0,
-        packageMetadata.rawJson,
-        resolveGitHubActionsRunUrl(),
-        scanStartedAt
-      );
+      .run(randomUUID(), owner, packageName, packageMetadata.rawJson, resolveGitHubActionsRunUrl(), scanStartedAt);
 
     this.#activeScanId = Number(result.lastInsertRowid);
   }

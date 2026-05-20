@@ -6,7 +6,7 @@ function _createLogger() {
   return { debug() {}, info() {}, warn() {}, error() {} };
 }
 
-test("package metadata loader returns whether the package is public", async () => {
+test("package metadata loader returns raw package metadata json", async () => {
   const metadata = await loadPackageMetadata(
     async (input, init) => {
       if (input === "https://api.github.com/users/acme") {
@@ -46,79 +46,7 @@ test("package metadata loader returns whether the package is public", async () =
   );
 
   assert.deepEqual(metadata, {
-    isPublic: false,
     rawJson: JSON.stringify({ visibility: "internal" })
-  });
-});
-
-test("package metadata loader rejects unsupported visibility values", async () => {
-  await assert.rejects(
-    () =>
-      loadPackageMetadata(
-        async (input) =>
-          input === "https://api.github.com/users/acme"
-            ? {
-                ok: true,
-                status: 200,
-                headers: new Headers(),
-                async json() {
-                  return { type: "Organization" };
-                }
-              }
-            : {
-                ok: true,
-                status: 200,
-                headers: new Headers(),
-                async json() {
-                  return {
-                    visibility: "secret"
-                  };
-                }
-              },
-        {
-          owner: "acme",
-          packageName: "example",
-          token: "token",
-          logger: _createLogger()
-        }
-      ),
-    /GitHub package metadata response did not include a supported visibility value/
-  );
-});
-
-test("package metadata loader returns true for public packages", async () => {
-  const metadata = await loadPackageMetadata(
-    async (input) =>
-      input === "https://api.github.com/users/acme"
-        ? {
-            ok: true,
-            status: 200,
-            headers: new Headers(),
-            async json() {
-              return { type: "Organization" };
-            }
-          }
-        : {
-            ok: true,
-            status: 200,
-            headers: new Headers(),
-            async json() {
-              return {
-                visibility: "public"
-              };
-            }
-          },
-    {
-      owner: "acme",
-      packageName: "example",
-      token: "token",
-      logger: _createLogger()
-    }
-  );
-
-  assert.deepEqual(metadata, {
-    isPublic: true,
-    rawJson: JSON.stringify({ visibility: "public" })
   });
 });
 
@@ -220,7 +148,6 @@ test("package metadata loader retries retryable statuses", async () => {
     );
 
     assert.deepEqual(metadata, {
-      isPublic: false,
       rawJson: JSON.stringify({ visibility: "private" })
     });
     assert.equal(packageAttempts, 2);
@@ -296,5 +223,5 @@ test("package metadata loader supports user-owned packages", async () => {
   );
 
   assert.equal(seenUrl, "https://api.github.com/users/wuodan/packages/container/example");
-  assert.equal(metadata.isPublic, true);
+  assert.equal(metadata.rawJson, JSON.stringify({ visibility: "public" }));
 });

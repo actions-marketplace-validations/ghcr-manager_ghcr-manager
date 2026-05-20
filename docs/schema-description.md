@@ -49,7 +49,6 @@ Important columns:
 - `scan_uuid`
 - `owner`
 - `package_name`
-- `is_public`
 - `package_metadata_json`
 - `github_actions_run_url`
 - `scan_started_at`

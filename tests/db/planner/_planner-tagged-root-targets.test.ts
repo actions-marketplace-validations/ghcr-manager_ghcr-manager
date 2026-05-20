@@ -8,7 +8,6 @@ test("planner repository resolves tagged root targets through the dedicated tagg
   const repository = new PlannerRepository(database);
 
   writer.startScan("acme", "pkg", "2026-05-14T10:00:00.000Z", {
-    isPublic: false,
     rawJson: JSON.stringify({ visibility: "private" })
   });
   writer.insertPackageVersion({

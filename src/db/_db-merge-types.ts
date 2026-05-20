@@ -3,7 +3,6 @@ export interface SourceScanRow {
   scan_uuid: string;
   owner: string;
   package_name: string;
-  is_public: number;
   package_metadata_json: string | null;
   github_actions_run_url: string | null;
   scan_started_at: string;
@@ -16,7 +15,6 @@ export interface TargetScanRow {
   scan_uuid: string;
   owner: string;
   package_name: string;
-  is_public: number;
   package_metadata_json: string | null;
   github_actions_run_url: string | null;
   scan_started_at: string;

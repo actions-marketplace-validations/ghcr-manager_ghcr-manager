@@ -18,7 +18,6 @@ export async function importFileScan(snapshotPath: string, writer: ScanWriter): 
   const scanCompletedAt = document.scanCompletedAt;
 
   writer.startScan(document.owner, document.packageName, scanCompletedAt, {
-    isPublic: false,
     rawJson: JSON.stringify({ visibility: "private" })
   });
   try {

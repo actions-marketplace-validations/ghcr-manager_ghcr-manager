@@ -8,7 +8,6 @@ export interface GitHubScanOutputs {
   tags: number;
   manifests: number;
   manifestEdges: number;
-  isPublic: boolean;
 }
 
 export function writeGitHubScanOutputs(outputPath: string, outputs: GitHubScanOutputs): void {
@@ -19,8 +18,7 @@ export function writeGitHubScanOutputs(outputPath: string, outputs: GitHubScanOu
     `package_versions=${outputs.packageVersions}`,
     `tags=${outputs.tags}`,
     `manifests=${outputs.manifests}`,
-    `manifest_edges=${outputs.manifestEdges}`,
-    `is_public=${outputs.isPublic ? "true" : "false"}`
+    `manifest_edges=${outputs.manifestEdges}`
   ];
 
   appendFileSync(outputPath, `${lines.join("\n")}\n`);
