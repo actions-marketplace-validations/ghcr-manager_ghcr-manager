@@ -286,7 +286,7 @@ runs:
         append_line_args --delete-tag "$DELETE_TAGS"
         append_line_args --exclude-tag "$EXCLUDE_TAGS"
 
-        cleanup_summary_json="$(npm run ghcr-manager:dist -- cleanup "${cleanup_args[@]}")"
+        cleanup_summary_json="$(npm run --silent ghcr-manager:dist -- cleanup "${cleanup_args[@]}")"
         printf '%s\n' "$cleanup_summary_json" | jq . >&2
 
         {
@@ -322,7 +322,7 @@ runs:
           fi
         done <<< "$DELETE_TAGS"
 
-        summary_json="$(npm run ghcr-manager:dist -- untag "${untag_args[@]}")"
+        summary_json="$(npm run --silent ghcr-manager:dist -- untag "${untag_args[@]}")"
         printf '%s\n' "$summary_json" | jq . >&2
 
         {
