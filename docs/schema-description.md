@@ -2,6 +2,14 @@
 
 This document explains the current SQLite schema in practical terms.
 
+If you open a scan DB for the first time, the shortest useful path is usually:
+
+1. `package_scans`: what package and run this DB contains
+2. `package_versions` + `tags`: which versions and tags exist
+3. `manifests`: which root digest each package version points to
+
+The rest of the schema helps when you want to inspect manifest relations, referrers, or cleanup audit detail.
+
 ## Big Picture
 
 One database can contain:
@@ -102,7 +110,7 @@ Important columns:
 
 What this means:
 
-- `latest`, `1.2.3`, `pr-123`, and so on live here
+- `latest`, `1.2.3`, `pr-123`, and so on are stored here
 - tags are not free-floating objects in this DB
 - a tag belongs to one package version in one scan
 
@@ -335,7 +343,7 @@ Important columns:
 What this means:
 
 - a cleanup run is attached to the exact scan it planned from
-- both dry-run and live cleanup can be persisted
+- both `dry-run` and cleanup that makes changes can be persisted
 - the summary counts make the run readable without re-running planner logic
 
 ### `cleanup_root_decisions`

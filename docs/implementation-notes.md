@@ -102,27 +102,6 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
   - `cleanup_protected_root_blocks`
   - derived SQL views for closure/blocking reads
 
-## Recent Checkpoints
-
-- ☑ `3d20a13` Add cleanup run summaries to action output.
-- ☑ `a5377c3` Unify action command summary output.
-- ☑ `51f305a` Silence npm wrapper for action summary capture.
-- ☑ `8cb45c0` Tighten cleanup step summary layout.
-- ☑ `8bd644e` Remove DB artifact encryption support.
-- ☑ `5884e13` Remove scan visibility ballast.
-- ☑ `59c5520` Compact persisted planner inputs.
-- ☑ `17ca89b` Remove stale schema doc link.
-- ☑ `e548866` Split dedicated untag test scenarios.
-- ☑ `2a942a5` Reuse shared seed action for untag tests.
-- ☑ `5a1fd2e` Fix cleanup untag verification tests.
-- ☑ `23bc6e3` Add direct untag test workflows.
-- ☑ `0af3915` Add direct untag command support.
-- ☑ `2b1452b` Move shared constants into config.
-- ☑ `dd97037` Remove unused sequential paginated ingest helper.
-- ☑ `6087883` Support user-owned GitHub container packages.
-- ☑ `f42e4a6` Store scan package metadata and GitHub run URLs.
-- ☑ `70a5dfb` Share DB artifact upload action.
-
 ## Current Next Plan
 
 - [ ] Clean up remaining repo rough edges before first public release.
@@ -140,9 +119,29 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
   - action `summary-json` output
   - optional cleanup JSON artifact upload alongside the DB
   - GitHub step summary rendering from that same JSON
-- [ ] Update documentation for the first public release:
+- [x] Update documentation for the first public release:
   - action usage
   - CLI usage
   - DB artifact / merge workflow
   - direct untag behavior and caveats
 - [ ] Review release workflow and public-facing metadata before the first release tag.
+
+## Current Documentation Notes
+
+- Release-facing docs should be layered:
+  - `README.md` as action-first quick start and orientation
+  - action-run summary output as the first cleanup review surface
+  - DB/schema docs as the deeper second layer
+- Task 03 changed the recommended first-run inspection flow:
+  - `cleanup` dry-run understanding should start from the GitHub step summary or `summary-json`
+  - DB inspection is still important, but no longer the primary first-run entry path
+- Do not maintain a checkpoint commit list here.
+  Squash/rebase workflows make that log noisy and force unnecessary follow-up commits.
+- Active user-doc split:
+  - `README.md` for action-first entry
+  - `action-usage.md` for the root action
+  - `db-merge-workflows.md` for workflow artifact merge helpers
+  - `cli-usage.md` for the secondary local CLI surface
+  - `schema-description.md` for DB orientation
+  - `queries/missing-manifests-queries.md` for a narrow advanced SQL recipe
+- Keep internal planner/semantics notes out of the user-facing doc path.
