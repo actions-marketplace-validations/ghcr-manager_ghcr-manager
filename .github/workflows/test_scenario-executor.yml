@@ -209,6 +209,8 @@ jobs:
           digest_selector_tag_name_key="$(jq -r '.digestSelectorTagNameKey // ""' "$RESOLUTION_PATH")"
           if [[ "$EXECUTOR" == "ghcr-cleanup-action" && -n "$digest_selector_tag_name_key" ]]; then
             delete_tags="$(node tools/tests/resolve-test-scenario-delete-digests.mjs "$RESOLUTION_PATH" "$DB_PATH")"
+          elif [[ "$EXECUTOR" == "ghcr-manager" && -n "$digest_selector_tag_name_key" ]]; then
+            delete_tags="$(jq -r --arg key "$digest_selector_tag_name_key" '.tagNames[$key] // ""' "$RESOLUTION_PATH")"
           fi
           echo "delete_untagged=$delete_untagged" >> "$GITHUB_OUTPUT"
           echo "keep_n_tagged=$keep_n_tagged" >> "$GITHUB_OUTPUT"
