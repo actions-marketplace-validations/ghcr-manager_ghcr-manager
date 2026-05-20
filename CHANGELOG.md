@@ -7,13 +7,42 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-05-21
+
+`0.9.0` is the first stable pre-`1.0` release of `ghcr-manager`.
+
+### Added
+
+- `cleanup` as the main GHCR maintenance flow for both the GitHub Action and the companion CLI.
+- `untag` as a direct tag-removal mode that works without a scan database.
+- `db-merge` and `merge-run-artifacts` support for combining scan databases across packages and workflow runs.
+- Support for both organization-owned and user-owned GitHub Container Registry packages.
+- Cleanup summary JSON output plus GitHub step summary rendering for action runs.
+- Broad live and scenario-based workflow coverage for cleanup, untag, and cross-owner behavior.
+- User-facing documentation for action usage, CLI usage, DB merge workflows, schema orientation, and SQL recipes.
+
 ### Changed
 
 - The GitHub Action now builds and runs the repo-local CLI directly instead of installing `ghcr-manager` from npm at
   runtime.
-- The primary cleanup surface is now `cleanup` with `dry-run` semantics, both in the CLI and the action.
-- The GitHub Action now supports `command: scan | cleanup`; cleanup runs an implicit pre-scan and a post-scan after live
-  mutations.
+- The primary maintenance surface is now `cleanup` with `dry-run` semantics, with `scan` and `untag` as supporting
+  command modes.
+- The action input and artifact flow were refined around scan databases, cleanup summaries, and optional post-cleanup
+  rescan behavior.
+- Documentation was reorganized around action-first usage, with deeper companion docs for CLI and database workflows.
+- Release validation and workflow gating were tightened around exact version references, changelog readiness, and live
+  scenario checks.
+
+### Removed
+
+- Built-in database artifact encryption and decryption support.
+
+### Fixed
+
+- Digest-selector scenario handling and related workflow wiring for `ghcr-manager`.
+- Latest-scan based verification for cleanup and untag test flows.
+- User-owner cleanup workflow behavior and related test setup details.
+- Numerous workflow, artifact-handling, and planner-audit edge cases discovered during pre-release hardening.
 
 ## [0.0.6] - 2026-04-30
 
