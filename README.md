@@ -3,7 +3,7 @@
 [![Release](https://img.shields.io/github/v/release/gh-workflow/ghcr-manager?style=flat-square)](https://github.com/gh-workflow/ghcr-manager/releases)
 [![Immutable Releases](https://img.shields.io/badge/releases-immutable-blue?labelColor=333)](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/immutable-releases)
 [![GitHub Marketplace](https://img.shields.io/badge/marketplace-ghcr--manager-blue?logo=github&labelColor=333&style=flat-square)](https://github.com/marketplace/actions/ghcr-manager)
-[![Tests](https://img.shields.io/github/actions/workflow/status/gh-workflow/ghcr-manager/change-validation.yml?branch=main&label=test&style=flat-square)](https://github.com/gh-workflow/ghcr-manager/actions/workflows/change-validation.yml)
+[![Tests](https://img.shields.io/github/actions/workflow/status/gh-workflow/ghcr-manager/.github/workflows/ci_change-validation.yml?branch=main&label=test&style=flat-square)](https://github.com/gh-workflow/ghcr-manager/actions/workflows/change-validation.yml)
 [![Usage](https://img.shields.io/badge/image-GHCR-2496ED?logo=docker&logoColor=white&style=flat-square)](#usage)
 
 Inspect, analyze, and manage GitHub Container Registry packages.
