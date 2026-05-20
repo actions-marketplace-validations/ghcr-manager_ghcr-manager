@@ -50,7 +50,6 @@ Required package scopes:
 
 Notes:
 
-- Prefer a dedicated machine user over a personal human account.
 - The token owner needs permission to create, update, and delete GHCR packages in `gh-workflow-test`.
 - Keep this token scoped to test-package workflows only.
 - `GHCR_TEST_PAT_USERNAME` must match the user account that owns `GHCR_TEST_PAT`.
