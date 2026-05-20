@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* global process */
 
-import { appendFileSync, readFileSync } from "node:fs";
+import { appendFileSync } from "node:fs";
 import { renderCleanupSummaryMarkdown } from "../dist/cleanup-summary/index.js";
 
 const args = process.argv.slice(2);

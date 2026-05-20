@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { renderCleanupSummaryMarkdown } from "../../src/cleanup-summary/_cleanup-summary-markdown.js";
+import { renderCleanupSummaryMarkdown } from "../../src/cleanup-summary/index.js";
 
 test("renderCleanupSummaryMarkdown renders sections and truncates long lists", () => {
   const markdown = renderCleanupSummaryMarkdown(

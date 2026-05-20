@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildCleanupSummary } from "../../src/cleanup-summary/_cleanup-summary.js";
+import { buildCleanupSummary } from "../../src/cleanup-summary/index.js";
 
 test("buildCleanupSummary groups root decisions and carries live execution effects", () => {
   const summary = buildCleanupSummary(
