@@ -141,7 +141,7 @@ jobs:
           echo "summary_path=$summary_path" >> "$GITHUB_OUTPUT"
           echo "package_name=$package_name" >> "$GITHUB_OUTPUT"
           echo "seed_strategy=$(jq -r '.seedStrategy' "$resolution_path")" >> "$GITHUB_OUTPUT"
-          echo "digest_selector_tag_name_key=$(jq -r '.digestSelectorTagNameKey // \"\"' "$resolution_path")" >> "$GITHUB_OUTPUT"
+          echo "digest_selector_tag_name_key=$(jq -r '.digestSelectorTagNameKey // ""' "$resolution_path")" >> "$GITHUB_OUTPUT"
           echo "image_ref=ghcr.io/${TEST_OWNER}/${package_name}" >> "$GITHUB_OUTPUT"
 
       - name: Clear scenario package
