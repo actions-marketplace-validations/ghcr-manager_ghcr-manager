@@ -253,7 +253,8 @@ jobs:
 
       - name: Execute with ghcr-cleanup-action action
         if: ${{ inputs.executor == 'ghcr-cleanup-action' }}
-        uses: dataaxiom/ghcr-cleanup-action@34a2b6c814b9c6bcb92f78cba3e56a7ab9ca7a86 # v1.1.0
+        #        uses: dataaxiom/ghcr-cleanup-action@34a2b6c814b9c6bcb92f78cba3e56a7ab9ca7a86 # v1.1.0
+        uses: dataaxiom/ghcr-cleanup-action@9c0f86a9826285afb9e8bc7f849b708c9d388eab # main
         with:
           token: ${{ secrets.GHCR_TEST_PAT }}
           owner: ${{ vars.GHCR_TEST_OWNER }}
