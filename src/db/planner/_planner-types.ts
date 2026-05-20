@@ -112,14 +112,15 @@ export interface DeletePlan {
   packageName: string;
   scanCompletedAt: string;
   plannerInputs: {
-    deleteUntagged: boolean;
+    deleteUntagged?: boolean;
     deleteGhostImages?: boolean;
     deletePartialImages?: boolean;
     deleteOrphanedImages?: boolean;
-    deleteTags: string[];
-    excludeTags: string[];
+    deleteTags?: string[];
+    excludeTags?: string[];
     keepNTagged?: number;
     keepNUntagged?: number;
+    useRegex?: boolean;
     olderThan?: string;
     cutoffTimestamp?: string;
   };

@@ -62,18 +62,11 @@ export class PlannerRepository {
       owner: scan.owner,
       packageName: scan.package_name,
       scanCompletedAt: scan.scan_completed_at,
-      plannerInputs: {
+      plannerInputs: _buildPlannerInputs({
         deleteUntagged: true,
-        deleteGhostImages: undefined,
-        deletePartialImages: undefined,
-        deleteOrphanedImages: undefined,
-        deleteTags: [],
-        excludeTags: [],
-        keepNTagged: undefined,
-        keepNUntagged: undefined,
         olderThan: options?.olderThan,
         cutoffTimestamp: options?.cutoffTimestamp
-      },
+      }),
       ...buildPlanOutputs([], directTargetRoots, planArtifacts)
     };
   }
@@ -99,18 +92,11 @@ export class PlannerRepository {
       owner: scan.owner,
       packageName: scan.package_name,
       scanCompletedAt: scan.scan_completed_at,
-      plannerInputs: {
-        deleteUntagged: false,
-        deleteGhostImages: undefined,
-        deletePartialImages: undefined,
-        deleteOrphanedImages: undefined,
-        deleteTags: [],
-        excludeTags: [],
-        keepNTagged: undefined,
+      plannerInputs: _buildPlannerInputs({
         keepNUntagged: keepCount,
         olderThan: options?.olderThan,
         cutoffTimestamp: options?.cutoffTimestamp
-      },
+      }),
       ...buildPlanOutputs([], directTargetRoots, planArtifacts)
     };
   }
@@ -138,18 +124,12 @@ export class PlannerRepository {
       owner: scan.owner,
       packageName: scan.package_name,
       scanCompletedAt: scan.scan_completed_at,
-      plannerInputs: {
-        deleteUntagged: false,
-        deleteGhostImages: undefined,
-        deletePartialImages: undefined,
-        deleteOrphanedImages: undefined,
-        deleteTags: [],
+      plannerInputs: _buildPlannerInputs({
         excludeTags,
         keepNTagged: keepCount,
-        keepNUntagged: undefined,
         olderThan: options?.olderThan,
         cutoffTimestamp: options?.cutoffTimestamp
-      },
+      }),
       ...buildPlanOutputs([], directTargetRoots, planArtifacts)
     };
   }
@@ -196,19 +176,32 @@ export class PlannerRepository {
       owner: scan.owner,
       packageName: scan.package_name,
       scanCompletedAt: scan.scan_completed_at,
-      plannerInputs: {
-        deleteUntagged: false,
+      plannerInputs: _buildPlannerInputs({
         deleteGhostImages: options?.deleteGhostImages || undefined,
         deletePartialImages: options?.deletePartialImages || undefined,
         deleteOrphanedImages: options?.deleteOrphanedImages || undefined,
         deleteTags,
         excludeTags,
         keepNTagged: options?.keepNTagged,
-        keepNUntagged: undefined,
+        useRegex: options?.useRegex || undefined,
         olderThan: options?.olderThan,
         cutoffTimestamp: options?.cutoffTimestamp
-      },
+      }),
       ...buildPlanOutputs(directTargetTags, directTargetRoots, planArtifacts)
     };
   }
+}
+
+function _buildPlannerInputs(inputs: DeletePlan["plannerInputs"]): DeletePlan["plannerInputs"] {
+  return Object.fromEntries(
+    Object.entries(inputs).filter(([, value]) => {
+      if (value === undefined) {
+        return false;
+      }
+      if (value === false) {
+        return false;
+      }
+      return !(Array.isArray(value) && value.length === 0);
+    })
+  ) as DeletePlan["plannerInputs"];
 }
