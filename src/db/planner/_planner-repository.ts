@@ -1,11 +1,11 @@
 import type Database from "better-sqlite3";
 import { PlannerDirectTargetRoots } from "./_planner-direct-target-roots.js";
+import { PlannerDirectTargetTags } from "./_planner-direct-target-tags.js";
+import { PlannerLatestScan } from "./_planner-latest-scan.js";
 import { buildPlanOutputs } from "./_planner-output.js";
 import { PlannerPlanArtifacts } from "./_planner-plan-artifacts.js";
 import { PlannerSql } from "./_planner-sql.js";
-import { PlannerTaggedTargets } from "./_planner-tagged-targets.js";
 import type { DeletePlan, PlannerLogger } from "./_planner-types.js";
-import { PlannerUntaggedTargets } from "./_planner-untagged-targets.js";
 
 export type {
   DeletePlan,
@@ -17,15 +17,15 @@ export type {
 } from "./_planner-types.js";
 
 export class PlannerRepository {
-  readonly #untaggedTargets: PlannerUntaggedTargets;
-  readonly #taggedTargets: PlannerTaggedTargets;
+  readonly #latestScan: PlannerLatestScan;
+  readonly #directTargetTags: PlannerDirectTargetTags;
   readonly #directTargetRoots: PlannerDirectTargetRoots;
   readonly #planArtifacts: PlannerPlanArtifacts;
 
   constructor(database: Database.Database, logger?: PlannerLogger) {
     const sql = new PlannerSql(database, logger);
-    this.#untaggedTargets = new PlannerUntaggedTargets(sql);
-    this.#taggedTargets = new PlannerTaggedTargets(sql);
+    this.#latestScan = new PlannerLatestScan(sql);
+    this.#directTargetTags = new PlannerDirectTargetTags(sql);
     this.#directTargetRoots = new PlannerDirectTargetRoots(sql);
     this.#planArtifacts = new PlannerPlanArtifacts(sql);
   }
@@ -35,7 +35,7 @@ export class PlannerRepository {
   }
 
   getLatestCompletedScanId(owner: string, packageName: string): number {
-    return this.#untaggedTargets.getLatestCompletedScan(owner, packageName).scan_id;
+    return this.#latestScan.get(owner, packageName).scan_id;
   }
 
   getKeepNUntaggedPlan(owner: string, packageName: string, keepCount: number): DeletePlan {
@@ -147,10 +147,10 @@ export class PlannerRepository {
       cutoffTimestamp?: string;
     }
   ): DeletePlan {
-    const scan = this.#untaggedTargets.getLatestCompletedScan(owner, packageName);
+    const scan = this.#latestScan.get(owner, packageName);
     const deleteTags = options?.deleteTags ?? [];
     const excludeTags = options?.excludeTags ?? [];
-    const directTargetTags = this.#taggedTargets.listDeleteTagDirectTargetTags(
+    const directTargetTags = this.#directTargetTags.listDeleteTagDirectTargetTags(
       scan.scan_id,
       deleteTags,
       excludeTags,

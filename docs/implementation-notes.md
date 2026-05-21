@@ -82,6 +82,8 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
   - selector predicates are composed in SQL, then tagged/untagged keep-overflow ranking is applied in later SQL stages
   - tagged selector families may now be combined with `delete-untagged`
   - `keep-n-untagged` remains incompatible with `delete-untagged`
+  - the older planner helper layer for separate tagged/untagged root-target selection was removed after the SQL
+    composition refactor so `src/db/planner` reflects the live repository path instead of carrying dead adapters
 
 ## Current Action / DB Notes
 
