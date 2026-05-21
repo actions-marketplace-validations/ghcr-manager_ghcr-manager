@@ -7,6 +7,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.3] - 2026-05-21
+
+### Changed
+
+- Cleanup selector planning now composes tagged and untagged selector families in one SQL-backed planner path.
+- Cleanup CLI help and docs now describe the composed selector model, including tagged selectors combined with
+  `delete-untagged`.
+
+### Fixed
+
+- `exclude-tag` now works correctly when a tagged selector family is combined with `delete-untagged`.
+
 ## [0.9.2] - 2026-05-21
 
 ### Changed
