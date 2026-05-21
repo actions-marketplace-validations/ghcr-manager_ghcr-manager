@@ -110,7 +110,7 @@ jobs:
       - name: Merge current-run DB artifacts
         uses: gh-workflow/ghcr-manager/merge-run-artifacts@v0
         with:
-          artifact-name-pattern: "\.sqlite$"  #default
+          artifact-name-glob: "*.sqlite" #default
           db-file: ghcr-manager-merged.sqlite #default
 ```
 

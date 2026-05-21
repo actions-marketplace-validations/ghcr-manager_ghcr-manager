@@ -96,6 +96,10 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
   - the root action and helper actions now use `upload-artifacts`
   - that flag governs artifact upload broadly, not only DB uploads, because `cleanup` may upload both the scan DB and
     the cleanup summary JSON artifact
+- Artifact-download note:
+  - `merge-run-artifacts` now uses `actions/download-artifact` directly for current-run artifact collection
+  - its selector input is now a glob, not a regex
+  - the helper action is pinned to `actions/download-artifact` `v8.0.1`
 - Composite-action nesting note:
   - the root action, `db-merge`, and `merge-run-artifacts` now avoid nested repo-local action paths for live upload and
     merge steps
@@ -120,7 +124,7 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
   - can upload the merged DB itself
   - exposes `db-path`, `artifact-id`, `artifact-url`, `artifact-digest`
 - `merge-run-artifacts`:
-  - collects current-run artifacts
+  - collects current-run artifacts through `actions/download-artifact`
   - calls `db-merge`
   - excludes the just-uploaded merged artifact from cleanup by artifact ID
 
@@ -147,6 +151,10 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
 - [x] Remove regex-based package filtering from the manual test-org package cleanup workflow.
 - [x] Move untag scenario verification onto `v_latest_scan_per_package` and align the user-owner cleanup workflow with
       post-cleanup DB upload.
+- [x] Replace the custom current-run artifact download helper in `merge-run-artifacts` with
+      `actions/download-artifact` and switch its selector input to glob semantics.
+- [x] Align workflow callers with `artifact-name-glob` and bump `actions/download-artifact` to `v8.0.1` to avoid
+      Node 20 deprecation warnings.
 - [ ] Port regex selector validation hardening for `--use-regex` cleanup selectors.
 - [x] Fix `merge-run-artifacts` repo-script resolution and merged-artifact exclusion:
   - resolve helper scripts from the repo root via the parent of `$GITHUB_ACTION_PATH`

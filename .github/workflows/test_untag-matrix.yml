@@ -78,7 +78,7 @@ jobs:
           db-file: ghcr-manager-merged--scenario-matrix-untag.sqlite
           db-artifact-retention-days: ${{ inputs.artifact_retention_days }}
           delete-source-artifacts: "true"
-          artifact-name-pattern: '\.sqlite$'
+          artifact-name-glob: "*.sqlite"
 
       - name: Print merged artifact outputs
         shell: bash
