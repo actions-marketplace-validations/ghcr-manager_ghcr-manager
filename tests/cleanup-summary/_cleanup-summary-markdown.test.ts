@@ -29,7 +29,7 @@ test("renderCleanupSummaryMarkdown renders sections and truncates long lists", (
           rootTags: ["a", "b", "c"],
           matchedTags: ["a"],
           selectionMode: "delete-root",
-          selectionReason: "matched delete tag",
+          selectionReason: "delete-tags-partial-tag-match",
           validationStatus: "fully-deletable",
           validationReasonCode: "fully-deletable-no-retained-overlap",
           validationReason: "No retained overlap"
@@ -91,7 +91,7 @@ test("renderCleanupSummaryMarkdown renders blocked, untag-only, and live-effect 
           rootTags: [],
           matchedTags: ["keep|me"],
           selectionMode: "untag-only",
-          selectionReason: "partial",
+          selectionReason: "delete-tags-partial-tag-match",
           validationStatus: "untag-only",
           validationReasonCode: "untag-only-partial-tag-match",
           validationReason: "detaches"
@@ -104,7 +104,7 @@ test("renderCleanupSummaryMarkdown renders blocked, untag-only, and live-effect 
           rootTags: ["line1\nline2"],
           matchedTags: [],
           selectionMode: "delete-root",
-          selectionReason: "blocked",
+          selectionReason: "delete-tags-all-tags-selected",
           validationStatus: "blocked",
           validationReasonCode: "blocked-overlap-with-retained-root",
           validationReason: "blocked",
@@ -117,7 +117,7 @@ test("renderCleanupSummaryMarkdown renders blocked, untag-only, and live-effect 
           rootTags: [],
           matchedTags: [],
           selectionMode: "delete-root",
-          selectionReason: "blocked",
+          selectionReason: "delete-tags-all-tags-selected",
           validationStatus: "blocked",
           validationReasonCode: "blocked-overlap-with-retained-root",
           validationReason: "blocked",
@@ -167,4 +167,66 @@ test("renderCleanupSummaryMarkdown renders blocked, untag-only, and live-effect 
   assert.match(markdown, /Deleted package versions: 1/);
   assert.match(markdown, /Detached tags: 1/);
   assert.match(markdown, /Unsupported untag roots: 1/);
+});
+
+test("renderCleanupSummaryMarkdown notes when a root section is truncated", () => {
+  const markdown = renderCleanupSummaryMarkdown(
+    {
+      command: "cleanup",
+      owner: "acme",
+      packageName: "example",
+      scanCompletedAt: "2026-05-20T10:00:00.000Z",
+      dryRun: true,
+      plannerInputs: { deleteTags: ["a"] },
+      validationSummary: {
+        directTargetTagCount: 1,
+        directTargetRootCount: 2,
+        deleteRootCandidateCount: 2,
+        untagOnlyRootCount: 0,
+        fullyDeletableRootCount: 2,
+        blockedDeleteRootCount: 0,
+        protectedRootCount: 0
+      },
+      directTargetTags: ["a"],
+      collateralTags: [],
+      fullyDeletableRoots: [
+        {
+          versionId: 101,
+          digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          rootTags: ["a"],
+          matchedTags: ["a"],
+          selectionMode: "delete-root",
+          selectionReason: "delete-tags-all-tags-selected",
+          validationStatus: "fully-deletable",
+          validationReasonCode: "fully-deletable-no-retained-overlap",
+          validationReason: "No retained overlap"
+        },
+        {
+          versionId: 102,
+          digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          rootTags: ["a"],
+          matchedTags: ["a"],
+          selectionMode: "delete-root",
+          selectionReason: "delete-tags-all-tags-selected",
+          validationStatus: "fully-deletable",
+          validationReasonCode: "fully-deletable-no-retained-overlap",
+          validationReason: "No retained overlap"
+        }
+      ],
+      untagOnlyRoots: [],
+      blockedRoots: [],
+      affectedManifestCount: 2,
+      affectedManifests: [{ digest: "sha256:a" }, { digest: "sha256:b" }],
+      deletedPackageVersions: [],
+      untaggedTags: [],
+      unsupportedUntagRoots: []
+    },
+    {
+      maxDirectTargetTags: 5,
+      maxRootsPerSection: 1,
+      maxTagsPerRoot: 5
+    }
+  );
+
+  assert.match(markdown, /Showing first 1 of 2 🗑️ fully deletable roots\./i);
 });

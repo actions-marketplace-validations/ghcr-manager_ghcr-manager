@@ -120,6 +120,24 @@ test("markScanFailed records failed status and completion timestamp", () => {
   database.close();
 });
 
+test("scan writer rejects calls before a scan is started", () => {
+  const database = openDatabase(":memory:");
+  const writer = new ScanWriter(database);
+
+  assert.throws(() => writer.getActiveScanId(), /package not initialized/);
+  assert.throws(
+    () =>
+      writer.insertPackageVersion({
+        versionId: 1,
+        createdAt: "2026-04-20T10:00:00.000Z",
+        updatedAt: "2026-04-20T10:00:00.000Z"
+      }),
+    /package not initialized/
+  );
+
+  database.close();
+});
+
 function _restoreEnv(name: string, value: string | undefined): void {
   if (value === undefined) {
     delete process.env[name];

@@ -181,3 +181,43 @@ test("db merge repository rejects divergent cleanup history for the same scan", 
     rmSync(tempDirectory, { recursive: true, force: true });
   }
 });
+
+test("db merge repository rejects merging a database into itself", () => {
+  const tempDirectory = mkdtempSync(join(tmpdir(), "ghcr-manager-"));
+  const databasePath = join(tempDirectory, "single.sqlite");
+  _seedDatabase(databasePath, []);
+  const database = openDatabase(databasePath);
+  const merger = new DbMergeRepository(database);
+
+  try {
+    assert.throws(() => merger.mergeSourceDatabase(databasePath), /source DB matches target DB/);
+  } finally {
+    database.close();
+    rmSync(tempDirectory, { recursive: true, force: true });
+  }
+});
+
+test("db merge repository counts source cleanup runs as skipped when target history is ahead", () => {
+  const tempDirectory = mkdtempSync(join(tmpdir(), "ghcr-manager-"));
+  const baseDatabasePath = join(tempDirectory, "base.sqlite");
+  const targetDatabasePath = join(tempDirectory, "target.sqlite");
+  const sourceDatabasePath = join(tempDirectory, "source.sqlite");
+  _seedDatabase(baseDatabasePath, ["2026-05-17T09:01:00.000Z"]);
+  cpSync(baseDatabasePath, targetDatabasePath);
+  cpSync(baseDatabasePath, sourceDatabasePath);
+  _appendCleanupRun(targetDatabasePath, "2026-05-17T09:02:00.000Z");
+
+  const targetDatabase = openDatabase(targetDatabasePath);
+  const merger = new DbMergeRepository(targetDatabase);
+
+  try {
+    const summary = merger.mergeSourceDatabase(sourceDatabasePath);
+    assert.equal(summary.importedScanCount, 0);
+    assert.equal(summary.skippedScanCount, 1);
+    assert.equal(summary.importedCleanupRunCount, 0);
+    assert.equal(summary.skippedCleanupRunCount, 1);
+  } finally {
+    targetDatabase.close();
+    rmSync(tempDirectory, { recursive: true, force: true });
+  }
+});

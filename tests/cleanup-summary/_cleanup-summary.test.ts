@@ -25,7 +25,7 @@ test("buildCleanupSummary groups root decisions and carries live execution effec
           versionId: 101,
           digest: "sha256:fully",
           selectionMode: "delete-root",
-          selectionReason: "matched delete tag",
+          selectionReason: "delete-tags-all-tags-selected",
           validationStatus: "fully-deletable",
           validationReasonCode: "fully-deletable-no-retained-overlap",
           validationReason: "No retained overlap"
@@ -34,7 +34,7 @@ test("buildCleanupSummary groups root decisions and carries live execution effec
           versionId: 102,
           digest: "sha256:untag",
           selectionMode: "delete-root",
-          selectionReason: "matched delete tag",
+          selectionReason: "delete-tags-partial-tag-match",
           validationStatus: "untag-only",
           validationReasonCode: "untag-only-partial-tag-match",
           validationReason: "Only selected tags can be detached"
@@ -43,7 +43,7 @@ test("buildCleanupSummary groups root decisions and carries live execution effec
           versionId: 103,
           digest: "sha256:blocked",
           selectionMode: "delete-root",
-          selectionReason: "matched delete tag",
+          selectionReason: "delete-tags-all-tags-selected",
           validationStatus: "blocked",
           validationReasonCode: "blocked-overlap-with-retained-root",
           validationReason: "Retained overlap exists",
