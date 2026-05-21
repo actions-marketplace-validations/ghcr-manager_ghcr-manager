@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import { PlannerDirectTargetRoots } from "./_planner-direct-target-roots.js";
 import { buildPlanOutputs } from "./_planner-output.js";
 import { PlannerPlanArtifacts } from "./_planner-plan-artifacts.js";
 import { PlannerSql } from "./_planner-sql.js";
@@ -18,12 +19,14 @@ export type {
 export class PlannerRepository {
   readonly #untaggedTargets: PlannerUntaggedTargets;
   readonly #taggedTargets: PlannerTaggedTargets;
+  readonly #directTargetRoots: PlannerDirectTargetRoots;
   readonly #planArtifacts: PlannerPlanArtifacts;
 
   constructor(database: Database.Database, logger?: PlannerLogger) {
     const sql = new PlannerSql(database, logger);
     this.#untaggedTargets = new PlannerUntaggedTargets(sql);
     this.#taggedTargets = new PlannerTaggedTargets(sql);
+    this.#directTargetRoots = new PlannerDirectTargetRoots(sql);
     this.#planArtifacts = new PlannerPlanArtifacts(sql);
   }
 
@@ -51,24 +54,11 @@ export class PlannerRepository {
       cutoffTimestamp?: string;
     }
   ): DeletePlan {
-    const scan = this.#untaggedTargets.getLatestCompletedScan(owner, packageName);
-    const directTargetRoots = this.#untaggedTargets.listDeleteUntaggedDirectTargetRoots(
-      scan.scan_id,
-      options?.cutoffTimestamp
-    );
-    const planArtifacts = this.#planArtifacts.build(scan.scan_id, directTargetRoots);
-
-    return {
-      owner: scan.owner,
-      packageName: scan.package_name,
-      scanCompletedAt: scan.scan_completed_at,
-      plannerInputs: _buildPlannerInputs({
-        deleteUntagged: true,
-        olderThan: options?.olderThan,
-        cutoffTimestamp: options?.cutoffTimestamp
-      }),
-      ...buildPlanOutputs([], directTargetRoots, planArtifacts)
-    };
+    return this.getCleanupPlanWithCutoff(owner, packageName, {
+      deleteUntagged: true,
+      olderThan: options?.olderThan,
+      cutoffTimestamp: options?.cutoffTimestamp
+    });
   }
 
   getKeepNUntaggedPlanWithCutoff(
@@ -80,25 +70,11 @@ export class PlannerRepository {
       cutoffTimestamp?: string;
     }
   ): DeletePlan {
-    const scan = this.#untaggedTargets.getLatestCompletedScan(owner, packageName);
-    const directTargetRoots = this.#untaggedTargets.listKeepNUntaggedDirectTargetRoots(
-      scan.scan_id,
-      keepCount,
-      options?.cutoffTimestamp
-    );
-    const planArtifacts = this.#planArtifacts.build(scan.scan_id, directTargetRoots);
-
-    return {
-      owner: scan.owner,
-      packageName: scan.package_name,
-      scanCompletedAt: scan.scan_completed_at,
-      plannerInputs: _buildPlannerInputs({
-        keepNUntagged: keepCount,
-        olderThan: options?.olderThan,
-        cutoffTimestamp: options?.cutoffTimestamp
-      }),
-      ...buildPlanOutputs([], directTargetRoots, planArtifacts)
-    };
+    return this.getCleanupPlanWithCutoff(owner, packageName, {
+      keepNUntagged: keepCount,
+      olderThan: options?.olderThan,
+      cutoffTimestamp: options?.cutoffTimestamp
+    });
   }
 
   getKeepNTaggedPlanWithCutoff(
@@ -111,27 +87,12 @@ export class PlannerRepository {
       cutoffTimestamp?: string;
     }
   ): DeletePlan {
-    const scan = this.#untaggedTargets.getLatestCompletedScan(owner, packageName);
-    const directTargetRoots = this.#taggedTargets.listTaggedDirectTargetRoots(scan.scan_id, {
-      deleteTags: [],
+    return this.getCleanupPlanWithCutoff(owner, packageName, {
       excludeTags,
-      keepCount,
+      keepNTagged: keepCount,
+      olderThan: options?.olderThan,
       cutoffTimestamp: options?.cutoffTimestamp
     });
-    const planArtifacts = this.#planArtifacts.build(scan.scan_id, directTargetRoots);
-
-    return {
-      owner: scan.owner,
-      packageName: scan.package_name,
-      scanCompletedAt: scan.scan_completed_at,
-      plannerInputs: _buildPlannerInputs({
-        excludeTags,
-        keepNTagged: keepCount,
-        olderThan: options?.olderThan,
-        cutoffTimestamp: options?.cutoffTimestamp
-      }),
-      ...buildPlanOutputs([], directTargetRoots, planArtifacts)
-    };
   }
 
   getDeleteTagsPlan(owner: string, packageName: string, deleteTags: string[], excludeTags: string[]): DeletePlan {
@@ -154,7 +115,41 @@ export class PlannerRepository {
       cutoffTimestamp?: string;
     }
   ): DeletePlan {
+    return this.getCleanupPlanWithCutoff(owner, packageName, {
+      deleteTags,
+      excludeTags,
+      deleteGhostImages: options?.deleteGhostImages,
+      deletePartialImages: options?.deletePartialImages,
+      deleteOrphanedImages: options?.deleteOrphanedImages,
+      deleteTagsRequested: options?.deleteTagsRequested ?? true,
+      keepNTagged: options?.keepNTagged,
+      useRegex: options?.useRegex,
+      olderThan: options?.olderThan,
+      cutoffTimestamp: options?.cutoffTimestamp
+    });
+  }
+
+  getCleanupPlanWithCutoff(
+    owner: string,
+    packageName: string,
+    options?: {
+      deleteUntagged?: boolean;
+      deleteGhostImages?: boolean;
+      deletePartialImages?: boolean;
+      deleteOrphanedImages?: boolean;
+      deleteTags?: string[];
+      deleteTagsRequested?: boolean;
+      excludeTags?: string[];
+      keepNTagged?: number;
+      keepNUntagged?: number;
+      useRegex?: boolean;
+      olderThan?: string;
+      cutoffTimestamp?: string;
+    }
+  ): DeletePlan {
     const scan = this.#untaggedTargets.getLatestCompletedScan(owner, packageName);
+    const deleteTags = options?.deleteTags ?? [];
+    const excludeTags = options?.excludeTags ?? [];
     const directTargetTags = this.#taggedTargets.listDeleteTagDirectTargetTags(
       scan.scan_id,
       deleteTags,
@@ -162,11 +157,13 @@ export class PlannerRepository {
       options?.useRegex ?? false,
       options?.cutoffTimestamp
     );
-    const directTargetRoots = this.#taggedTargets.listTaggedDirectTargetRoots(scan.scan_id, {
+    const directTargetRoots = this.#directTargetRoots.list(scan.scan_id, {
       deleteTags,
-      deleteTagsRequested: options?.deleteTagsRequested ?? true,
+      deleteTagsRequested: options?.deleteTagsRequested ?? false,
       excludeTags,
-      keepCount: options?.keepNTagged,
+      deleteUntagged: options?.deleteUntagged ?? false,
+      keepNTagged: options?.keepNTagged,
+      keepNUntagged: options?.keepNUntagged,
       useRegex: options?.useRegex ?? false,
       cutoffTimestamp: options?.cutoffTimestamp
     });
@@ -181,8 +178,10 @@ export class PlannerRepository {
         deletePartialImages: options?.deletePartialImages || undefined,
         deleteOrphanedImages: options?.deleteOrphanedImages || undefined,
         deleteTags,
+        deleteUntagged: options?.deleteUntagged || undefined,
         excludeTags,
         keepNTagged: options?.keepNTagged,
+        keepNUntagged: options?.keepNUntagged,
         useRegex: options?.useRegex || undefined,
         olderThan: options?.olderThan,
         cutoffTimestamp: options?.cutoffTimestamp

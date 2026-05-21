@@ -50,20 +50,17 @@ export function resolvePlanCommandInputs(args: string[]): PlanCommandInputs {
     deletePartialImages ||
     deleteOrphanedImages ||
     keepNTagged !== undefined;
-  const selectorCount =
-    (deleteUntagged ? 1 : 0) + (taggedSelectorActive ? 1 : 0) + (keepNUntagged !== undefined ? 1 : 0);
-  if (selectorCount > 1) {
-    throw new Error(
-      "plan currently supports exactly one selector family: --delete-untagged, --delete-tag, --delete-ghost-images, --delete-partial-images, --delete-orphaned-images, --keep-n-tagged, or --keep-n-untagged"
-    );
+  const hasAnySelector = deleteUntagged || taggedSelectorActive || keepNUntagged !== undefined;
+  if (deleteUntagged && keepNUntagged !== undefined) {
+    throw new Error("--delete-untagged and --keep-n-untagged cannot be combined");
   }
-  if (selectorCount === 0) {
+  if (!hasAnySelector) {
     throw new Error(
       "missing required cleanup selector: --delete-untagged, --delete-tag, --delete-ghost-images, --delete-partial-images, --delete-orphaned-images, --keep-n-tagged, or --keep-n-untagged"
     );
   }
 
-  if ((deleteUntagged || keepNUntagged !== undefined) && excludeTags.length > 0) {
+  if (!taggedSelectorActive && excludeTags.length > 0) {
     throw new Error("--exclude-tag is only supported with tagged selector families");
   }
   if (olderThanRaw.length > 1) {
@@ -92,49 +89,20 @@ export function resolvePlanCommandInputs(args: string[]): PlanCommandInputs {
 }
 
 export function loadDeletePlan(repository: PlannerRepository, inputs: PlanCommandInputs): DeletePlan {
-  if (inputs.keepNUntagged !== undefined) {
-    return repository.getKeepNUntaggedPlanWithCutoff(inputs.owner, inputs.packageName, inputs.keepNUntagged, {
-      olderThan: inputs.olderThan,
-      cutoffTimestamp: inputs.cutoffTimestamp
-    });
-  }
-
-  if (inputs.deleteUntagged) {
-    return repository.getDeleteUntaggedPlanWithCutoff(inputs.owner, inputs.packageName, {
-      olderThan: inputs.olderThan,
-      cutoffTimestamp: inputs.cutoffTimestamp
-    });
-  }
-
-  if (
-    !inputs.deleteTagsRequested &&
-    !inputs.deleteGhostImages &&
-    !inputs.deletePartialImages &&
-    !inputs.deleteOrphanedImages &&
-    inputs.keepNTagged !== undefined
-  ) {
-    return repository.getKeepNTaggedPlanWithCutoff(inputs.owner, inputs.packageName, inputs.keepNTagged, [], {
-      olderThan: inputs.olderThan,
-      cutoffTimestamp: inputs.cutoffTimestamp
-    });
-  }
-
-  return repository.getDeleteTagsPlanWithCutoff(
-    inputs.owner,
-    inputs.packageName,
-    inputs.deleteTags,
-    inputs.excludeTags,
-    {
-      deleteGhostImages: inputs.deleteGhostImages,
-      deletePartialImages: inputs.deletePartialImages,
-      deleteOrphanedImages: inputs.deleteOrphanedImages,
-      deleteTagsRequested: inputs.deleteTagsRequested,
-      keepNTagged: inputs.keepNTagged,
-      useRegex: inputs.useRegex,
-      olderThan: inputs.olderThan,
-      cutoffTimestamp: inputs.cutoffTimestamp
-    }
-  );
+  return repository.getCleanupPlanWithCutoff(inputs.owner, inputs.packageName, {
+    deleteTags: inputs.deleteTags,
+    deleteTagsRequested: inputs.deleteTagsRequested,
+    deleteGhostImages: inputs.deleteGhostImages,
+    deletePartialImages: inputs.deletePartialImages,
+    deleteOrphanedImages: inputs.deleteOrphanedImages,
+    excludeTags: inputs.excludeTags,
+    deleteUntagged: inputs.deleteUntagged,
+    useRegex: inputs.useRegex,
+    keepNTagged: inputs.keepNTagged,
+    keepNUntagged: inputs.keepNUntagged,
+    olderThan: inputs.olderThan,
+    cutoffTimestamp: inputs.cutoffTimestamp
+  });
 }
 
 function resolveKeepCount(optionName: string, rawValue: string): number {

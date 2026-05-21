@@ -42,6 +42,29 @@ test("resolvePlanCommandInputs rejects exclude-tag for keep-n-untagged", () => {
   );
 });
 
+test("resolvePlanCommandInputs allows exclude-tag when a tagged selector is combined with delete-untagged", () => {
+  const inputs = resolvePlanCommandInputs([
+    "--db",
+    "scan.sqlite",
+    "--owner",
+    "acme",
+    "--package",
+    "example",
+    "--delete-tag",
+    ".*",
+    "--exclude-tag",
+    "^keep-me$",
+    "--use-regex",
+    "--delete-untagged"
+  ]);
+
+  assert.deepEqual(inputs.deleteTags, [".*"]);
+  assert.deepEqual(inputs.excludeTags, ["^keep-me$"]);
+  assert.equal(inputs.useRegex, true);
+  assert.equal(inputs.deleteUntagged, true);
+  assert.equal(inputs.deleteTagsRequested, true);
+});
+
 test("resolvePlanCommandInputs treats delete-tag selectors as wildcard patterns by default", () => {
   const inputs = resolvePlanCommandInputs([
     "--db",
@@ -139,6 +162,19 @@ test("resolvePlanCommandInputs rejects missing selectors and conflicting selecto
     () => resolvePlanCommandInputs(["--db", "scan.sqlite", "--owner", "acme", "--package", "example"]),
     /missing required cleanup selector/
   );
+  const combinedInputs = resolvePlanCommandInputs([
+    "--db",
+    "scan.sqlite",
+    "--owner",
+    "acme",
+    "--package",
+    "example",
+    "--delete-untagged",
+    "--keep-n-tagged",
+    "1"
+  ]);
+  assert.equal(combinedInputs.deleteUntagged, true);
+  assert.equal(combinedInputs.keepNTagged, 1);
   assert.throws(
     () =>
       resolvePlanCommandInputs([
@@ -149,10 +185,10 @@ test("resolvePlanCommandInputs rejects missing selectors and conflicting selecto
         "--package",
         "example",
         "--delete-untagged",
-        "--keep-n-tagged",
+        "--keep-n-untagged",
         "1"
       ]),
-    /plan currently supports exactly one selector family/
+    /--delete-untagged and --keep-n-untagged cannot be combined/
   );
 });
 
@@ -228,21 +264,9 @@ test("resolvePlanCommandInputs rejects invalid keep counts and parses older-than
 test("loadDeletePlan dispatches the expected repository method for each selector family", () => {
   const calls: Array<{ method: string; args: unknown[] }> = [];
   const repository = {
-    getKeepNUntaggedPlanWithCutoff(...args: unknown[]) {
-      calls.push({ method: "keep-untagged", args });
-      return { source: "keep-untagged" };
-    },
-    getDeleteUntaggedPlanWithCutoff(...args: unknown[]) {
-      calls.push({ method: "delete-untagged", args });
-      return { source: "delete-untagged" };
-    },
-    getKeepNTaggedPlanWithCutoff(...args: unknown[]) {
-      calls.push({ method: "keep-tagged", args });
-      return { source: "keep-tagged" };
-    },
-    getDeleteTagsPlanWithCutoff(...args: unknown[]) {
-      calls.push({ method: "delete-tags", args });
-      return { source: "delete-tags" };
+    getCleanupPlanWithCutoff(...args: unknown[]) {
+      calls.push({ method: "cleanup", args });
+      return { source: "cleanup" };
     }
   } as unknown as Parameters<typeof loadDeletePlan>[0];
 
@@ -263,7 +287,7 @@ test("loadDeletePlan dispatches the expected repository method for each selector
       olderThan: "1 day",
       cutoffTimestamp: "2026-05-16T00:00:00.000Z"
     }),
-    { source: "keep-untagged" }
+    { source: "cleanup" }
   );
   assert.deepEqual(
     loadDeletePlan(repository, {
@@ -279,7 +303,7 @@ test("loadDeletePlan dispatches the expected repository method for each selector
       deleteUntagged: true,
       useRegex: false
     }),
-    { source: "delete-untagged" }
+    { source: "cleanup" }
   );
   assert.deepEqual(
     loadDeletePlan(repository, {
@@ -296,7 +320,7 @@ test("loadDeletePlan dispatches the expected repository method for each selector
       useRegex: false,
       keepNTagged: 1
     }),
-    { source: "keep-tagged" }
+    { source: "cleanup" }
   );
   assert.deepEqual(
     loadDeletePlan(repository, {
@@ -313,11 +337,11 @@ test("loadDeletePlan dispatches the expected repository method for each selector
       useRegex: false,
       keepNTagged: 1
     }),
-    { source: "delete-tags" }
+    { source: "cleanup" }
   );
 
   assert.deepEqual(
     calls.map((call) => call.method),
-    ["keep-untagged", "delete-untagged", "keep-tagged", "delete-tags"]
+    ["cleanup", "cleanup", "cleanup", "cleanup"]
   );
 });

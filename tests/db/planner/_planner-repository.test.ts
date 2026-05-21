@@ -40,6 +40,40 @@ test("planner repository returns a delete-untagged plan for top-level untagged r
   database.close();
 });
 
+test("planner repository can combine tagged and untagged delete selectors in one SQL-backed plan", async () => {
+  const database = openDatabase(":memory:");
+  const writer = new ScanWriter(database);
+  const repository = new PlannerRepository(database);
+
+  await importFileScan("tests/fixtures/sample-package.json", writer);
+
+  const plan = repository.getCleanupPlanWithCutoff("acme", "example", {
+    deleteTags: ["latest"],
+    deleteTagsRequested: true,
+    deleteUntagged: true
+  });
+
+  assert.deepEqual(plan.directTargetTags, ["latest"]);
+  assert.deepEqual(plan.directTargetRoots, [
+    {
+      versionId: 101,
+      digest: "sha256:index-current",
+      manifestKind: "image_index",
+      reason: "delete-tags-all-tags-selected",
+      selectionMode: "delete-root"
+    },
+    {
+      versionId: 104,
+      digest: "sha256:untagged-old",
+      manifestKind: "image_manifest",
+      reason: "delete-untagged",
+      selectionMode: "delete-root"
+    }
+  ]);
+
+  database.close();
+});
+
 test("planner repository logs raw SQL statements and params at trace level", async () => {
   const database = openDatabase(":memory:");
   const writer = new ScanWriter(database);

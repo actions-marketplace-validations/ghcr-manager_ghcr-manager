@@ -77,6 +77,11 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
 - Tagged cleanup seed note:
   - digest and wildcard tagged-delete scenarios now use dedicated seed strategy IDs instead of borrowing
     `tagged-fully-deletable`
+- Cleanup selector composition note:
+  - cleanup direct-target root selection now goes through one SQL-backed planner path
+  - selector predicates are composed in SQL, then tagged/untagged keep-overflow ranking is applied in later SQL stages
+  - tagged selector families may now be combined with `delete-untagged`
+  - `keep-n-untagged` remains incompatible with `delete-untagged`
 
 ## Current Action / DB Notes
 
