@@ -7,21 +7,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.6] - 2026-05-21
+
 ### Added
 
 - Cleanup audit now persists concrete selected tags in `cleanup_selected_tags`.
 - Cleanup schema docs now include a readable cleanup-decision view plus example SQL queries for audit inspection.
+- GHCR digest-tag helper relations are now modeled explicitly in scan data and manifest reachability.
 
 ### Changed
 
-- Cleanup summary JSON and Markdown now expose derived affected-manifest counts and digests for fully deletable roots.
+- Cleanup summary JSON now exposes derived affected manifests for fully deletable roots.
+- Cleanup Markdown now reads displayed counts from the summary arrays instead of carrying duplicate count fields.
 - Cleanup decision audit fields are now constrained more tightly in SQLite and TypeScript, including `selection_mode`,
   `selection_reason`, and related block reason codes.
+- Digest-tag helper artifacts are now classified on `tags.is_digest_tag` and excluded from normal user-facing tag
+  selection and output.
+- Digest-tag helper terminology was simplified across code and SQL surfaces.
 - Schema docs now include a table of contents and collapsible example query blocks for easier GitHub browsing.
 
 ### Fixed
 
 - Fixed remote action path handling for artifact upload and merge helper actions.
+- Cleanup reachability now follows digest-tag helper edges recursively, matching helper-artifact cascades more closely.
 
 ## [0.9.5] - 2026-05-21
 
