@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-05-21
+
+### Changed
+
+- The action input is now `token`, and the repo now uses `GITHUB_TOKEN` consistently in docs and helper scripts.
+
 ## [0.9.1] - 2026-05-21
 
 ### Fixed
