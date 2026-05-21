@@ -1,7 +1,7 @@
 import type { CleanupSummary, CleanupSummaryRoot } from "./_cleanup-summary.js";
 
-const _DEFAULT_MAX_DIRECT_TARGET_TAGS = 20;
-const _DEFAULT_MAX_ROOTS_PER_SECTION = 20;
+const _DEFAULT_MAX_DIRECT_TARGET_TAGS = 100;
+const _DEFAULT_MAX_ROOTS_PER_SECTION = 100;
 const _DEFAULT_MAX_TAGS_PER_ROOT = 4;
 
 export function renderCleanupSummaryMarkdown(
