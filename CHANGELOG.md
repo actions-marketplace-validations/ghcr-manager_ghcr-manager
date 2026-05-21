@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-05-21
+
+### Fixed
+
+- The GitHub Action now installs, builds, and runs from its own checkout path instead of the caller repository path.
+
 ## [0.9.0] - 2026-05-21
 
 `0.9.0` is the first stable pre-`1.0` release of `ghcr-manager`.
