@@ -87,6 +87,9 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
 - Coverage note:
   - CLI dispatch, cleanup-summary markdown branches, and planner repository wrapper methods now have explicit tests so
     post-refactor line coverage reflects the live surface more closely
+- Action summary handoff note:
+  - command summary JSON is now handed across action steps by file path instead of large env/expression payloads
+  - this avoids GitHub template-memory and argument-length failures on large cleanup summaries
 
 ## Current Action / DB Notes
 

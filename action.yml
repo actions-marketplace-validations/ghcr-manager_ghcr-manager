@@ -222,6 +222,7 @@ runs:
         DELETE_GHOST_IMAGES: ${{ inputs.delete-ghost-images }}
         DELETE_ORPHANED_IMAGES: ${{ inputs.delete-orphaned-images }}
         DELETE_PARTIAL_IMAGES: ${{ inputs.delete-partial-images }}
+        DB_PATH: ${{ steps.prepare-db.outputs.db_path }}
         DRY_RUN: ${{ inputs.dry-run }}
         EXCLUDE_TAGS: ${{ inputs.exclude-tags }}
         KEEP_N_TAGGED: ${{ inputs.keep-n-tagged }}
@@ -292,18 +293,20 @@ runs:
         cleanup_summary_json="$(npm run --silent ghcr-manager:dist -- cleanup "${cleanup_args[@]}")"
         printf '%s\n' "$cleanup_summary_json" | jq . >&2
 
-        {
-          echo "COMMAND_SUMMARY_JSON<<EOF"
-          printf '%s\n' "$cleanup_summary_json"
-          echo "EOF"
-        } >> "$GITHUB_ENV"
+        summary_path="${DB_PATH}--cleanup-summary.json"
+        summary_file="$(basename "$summary_path")"
+        printf '%s\n' "$cleanup_summary_json" > "$summary_path"
+        echo "summary_file=$summary_file" >> "$GITHUB_OUTPUT"
+        echo "summary_path=$summary_path" >> "$GITHUB_OUTPUT"
 
     - name: Run untag
+      id: run-untag
       if: ${{ inputs.command == 'untag' }}
       shell: bash
       working-directory: ${{ github.action_path }}
       env:
         DELETE_TAGS: ${{ inputs.delete-tags }}
+        RUNNER_TEMP: ${{ runner.temp }}
       run: |
         set -euo pipefail
 
@@ -329,40 +332,25 @@ runs:
         summary_json="$(npm run --silent ghcr-manager:dist -- untag "${untag_args[@]}")"
         printf '%s\n' "$summary_json" | jq . >&2
 
-        {
-          echo "COMMAND_SUMMARY_JSON<<EOF"
-          printf '%s\n' "$summary_json"
-          echo "EOF"
-        } >> "$GITHUB_ENV"
+        summary_path="$(mktemp -p "$RUNNER_TEMP" ghcr-manager-untag-summary-XXXXXX.json)"
+        printf '%s\n' "$summary_json" > "$summary_path"
+        echo "summary_path=$summary_path" >> "$GITHUB_OUTPUT"
 
     - name: Publish command summary output
       id: publish-summary-output
       if: ${{ inputs.command == 'cleanup' || inputs.command == 'untag' }}
       shell: bash
       env:
-        COMMAND_SUMMARY_JSON: ${{ env.COMMAND_SUMMARY_JSON }}
+        SUMMARY_PATH:
+          ${{ inputs.command == 'cleanup' && steps.run-cleanup.outputs.summary_path ||
+          steps.run-untag.outputs.summary_path }}
       run: |
         set -euo pipefail
         {
           echo "summary_json<<EOF"
-          printf '%s\n' "$COMMAND_SUMMARY_JSON"
+          cat "$SUMMARY_PATH"
           echo "EOF"
         } >> "$GITHUB_OUTPUT"
-
-    - name: Write cleanup summary JSON file
-      id: write-cleanup-summary-json
-      if: ${{ inputs.command == 'cleanup' }}
-      shell: bash
-      env:
-        DB_PATH: ${{ steps.prepare-db.outputs.db_path }}
-        COMMAND_SUMMARY_JSON: ${{ env.COMMAND_SUMMARY_JSON }}
-      run: |
-        set -euo pipefail
-        summary_path="${DB_PATH}--cleanup-summary.json"
-        summary_file="$(basename "$summary_path")"
-        printf '%s\n' "$COMMAND_SUMMARY_JSON" > "$summary_path"
-        echo "summary_file=$summary_file" >> "$GITHUB_OUTPUT"
-        echo "summary_path=$summary_path" >> "$GITHUB_OUTPUT"
 
     - name: Scan after live cleanup
       id: scan-after
@@ -393,8 +381,8 @@ runs:
       if: ${{ inputs.command == 'cleanup' && steps.resolve-upload.outputs.upload_db_artifact == 'true' }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: ${{ steps.write-cleanup-summary-json.outputs.summary_file }}
-        path: ${{ steps.write-cleanup-summary-json.outputs.summary_path }}
+        name: ${{ steps.run-cleanup.outputs.summary_file }}
+        path: ${{ steps.run-cleanup.outputs.summary_path }}
         retention-days:
           ${{ inputs.db-artifact-retention-days != '' && inputs.db-artifact-retention-days || github.retention_days }}
 
@@ -402,9 +390,8 @@ runs:
       if: ${{ inputs.command == 'cleanup' }}
       shell: bash
       working-directory: ${{ github.action_path }}
-      env:
-        CLEANUP_SUMMARY_JSON: ${{ env.COMMAND_SUMMARY_JSON }}
       run: |
         set -euo pipefail
         node tools/write-cleanup-step-summary.mjs \
-          --step-summary-path "$GITHUB_STEP_SUMMARY"
+          --step-summary-path "$GITHUB_STEP_SUMMARY" \
+          --summary-json-path "${{ steps.run-cleanup.outputs.summary_path }}"

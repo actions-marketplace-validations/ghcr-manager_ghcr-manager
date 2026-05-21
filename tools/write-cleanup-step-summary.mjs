@@ -1,15 +1,13 @@
 #!/usr/bin/env node
 /* global process */
 
-import { appendFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import { renderCleanupSummaryMarkdown } from "../dist/cleanup-summary/index.js";
 
 const args = process.argv.slice(2);
 const stepSummaryPath = _requireOption(args, "--step-summary-path");
-const summaryJson = process.env.CLEANUP_SUMMARY_JSON;
-if (!summaryJson) {
-  throw new Error("missing required env var: CLEANUP_SUMMARY_JSON");
-}
+const summaryJsonPath = _requireOption(args, "--summary-json-path");
+const summaryJson = readFileSync(summaryJsonPath, "utf8");
 const summary = JSON.parse(summaryJson);
 
 appendFileSync(stepSummaryPath, renderCleanupSummaryMarkdown(summary, {}));
