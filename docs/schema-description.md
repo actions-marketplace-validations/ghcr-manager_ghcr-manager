@@ -10,6 +10,20 @@ If you open a scan DB for the first time, the shortest useful path is usually:
 
 The rest of the schema helps when you want to inspect manifest relations, referrers, or cleanup audit detail.
 
+## Table Of Contents
+
+- [Big Picture](#big-picture)
+- [Mental Model](#mental-model)
+- [Core Scan Tables](#core-scan-tables)
+- [Manifest Tables](#manifest-tables)
+- [Manifest Graph Tables](#manifest-graph-tables)
+- [What Is And Is Not Fetched](#what-is-and-is-not-fetched)
+- [Derived Views](#derived-views)
+- [Cleanup Audit Tables](#cleanup-audit-tables)
+- [Raw JSON Versus Derived Meaning](#raw-json-versus-derived-meaning)
+- [Practical Reading Order](#practical-reading-order)
+- [Example Queries](#example-queries)
+
 ## Big Picture
 
 One database can contain:
@@ -455,3 +469,93 @@ If you open a DB and want to understand a package quickly, this order works well
 
 That path usually gets someone from "I know Docker tags and manifests" to "I can see how this GHCR package is shaped"
 without needing to learn every table up front.
+
+## Example Queries
+
+### Latest Cleanup Run With Readable Root Decisions
+
+Use this to inspect the latest cleanup run for one package with friendlier labels and selected tags per root:
+
+<!-- markdownlint-disable MD033 -->
+<details>
+<summary>Show Query</summary>
+
+```sql
+WITH latest_cleanup AS (
+  SELECT cr.cleanup_run_id
+  FROM cleanup_runs cr
+  JOIN package_scans ps
+    ON ps.scan_id = cr.scan_id
+  WHERE ps.owner = 'acme'
+    AND ps.package_name = 'example'
+  ORDER BY cr.cleanup_started_at DESC, cr.cleanup_run_id DESC
+  LIMIT 1
+)
+SELECT
+  root_digest,
+  root_manifest_kind,
+  selected_tags,
+  selection_mode_label,
+  selection_reason_label,
+  validation_status_label,
+  validation_reason_code_label,
+  blocking_digest,
+  overlap_digest
+FROM v_cleanup_root_decision_readable
+WHERE cleanup_run_id = (SELECT cleanup_run_id FROM latest_cleanup)
+ORDER BY root_digest;
+```
+
+</details>
+<!-- markdownlint-enable MD033 -->
+
+### Selected Tags Expanded To Affected Manifests
+
+Use this to answer "which selected tag led to which root, and what manifests sit in that root's affected closure?":
+
+<!-- markdownlint-disable MD033 -->
+<details>
+<summary>Show Query</summary>
+
+```sql
+WITH latest_cleanup AS (
+  SELECT cr.cleanup_run_id, cr.scan_id
+  FROM cleanup_runs cr
+  JOIN package_scans ps
+    ON ps.scan_id = cr.scan_id
+  WHERE ps.owner = 'acme'
+    AND ps.package_name = 'example'
+  ORDER BY cr.cleanup_started_at DESC, cr.cleanup_run_id DESC
+  LIMIT 1
+)
+SELECT
+  selected.tag AS selected_tag,
+  root.digest AS root_digest,
+  readable.validation_status_label,
+  closure.member_digest AS affected_manifest_digest,
+  closure.member_manifest_kind,
+  closure.hops_from_root,
+  closure.member_role
+FROM latest_cleanup lc
+JOIN cleanup_selected_tags selected
+  ON selected.cleanup_run_id = lc.cleanup_run_id
+ AND selected.scan_id = lc.scan_id
+JOIN tags selected_tag
+  ON selected_tag.scan_id = selected.scan_id
+ AND selected_tag.tag = selected.tag
+JOIN manifests root
+  ON root.scan_id = selected.scan_id
+ AND root.version_id = selected_tag.version_id
+JOIN v_cleanup_root_decision_readable readable
+  ON readable.cleanup_run_id = selected.cleanup_run_id
+ AND readable.scan_id = selected.scan_id
+ AND readable.root_digest = root.digest
+JOIN v_cleanup_root_closure_members closure
+  ON closure.cleanup_run_id = selected.cleanup_run_id
+ AND closure.scan_id = selected.scan_id
+ AND closure.root_digest = root.digest
+ORDER BY selected.tag, closure.hops_from_root, closure.member_digest;
+```
+
+</details>
+<!-- markdownlint-enable MD033 -->
