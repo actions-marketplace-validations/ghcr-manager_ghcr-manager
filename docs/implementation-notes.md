@@ -151,6 +151,11 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
 - Scenario assertion note:
   - cleanup and untag live-scenario definitions now expect real Docker/OCI multi-arch roots as
     `cross_arch_manifest`, not the older `image_index` label
+- Cleanup selected-tag audit note:
+  - `cleanup_selected_tags` rows are inserted with `is_deleted = 0`
+  - the follow-up audit update only touches selected tags that belong to a persisted root decision
+  - this matters for `keep-n-tagged` overflow cases where a selected tag survives retention and therefore has no
+    matching decision row
 
 ## Current Next Plan
 

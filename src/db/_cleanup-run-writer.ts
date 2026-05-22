@@ -24,24 +24,20 @@ export class CleanupRunWriter {
     `);
     this.#updateSelectedTagsDeletedStatement = this.#database.prepare(`
       UPDATE cleanup_selected_tags
-      SET is_deleted = (
-        SELECT CASE decision.validation_status
-          WHEN 'blocked' THEN 0
-          ELSE 1
-        END
-        FROM cleanup_root_decisions decision
-        JOIN manifests manifest
-          ON manifest.scan_id = decision.scan_id
-         AND manifest.digest = decision.digest
-        JOIN tags
-          ON tags.scan_id = manifest.scan_id
-         AND tags.version_id = manifest.version_id
-         AND tags.tag = cleanup_selected_tags.tag
-        WHERE decision.cleanup_run_id = cleanup_selected_tags.cleanup_run_id
-          AND decision.scan_id = cleanup_selected_tags.scan_id
-      )
+      SET is_deleted = 1
+      FROM cleanup_root_decisions decision
+      JOIN manifests manifest
+        ON manifest.scan_id = decision.scan_id
+       AND manifest.digest = decision.digest
+      JOIN tags
+        ON tags.scan_id = manifest.scan_id
+       AND tags.version_id = manifest.version_id
       WHERE cleanup_selected_tags.cleanup_run_id = ?
         AND cleanup_selected_tags.scan_id = ?
+        AND decision.cleanup_run_id = cleanup_selected_tags.cleanup_run_id
+        AND decision.scan_id = cleanup_selected_tags.scan_id
+        AND decision.validation_status != 'blocked'
+        AND tags.tag = cleanup_selected_tags.tag
     `);
     this.#insertRootDecisionStatement = this.#database.prepare(`
       INSERT INTO cleanup_root_decisions(

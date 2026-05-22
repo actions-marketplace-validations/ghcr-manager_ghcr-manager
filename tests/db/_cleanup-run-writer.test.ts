@@ -457,6 +457,108 @@ test("cleanup audit rows must use the same scan as their cleanup run", () => {
   database.close();
 });
 
+test("cleanup run writer keeps selected tags that survive keep-n-tagged as not deleted", () => {
+  const database = openDatabase(":memory:");
+  const scanWriter = new ScanWriter(database);
+  const cleanupRunWriter = new CleanupRunWriter(database);
+
+  scanWriter.startScan("acme", "example", "2026-05-17T09:00:00.000Z", {
+    rawJson: JSON.stringify({ visibility: "private" })
+  });
+  scanWriter.insertPackageVersion({
+    versionId: 101,
+    createdAt: "2026-05-17T08:00:00.000Z",
+    updatedAt: "2026-05-17T08:00:00.000Z"
+  });
+  scanWriter.insertManifest({
+    versionId: 101,
+    digest: "sha256:older",
+    mediaType: "application/vnd.oci.image.manifest.v1+json",
+    manifestKind: ManifestKinds.imageManifest
+  });
+  scanWriter.insertTag({ versionId: 101, tag: "delete-old" });
+  scanWriter.insertPackageVersion({
+    versionId: 102,
+    createdAt: "2026-05-17T08:05:00.000Z",
+    updatedAt: "2026-05-17T08:05:00.000Z"
+  });
+  scanWriter.insertManifest({
+    versionId: 102,
+    digest: "sha256:newer",
+    mediaType: "application/vnd.oci.image.manifest.v1+json",
+    manifestKind: ManifestKinds.imageManifest
+  });
+  scanWriter.insertTag({ versionId: 102, tag: "delete-new" });
+  scanWriter.markScanCompleted("2026-05-17T09:00:00.000Z");
+  const scanId = scanWriter.getActiveScanId();
+
+  const plan: DeletePlan = {
+    owner: "acme",
+    packageName: "example",
+    scanCompletedAt: "2026-05-17T09:00:00.000Z",
+    plannerInputs: {
+      deleteUntagged: false,
+      deleteTags: ["delete-old", "delete-new"],
+      keepNTagged: 1
+    },
+    directTargetTags: ["delete-old", "delete-new"],
+    directTargetRoots: [
+      {
+        versionId: 101,
+        digest: "sha256:older",
+        reason: "delete-tags-all-tags-selected",
+        selectionMode: "delete-root"
+      }
+    ],
+    rootDecisions: [
+      {
+        versionId: 101,
+        digest: "sha256:older",
+        selectionMode: "delete-root",
+        selectionReason: "delete-tags-all-tags-selected",
+        validationStatus: DeletePlanValidationStatuses.fullyDeletable,
+        validationReasonCode: DeletePlanValidationReasonCodes.fullyDeletableNoRetainedOverlap,
+        validationReason: "selected tags cover the whole root"
+      }
+    ],
+    protectedRoots: [],
+    closureManifests: [],
+    blockedRoots: [],
+    fullyDeletableRoots: [
+      {
+        versionId: 101,
+        digest: "sha256:older",
+        reason: "delete-tags-all-tags-selected",
+        selectionMode: "delete-root"
+      }
+    ],
+    collateralTags: []
+  };
+
+  const cleanupRunId = cleanupRunWriter.persistCleanupRun(scanId, plan, {
+    dryRun: true,
+    cleanupStartedAt: "2026-05-17T09:01:00.000Z"
+  });
+
+  const selectedTags = database
+    .prepare(
+      `
+        SELECT tag, is_deleted
+        FROM cleanup_selected_tags
+        WHERE cleanup_run_id = ?
+        ORDER BY tag
+      `
+    )
+    .all(cleanupRunId) as Array<{ tag: string; is_deleted: number }>;
+
+  assert.deepEqual(selectedTags, [
+    { tag: "delete-new", is_deleted: 0 },
+    { tag: "delete-old", is_deleted: 1 }
+  ]);
+
+  database.close();
+});
+
 test("cleanup selected tags must exist in the same scan as their cleanup run", () => {
   const database = openDatabase(":memory:");
   const scanWriter = new ScanWriter(database);
