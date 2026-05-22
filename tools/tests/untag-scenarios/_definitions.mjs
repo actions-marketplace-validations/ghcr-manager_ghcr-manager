@@ -28,7 +28,7 @@ export const untagScenarios = {
     scanAssertions: [
       {
         tagNameKey: "keepTag",
-        expectedManifestKind: "image_index",
+        expectedManifestKind: "cross_arch_manifest",
         expectedManifestMediaType: "application/vnd.docker.distribution.manifest.list.v2+json",
         requireRoot: true
       }

@@ -148,6 +148,9 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
   - ingest now stores OCI/Docker index-list payloads as generic `index_manifest` first
   - after descriptor/edge ingest, a DB refinement pass upgrades only real multi-arch roots to `cross_arch_manifest`
   - helper-tagged indexes are intentionally left as generic `index_manifest`
+- Scenario assertion note:
+  - cleanup and untag live-scenario definitions now expect real Docker/OCI multi-arch roots as
+    `cross_arch_manifest`, not the older `image_index` label
 
 ## Current Next Plan
 
