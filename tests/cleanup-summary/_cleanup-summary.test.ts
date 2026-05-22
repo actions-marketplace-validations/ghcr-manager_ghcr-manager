@@ -72,18 +72,11 @@ test("buildCleanupSummary groups root decisions and carries live execution effec
     },
     {
       dryRun: false,
-      listRootTags: (versionId) => {
-        switch (versionId) {
-          case 101:
-            return ["delete-me"];
-          case 102:
-            return ["delete-me", "keep-me"];
-          case 103:
-            return ["delete-me"];
-          default:
-            return [];
-        }
-      },
+      rootTagsByVersionId: new Map([
+        [101, ["delete-me"]],
+        [102, ["delete-me", "keep-me"]],
+        [103, ["delete-me"]]
+      ]),
       plannedChanges: {
         tagRemovals: 1,
         imageDeletes: 1,
@@ -180,7 +173,7 @@ test("buildCleanupSummary trusts planner-facing direct target tags as already fi
     },
     {
       dryRun: true,
-      listRootTags: () => ["release-1"],
+      rootTagsByVersionId: new Map([[101, ["release-1"]]]),
       plannedChanges: {
         tagRemovals: 1,
         imageDeletes: 1,

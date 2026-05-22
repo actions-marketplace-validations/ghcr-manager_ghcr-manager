@@ -151,25 +151,12 @@ function _formatTags(root: CleanupSummaryRoot): string {
     return "(untagged)";
   }
 
-  let visible = "";
-
-  for (let index = 0; index < tags.length; index += 1) {
-    const tag = tags[index] as string;
-    const candidate = visible.length === 0 ? tag : `${visible}, ${tag}`;
-
-    if (candidate.length <= _DEFAULT_MAX_TAG_TEXT_LENGTH) {
-      visible = candidate;
-      continue;
-    }
-
-    if (visible.length === 0) {
-      return `${tag.slice(0, _DEFAULT_MAX_TAG_TEXT_LENGTH - 3)}...`;
-    }
-
-    return `${visible}, ...`;
+  const joinedTags = tags.join(", ");
+  if (joinedTags.length <= _DEFAULT_MAX_TAG_TEXT_LENGTH) {
+    return joinedTags;
   }
 
-  return visible;
+  return `${joinedTags.slice(0, _DEFAULT_MAX_TAG_TEXT_LENGTH - 3)}...`;
 }
 
 function _formatReason(root: CleanupSummaryRoot): string {

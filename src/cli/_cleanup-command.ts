@@ -19,6 +19,12 @@ export async function handleCleanup(args: string[]): Promise<number> {
     const scanId = repository.getLatestCompletedScanId(inputs.owner, inputs.packageName);
     logger.debug(`Starting cleanup for ${inputs.owner}/${inputs.packageName}`);
     const plan = loadDeletePlan(repository, resolveTagSelectors(database, inputs));
+    const rootTagsByVersionId = _loadRootTagsByVersionId(
+      database,
+      inputs.owner,
+      inputs.packageName,
+      plan.rootDecisions.map((decision) => decision.versionId)
+    );
     const cleanupRunId = cleanupRunWriter.persistCleanupRun(scanId, plan, {
       dryRun,
       cleanupStartedAt: new Date().toISOString()
@@ -26,7 +32,7 @@ export async function handleCleanup(args: string[]): Promise<number> {
     if (dryRun) {
       const summary = buildCleanupSummary(plan, {
         dryRun: true,
-        listRootTags: (versionId) => _listRootTags(database, inputs.owner, inputs.packageName, versionId),
+        rootTagsByVersionId,
         plannedChanges: _loadPlannedChanges(database, cleanupRunId)
       });
       logger.debug(`Completed dry-run cleanup for ${inputs.owner}/${inputs.packageName}`);
@@ -41,7 +47,7 @@ export async function handleCleanup(args: string[]): Promise<number> {
     });
     const summary = buildCleanupSummary(plan, {
       dryRun: false,
-      listRootTags: (versionId) => _listRootTags(database, inputs.owner, inputs.packageName, versionId),
+      rootTagsByVersionId,
       plannedChanges: _loadPlannedChanges(database, cleanupRunId),
       executionSummary
     });
@@ -75,6 +81,48 @@ function _listRootTags(
     .all(owner, packageName, versionId) as Array<{ tag: string }>;
 
   return rows.map((row) => row.tag);
+}
+
+function _loadRootTagsByVersionId(
+  database: ReturnType<typeof openDatabase>,
+  owner: string,
+  packageName: string,
+  versionIds: number[]
+): Map<number, string[]> {
+  const requestedVersionIds = new Set(versionIds);
+  const tagsByVersionId = new Map<number, string[]>();
+
+  for (const versionId of requestedVersionIds) {
+    tagsByVersionId.set(versionId, []);
+  }
+
+  if (requestedVersionIds.size === 0) {
+    return tagsByVersionId;
+  }
+
+  const rows = database
+    .prepare(
+      `
+        SELECT tags.version_id, tags.tag
+        FROM tags
+        INNER JOIN v_latest_scan_per_package latest_scan ON latest_scan.scan_id = tags.scan_id
+        WHERE latest_scan.owner = ?
+          AND latest_scan.package_name = ?
+          AND tags.is_digest_tag = 0
+        ORDER BY tags.version_id, tags.tag
+      `
+    )
+    .all(owner, packageName) as Array<{ version_id: number; tag: string }>;
+
+  for (const row of rows) {
+    if (!requestedVersionIds.has(row.version_id)) {
+      continue;
+    }
+
+    tagsByVersionId.get(row.version_id)?.push(row.tag);
+  }
+
+  return tagsByVersionId;
 }
 
 function _loadPlannedChanges(

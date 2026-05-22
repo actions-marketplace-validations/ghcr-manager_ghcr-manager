@@ -65,14 +65,14 @@ export function buildCleanupSummary(
   plan: DeletePlan,
   options: {
     dryRun: boolean;
-    listRootTags: (versionId: number) => string[];
+    rootTagsByVersionId: ReadonlyMap<number, string[]>;
     plannedChanges: CleanupSummaryPlannedChanges;
     executionSummary?: DeleteExecutionSummary;
   }
 ): CleanupSummary {
   const directTargetTagSet = new Set(plan.directTargetTags);
   const roots = plan.rootDecisions.map((decision) =>
-    _mapRootDecision(decision, directTargetTagSet, options.listRootTags)
+    _mapRootDecision(decision, directTargetTagSet, options.rootTagsByVersionId)
   );
   const fullyDeletableRoots = roots.filter(
     (root) => root.validationStatus === DeletePlanValidationStatuses.fullyDeletable
@@ -107,9 +107,9 @@ export function buildCleanupSummary(
 function _mapRootDecision(
   decision: DeletePlan["rootDecisions"][number],
   directTargetTagSet: Set<string>,
-  listRootTags: (versionId: number) => string[]
+  rootTagsByVersionId: ReadonlyMap<number, string[]>
 ): CleanupSummaryRoot {
-  const rootTags = listRootTags(decision.versionId);
+  const rootTags = rootTagsByVersionId.get(decision.versionId) ?? [];
 
   return {
     versionId: decision.versionId,

@@ -20,7 +20,7 @@ test("renderCleanupSummaryMarkdown renders user-facing counts and truncates long
           versionId: 101,
           digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           manifestKind: ManifestKinds.crossArchManifest,
-          rootTags: ["release-amd64-test", "release-arm64-test", "release-debug-test"],
+      rootTags: ["release-amd64-test", "release-arm64-test", "release-debug-test"],
           matchedTags: ["release-amd64-test"],
           selectionMode: "delete-root",
           selectionReason: "delete-tags-partial-tag-match",
@@ -80,11 +80,11 @@ test("renderCleanupSummaryMarkdown renders user-facing counts and truncates long
   assert.match(markdown, /<summary>🗑️ Items to delete<\/summary>/);
   assert.match(markdown, /Showing first 2 of 3 selected tags/);
   assert.match(markdown, /sha256:aaaaaaaa\.\.\.aaaaaaaa/);
-  assert.match(markdown, /release-amd64-test, release-arm64-test, \.\.\./);
+  assert.match(markdown, /release-amd64-test, release-arm64-tes\.\.\./);
   assert.match(markdown, /Tag lists may be truncated for table width\./);
   assert.match(
     markdown,
-    /\| 101 \| cross-arch \| `sha256:aaaaaaaa\.\.\.aaaaaaaa` \| release-amd64-test, release-arm64-test, \.\.\. \| Delete this item and its descendants \|/
+    /\| 101 \| cross-arch \| `sha256:aaaaaaaa\.\.\.aaaaaaaa` \| release-amd64-test, release-arm64-tes\.\.\. \| Delete this item and its descendants \|/
   );
   assert.doesNotMatch(markdown, /<summary>🔗 Tags to remove only<\/summary>/);
   assert.doesNotMatch(markdown, /<summary>🛡️ Blocked items<\/summary>/);
