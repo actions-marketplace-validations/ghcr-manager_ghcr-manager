@@ -215,6 +215,10 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
   - direct untag behavior and caveats
 - [ ] Revisit DB/schema onboarding later with example-driven guidance if release feedback shows users need it.
 - [ ] Review release workflow and public-facing metadata before the first release tag.
+- [x] Catch up release metadata for `0.9.7` after the post-`0.9.6` commit range:
+  - add a real `CHANGELOG.md` entry synthesized from commits since tag `0.9.6` / commit `d4b42011`
+  - bump `package.json` and `package-lock.json` to `0.9.7`
+  - update `README.md` action refs to `0.9.7` so release verification passes
 
 ## Current Documentation Notes
 
@@ -243,6 +247,9 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
   - `action.yml` still shows the direct public CLI invocation with `npm run ... ghcr-manager:dist -- cleanup|untag`
   - prepared argv is handed to the visible run step through a NUL-delimited temp file so log printing and execution use
     the exact same argument list
+- Older-than doc note:
+  - README cleanup command notes now explicitly list the real long-form `older-than` syntax and the supported units
+  - CLI docs keep the same unit list for the shell surface
   - the user-facing Markdown summary now emphasizes planned tag/image/cross-arch delete counts and uses item-oriented
     wording instead of planner-internal `root` / `closure` language
   - `DeletePlan` no longer carries denormalized `validationSummary` counts
@@ -271,3 +278,11 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
   - release validation now checks that the tag commit is on `main`
   - release validation checks `README.md` and `.github/workflows/manual-run_scan.yml` for exact action refs
   - `CHANGELOG.md` must already contain the concrete release heading before tagging
+- `0.9.7` release-prep note:
+  - the missing changelog gap after `0.9.6` was reconstructed from commits and their diffs, not only from commit
+    subjects
+  - the resulting release-facing themes are:
+    - cleanup summary/output polish
+    - action argv preparation and artifact-download simplification
+    - cross-arch manifest classification refinement
+    - cleanup audit-state correctness and DB-merge tag metadata preservation

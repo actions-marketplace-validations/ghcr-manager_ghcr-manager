@@ -82,7 +82,7 @@ The action supports three commands:
     delete-tags: |
       pr-.*
     use-regex: true
-    older-than: 30d
+    older-than: 30 days
     keep-n-tagged: "5"
     exclude-tags: |
       latest
@@ -169,11 +169,14 @@ Note: the second scan only runs if cleanup actually makes changes.
 
 `Cmds`: `s` = `scan`, `c` = `cleanup`, `u` = `untag`
 
-Cleanup notes:
+Cleanup command notes:
 
 - Tagged selector families may be combined with `delete-untagged`.
 - `exclude-tags` requires at least one tagged selector family.
 - `delete-untagged` and `keep-n-untagged` cannot be combined.
+- `older-than` takes one integer plus one unit.
+  - Supported `older-than` units: `minutes`, `hours`, `days`, `weeks`, `months`, `years`.
+  - Example values: `30 days`, `2 hours`, `1 month`.
 
 ## Outputs
 
