@@ -31,11 +31,6 @@ Then maybe something like see JSON on click or such.
 
 The day, days, ... format is a bit undocumented and unclear.
 
-## Clean up string enums
-
-Search for `" | "` and `| "` ... many such string types are inlined in objects and thus their string values used
-plain-text in code.
-
 ## Make action args visible in run logs
 
 `cleanup_summary_json="$(npm run --silent ghcr-manager:dist -- cleanup "${cleanup_args[@]}")"`
