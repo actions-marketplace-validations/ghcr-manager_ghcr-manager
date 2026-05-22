@@ -7,6 +7,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.7] - 2026-05-23
+
+### Added
+
+- The root action now prepares `cleanup` and `untag` CLI arguments through `tools/prepare-action-args.mjs`, keeping
+  printed and executed argument lists aligned.
+- Cleanup planning now traverses recursively beyond `sha256-*` helper-tag manifest links as well, if deeper helper
+  chains ever occur.
+
+### Changed
+
+- Cleanup dry-run output and GitHub step summaries were reworked to explain the plan more clearly, including a filters
+  table and clearer counts for tags, images, and cross-arch manifests.
+- Informational manifest classification was tuned so only real multi-arch roots are labeled `cross_arch_manifest`, while
+  helper-tagged indexes remain `index_manifest`.
+- `merge-run-artifacts` now uses a simpler current-run download flow with direct artifact download handling.
+- Cleanup selected-tag audit and DB-merge metadata handling were tightened alongside the summary/output refactor.
+
+### Fixed
+
+- `delete-orphaned-images` now carries orphaned `sha256-*` digest-tag targets through planner selection instead of
+  dropping them at the normal non-digest tag boundary.
+- Fully deletable cleanup execution now deletes the planned closure package versions instead of deleting only the root
+  package version.
+
 ## [0.9.6] - 2026-05-21
 
 ### Added
