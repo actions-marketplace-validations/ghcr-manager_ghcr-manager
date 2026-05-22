@@ -4,19 +4,17 @@ import type { CleanupSummary, CleanupSummaryRoot } from "./_cleanup-summary.js";
 
 const _DEFAULT_MAX_DIRECT_TARGET_TAGS = 100;
 const _DEFAULT_MAX_ROOTS_PER_SECTION = 100;
-const _DEFAULT_MAX_TAGS_PER_ROOT = 4;
+const _DEFAULT_MAX_TAG_TEXT_LENGTH = 40;
 
 export function renderCleanupSummaryMarkdown(
   summary: CleanupSummary,
   options: {
     maxDirectTargetTags?: number;
     maxRootsPerSection?: number;
-    maxTagsPerRoot?: number;
   }
 ): string {
   const maxDirectTargetTags = options.maxDirectTargetTags ?? _DEFAULT_MAX_DIRECT_TARGET_TAGS;
   const maxRootsPerSection = options.maxRootsPerSection ?? _DEFAULT_MAX_ROOTS_PER_SECTION;
-  const maxTagsPerRoot = options.maxTagsPerRoot ?? _DEFAULT_MAX_TAGS_PER_ROOT;
   const lines = [
     "## Cleanup Summary",
     "",
@@ -38,13 +36,9 @@ export function renderCleanupSummaryMarkdown(
   lines.push(..._renderPlannedDeleteBreakdown(summary));
   lines.push(..._renderPlannerInputs(summary.plannerInputs));
   lines.push(..._renderDirectTargetTags(summary.directTargetTags, maxDirectTargetTags));
-  lines.push(
-    ..._renderRootSection("🗑️ Items to delete", summary.fullyDeletableRoots, maxRootsPerSection, maxTagsPerRoot)
-  );
-  lines.push(
-    ..._renderRootSection("🔗 Tags to remove only", summary.untagOnlyRoots, maxRootsPerSection, maxTagsPerRoot)
-  );
-  lines.push(..._renderRootSection("🛡️ Blocked items", summary.blockedRoots, maxRootsPerSection, maxTagsPerRoot));
+  lines.push(..._renderRootSection("🗑️ Items to delete", summary.fullyDeletableRoots, maxRootsPerSection));
+  lines.push(..._renderRootSection("🔗 Tags to remove only", summary.untagOnlyRoots, maxRootsPerSection));
+  lines.push(..._renderRootSection("🛡️ Blocked items", summary.blockedRoots, maxRootsPerSection));
 
   if (!summary.dryRun && (summary.deletedPackageVersions.length > 0 || summary.untaggedTags.length > 0)) {
     lines.push(..._renderLiveEffects(summary));
@@ -115,8 +109,7 @@ function _renderDirectTargetTags(tags: string[], maxDirectTargetTags: number): s
 function _renderRootSection(
   title: string,
   roots: CleanupSummaryRoot[],
-  maxRootsPerSection: number,
-  maxTagsPerRoot: number
+  maxRootsPerSection: number
 ): string[] {
   if (roots.length === 0) {
     return [];
@@ -127,11 +120,11 @@ function _renderRootSection(
   lines.push("| --- | --- | --- | --- | --- |");
   for (const root of roots.slice(0, maxRootsPerSection)) {
     lines.push(
-      `| ${root.versionId} | ${_escapeMarkdown(_describeManifestKind(root.manifestKind))} | \`${_escapeInlineCode(_shortDigest(root.digest))}\` | ${_escapeMarkdown(_formatTags(root, maxTagsPerRoot))} | ${_escapeMarkdown(_formatReason(root))} |`
+      `| ${root.versionId} | ${_escapeMarkdown(_describeManifestKind(root.manifestKind))} | \`${_escapeInlineCode(_shortDigest(root.digest))}\` | ${_escapeMarkdown(_formatTags(root))} | ${_escapeMarkdown(_formatReason(root))} |`
     );
   }
 
-  lines.push("", "_Tag lists may be truncated; `+N more` means additional tags were omitted._");
+  lines.push("", "_Tag lists may be truncated for table width._");
 
   if (roots.length > maxRootsPerSection) {
     lines.push("", `_Showing first ${maxRootsPerSection} of ${roots.length} ${title.toLowerCase()}._`);
@@ -152,15 +145,31 @@ function _renderLiveEffects(summary: CleanupSummary): string[] {
   return lines;
 }
 
-function _formatTags(root: CleanupSummaryRoot, maxTagsPerRoot: number): string {
+function _formatTags(root: CleanupSummaryRoot): string {
   const tags = root.rootTags.length > 0 ? root.rootTags : root.matchedTags;
   if (tags.length === 0) {
     return "(untagged)";
   }
 
-  const visible = tags.slice(0, maxTagsPerRoot);
-  const suffix = tags.length > maxTagsPerRoot ? `, +${tags.length - maxTagsPerRoot} more` : "";
-  return visible.join(", ") + suffix;
+  let visible = "";
+
+  for (let index = 0; index < tags.length; index += 1) {
+    const tag = tags[index] as string;
+    const candidate = visible.length === 0 ? tag : `${visible}, ${tag}`;
+
+    if (candidate.length <= _DEFAULT_MAX_TAG_TEXT_LENGTH) {
+      visible = candidate;
+      continue;
+    }
+
+    if (visible.length === 0) {
+      return `${tag.slice(0, _DEFAULT_MAX_TAG_TEXT_LENGTH - 3)}...`;
+    }
+
+    return `${visible}, ...`;
+  }
+
+  return visible;
 }
 
 function _formatReason(root: CleanupSummaryRoot): string {

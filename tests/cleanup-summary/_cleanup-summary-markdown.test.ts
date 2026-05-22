@@ -20,8 +20,8 @@ test("renderCleanupSummaryMarkdown renders user-facing counts and truncates long
           versionId: 101,
           digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           manifestKind: ManifestKinds.crossArchManifest,
-          rootTags: ["a", "b", "c"],
-          matchedTags: ["a"],
+          rootTags: ["release-amd64-test", "release-arm64-test", "release-debug-test"],
+          matchedTags: ["release-amd64-test"],
           selectionMode: "delete-root",
           selectionReason: "delete-tags-partial-tag-match",
           validationStatus: DeletePlanValidationStatuses.fullyDeletable,
@@ -52,8 +52,7 @@ test("renderCleanupSummaryMarkdown renders user-facing counts and truncates long
     },
     {
       maxDirectTargetTags: 2,
-      maxRootsPerSection: 10,
-      maxTagsPerRoot: 2
+      maxRootsPerSection: 10
     }
   );
 
@@ -81,11 +80,11 @@ test("renderCleanupSummaryMarkdown renders user-facing counts and truncates long
   assert.match(markdown, /<summary>🗑️ Items to delete<\/summary>/);
   assert.match(markdown, /Showing first 2 of 3 selected tags/);
   assert.match(markdown, /sha256:aaaaaaaa\.\.\.aaaaaaaa/);
-  assert.match(markdown, /a, b, \+1 more/);
-  assert.match(markdown, /Tag lists may be truncated; `\+N more` means additional tags were omitted\./);
+  assert.match(markdown, /release-amd64-test, release-arm64-test, \.\.\./);
+  assert.match(markdown, /Tag lists may be truncated for table width\./);
   assert.match(
     markdown,
-    /\| 101 \| cross-arch \| `sha256:aaaaaaaa\.\.\.aaaaaaaa` \| a, b, \+1 more \| Delete this item and its descendants \|/
+    /\| 101 \| cross-arch \| `sha256:aaaaaaaa\.\.\.aaaaaaaa` \| release-amd64-test, release-arm64-test, \.\.\. \| Delete this item and its descendants \|/
   );
   assert.doesNotMatch(markdown, /<summary>🔗 Tags to remove only<\/summary>/);
   assert.doesNotMatch(markdown, /<summary>🛡️ Blocked items<\/summary>/);
@@ -179,8 +178,7 @@ test("renderCleanupSummaryMarkdown renders blocked, tag-only, and live-effect de
     },
     {
       maxDirectTargetTags: 5,
-      maxRootsPerSection: 5,
-      maxTagsPerRoot: 5
+      maxRootsPerSection: 5
     }
   );
 
@@ -255,8 +253,7 @@ test("renderCleanupSummaryMarkdown notes when a root section is truncated", () =
     },
     {
       maxDirectTargetTags: 5,
-      maxRootsPerSection: 1,
-      maxTagsPerRoot: 5
+      maxRootsPerSection: 1
     }
   );
 
