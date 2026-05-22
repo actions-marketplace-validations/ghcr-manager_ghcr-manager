@@ -164,7 +164,9 @@ CREATE TABLE IF NOT EXISTS cleanup_selected_tags (
   cleanup_run_id INTEGER NOT NULL,
   scan_id INTEGER NOT NULL,
   tag TEXT NOT NULL,
+  is_deleted INTEGER NOT NULL,
   PRIMARY KEY(cleanup_run_id, tag),
+  CHECK(is_deleted IN (0, 1)),
   FOREIGN KEY(cleanup_run_id, scan_id) REFERENCES cleanup_runs(cleanup_run_id, scan_id),
   FOREIGN KEY(scan_id, tag) REFERENCES tags(scan_id, tag)
 );

@@ -22,21 +22,26 @@ export function renderCleanupSummaryMarkdown(
     "| --- | --- |",
     `| 📦 Package | \`${_escapeInlineCode(`${summary.owner}/${summary.packageName}`)}\` |`,
     `| ⚙️ Mode | ${summary.dryRun ? "Cleanup dry-run" : "Cleanup"} |`,
-    `| 🏷️ Matched tags | ${summary.directTargetTags.length} |`,
-    `| 🗑️ Fully deletable roots | ${summary.fullyDeletableRoots.length} |`,
-    `| 🔗 Untag-only roots | ${summary.untagOnlyRoots.length} |`,
-    `| 🛡️ Blocked roots | ${summary.blockedRoots.length} |`,
-    `| 📄 Affected manifests | ${summary.affectedManifests.length} |`,
+    `| 🏷️ Selected tags | ${summary.directTargetTags.length} |`,
+    `| 🔖 Planned tag removals | ${summary.plannedChanges.tagRemovals} |`,
+    `| 🖼️ Planned image deletes | ${summary.plannedChanges.imageDeletes} |`,
+    `| 📚 Planned cross-arch deletes | ${summary.plannedChanges.crossArchDeletes} |`,
+    `| 📄 Planned item deletes | ${summary.plannedChanges.totalManifestDeletes} |`,
+    `| 🔗 Tag-only updates | ${summary.untagOnlyRoots.length} |`,
+    `| 🛡️ Blocked items | ${summary.blockedRoots.length} |`,
     ""
   ];
 
-  lines.push(..._renderJsonDetails("⚙️ Cleanup filter", summary.plannerInputs));
+  lines.push(..._renderPlannedDeleteBreakdown(summary));
+  lines.push(..._renderPlannerInputs(summary.plannerInputs));
   lines.push(..._renderDirectTargetTags(summary.directTargetTags, maxDirectTargetTags));
   lines.push(
-    ..._renderRootSection("🗑️ Fully deletable roots", summary.fullyDeletableRoots, maxRootsPerSection, maxTagsPerRoot)
+    ..._renderRootSection("🗑️ Items to delete", summary.fullyDeletableRoots, maxRootsPerSection, maxTagsPerRoot)
   );
-  lines.push(..._renderRootSection("🔗 Untag-only roots", summary.untagOnlyRoots, maxRootsPerSection, maxTagsPerRoot));
-  lines.push(..._renderRootSection("🛡️ Blocked roots", summary.blockedRoots, maxRootsPerSection, maxTagsPerRoot));
+  lines.push(
+    ..._renderRootSection("🔗 Tags to remove only", summary.untagOnlyRoots, maxRootsPerSection, maxTagsPerRoot)
+  );
+  lines.push(..._renderRootSection("🛡️ Blocked items", summary.blockedRoots, maxRootsPerSection, maxTagsPerRoot));
 
   if (!summary.dryRun && (summary.deletedPackageVersions.length > 0 || summary.untaggedTags.length > 0)) {
     lines.push(..._renderLiveEffects(summary));
@@ -45,14 +50,42 @@ export function renderCleanupSummaryMarkdown(
   return `${lines.join("\n").trimEnd()}\n`;
 }
 
-function _renderJsonDetails(title: string, value: unknown): string[] {
+function _renderPlannedDeleteBreakdown(summary: CleanupSummary): string[] {
+  if (
+    summary.plannedChanges.signatureDeletes === 0 &&
+    summary.plannedChanges.attestationDeletes === 0 &&
+    summary.plannedChanges.artifactDeletes === 0
+  ) {
+    return [];
+  }
+
   return [
-    `<details>`,
-    `<summary>${title}</summary>`,
+    "<details>",
+    "<summary>📦 Planned delete breakdown</summary>",
     "",
-    "```json",
-    JSON.stringify(value, null, 2),
-    "```",
+    "| Type | Count |",
+    "| --- | --- |",
+    `| Images | ${summary.plannedChanges.imageDeletes} |`,
+    `| Cross-arch manifests | ${summary.plannedChanges.crossArchDeletes} |`,
+    `| Signatures | ${summary.plannedChanges.signatureDeletes} |`,
+    `| Attestations | ${summary.plannedChanges.attestationDeletes} |`,
+    `| OCI artifacts | ${summary.plannedChanges.artifactDeletes} |`,
+    "",
+    "</details>",
+    ""
+  ];
+}
+
+function _renderPlannerInputs(plannerInputs: CleanupSummary["plannerInputs"]): string[] {
+  const rows = _getPlannerInputRows(plannerInputs);
+
+  return [
+    "<details>",
+    "<summary>⚙️ Cleanup filter</summary>",
+    "",
+    "| Filter | Value |",
+    "| --- | --- |",
+    ...(rows.length > 0 ? rows : ["| (none) | No cleanup filters recorded |"]),
     "",
     "</details>",
     ""
@@ -65,9 +98,9 @@ function _renderDirectTargetTags(tags: string[], maxDirectTargetTags: number): s
   }
 
   const visibleTags = tags.slice(0, maxDirectTargetTags).map((tag) => `- \`${_escapeInlineCode(tag)}\``);
-  const lines = ["<details>", "<summary>🏷️ Matched tags</summary>", "", ...visibleTags];
+  const lines = ["<details>", "<summary>🏷️ Selected tags</summary>", "", ...visibleTags];
   if (tags.length > maxDirectTargetTags) {
-    lines.push("", `_Showing first ${maxDirectTargetTags} of ${tags.length} matched tags._`);
+    lines.push("", `_Showing first ${maxDirectTargetTags} of ${tags.length} selected tags._`);
   }
   lines.push("", "</details>", "");
   return lines;
@@ -84,11 +117,11 @@ function _renderRootSection(
   }
 
   const lines = ["<details>", `<summary>${title}</summary>`, ""];
-  lines.push("| Version | Digest | Tags | Reason |");
-  lines.push("| --- | --- | --- | --- |");
+  lines.push("| Version | Type | Digest | Tags | Outcome |");
+  lines.push("| --- | --- | --- | --- | --- |");
   for (const root of roots.slice(0, maxRootsPerSection)) {
     lines.push(
-      `| ${root.versionId} | \`${_escapeInlineCode(_shortDigest(root.digest))}\` | ${_escapeMarkdown(_formatTags(root, maxTagsPerRoot))} | ${_escapeMarkdown(_formatReason(root))} |`
+      `| ${root.versionId} | ${_escapeMarkdown(_describeManifestKind(root.manifestKind))} | \`${_escapeInlineCode(_shortDigest(root.digest))}\` | ${_escapeMarkdown(_formatTags(root, maxTagsPerRoot))} | ${_escapeMarkdown(_formatReason(root))} |`
     );
   }
 
@@ -124,16 +157,16 @@ function _formatTags(root: CleanupSummaryRoot, maxTagsPerRoot: number): string {
 
 function _formatReason(root: CleanupSummaryRoot): string {
   if (root.validationStatus === "blocked") {
-    const blocking = root.blockingDigest ? _shortDigest(root.blockingDigest) : "another root";
+    const blocking = root.blockingDigest ? _shortDigest(root.blockingDigest) : "another item";
     const overlap = root.overlapDigest ? ` via ${_shortDigest(root.overlapDigest)}` : "";
-    return `Blocked by ${blocking}${overlap}`;
+    return `Blocked by retained item ${blocking}${overlap}`;
   }
 
   if (root.validationStatus === "untag-only") {
-    return "Selected tags detach; root remains";
+    return "Remove selected tags, keep this item";
   }
 
-  return "Root and closure can be deleted";
+  return "Delete this item and its descendants";
 }
 
 function _shortDigest(value: string): string {
@@ -150,4 +183,72 @@ function _escapeInlineCode(value: string): string {
 
 function _escapeMarkdown(value: string): string {
   return value.replaceAll("|", "\\|").replaceAll("\n", " ");
+}
+
+function _getPlannerInputRows(plannerInputs: CleanupSummary["plannerInputs"]): string[] {
+  const rows: string[] = [];
+
+  for (const [key, value] of Object.entries(plannerInputs)) {
+    rows.push(`| ${_escapeMarkdown(_plannerInputLabel(key))} | ${_escapeMarkdown(_formatPlannerInputValue(value))} |`);
+  }
+
+  return rows;
+}
+
+function _plannerInputLabel(key: string): string {
+  switch (key) {
+    case "deleteTags":
+      return "Delete tags";
+    case "excludeTags":
+      return "Exclude tags";
+    case "useRegex":
+      return "Use regex";
+    case "deleteUntagged":
+      return "Delete untagged";
+    case "keepNTagged":
+      return "Keep newest tagged";
+    case "keepNUntagged":
+      return "Keep newest untagged";
+    case "olderThan":
+      return "Older than";
+    case "cutoffTimestamp":
+      return "Cutoff timestamp";
+    case "deleteGhostImages":
+      return "Delete ghost images";
+    case "deletePartialImages":
+      return "Delete partial images";
+    case "deleteOrphanedImages":
+      return "Delete orphaned images";
+    default:
+      return key;
+  }
+}
+
+function _formatPlannerInputValue(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.length > 0 ? value.join(", ") : "(none)";
+  }
+
+  if (typeof value === "boolean") {
+    return value ? "yes" : "no";
+  }
+
+  return String(value);
+}
+
+function _describeManifestKind(manifestKind?: string): string {
+  switch (manifestKind) {
+    case "image_manifest":
+      return "image";
+    case "image_index":
+      return "cross-arch";
+    case "signature_manifest":
+      return "signature";
+    case "attestation_manifest":
+      return "attestation";
+    case "artifact_manifest":
+      return "artifact";
+    default:
+      return "item";
+  }
 }

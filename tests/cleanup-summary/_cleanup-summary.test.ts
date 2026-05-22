@@ -44,7 +44,26 @@ test("buildCleanupSummary groups root decisions and carries live execution effec
         }
       ],
       protectedRoots: [],
-      closureManifests: [],
+      closureManifests: [
+        {
+          sourceVersionId: 101,
+          sourceDigest: "sha256:fully",
+          memberVersionId: 101,
+          memberDigest: "sha256:fully",
+          memberManifestKind: "image_index",
+          hopsFromRoot: 0,
+          memberRole: "root"
+        },
+        {
+          sourceVersionId: 101,
+          sourceDigest: "sha256:fully",
+          memberVersionId: 201,
+          memberDigest: "sha256:child",
+          memberManifestKind: "image_manifest",
+          hopsFromRoot: 1,
+          memberRole: "child"
+        }
+      ],
       blockedRoots: [],
       fullyDeletableRoots: [],
       collateralTags: ["keep-me"]
@@ -63,9 +82,14 @@ test("buildCleanupSummary groups root decisions and carries live execution effec
             return [];
         }
       },
-      listAffectedManifestDigests: (rootDigests) => {
-        assert.deepEqual(rootDigests, ["sha256:fully"]);
-        return ["sha256:child", "sha256:fully"];
+      plannedChanges: {
+        tagRemovals: 1,
+        imageDeletes: 1,
+        crossArchDeletes: 1,
+        artifactDeletes: 0,
+        attestationDeletes: 0,
+        signatureDeletes: 0,
+        totalManifestDeletes: 2
       },
       executionSummary: {
         owner: "acme",
@@ -95,7 +119,19 @@ test("buildCleanupSummary groups root decisions and carries live execution effec
   assert.equal(summary.fullyDeletableRoots.length, 1);
   assert.equal(summary.untagOnlyRoots.length, 1);
   assert.equal(summary.blockedRoots.length, 1);
-  assert.deepEqual(summary.affectedManifests, [{ digest: "sha256:child" }, { digest: "sha256:fully" }]);
+  assert.deepEqual(summary.affectedManifests, [
+    { digest: "sha256:child", manifestKind: "image_manifest" },
+    { digest: "sha256:fully", manifestKind: "image_index" }
+  ]);
+  assert.deepEqual(summary.plannedChanges, {
+    tagRemovals: 1,
+    imageDeletes: 1,
+    crossArchDeletes: 1,
+    artifactDeletes: 0,
+    attestationDeletes: 0,
+    signatureDeletes: 0,
+    totalManifestDeletes: 2
+  });
   assert.deepEqual(summary.untagOnlyRoots[0]?.matchedTags, ["delete-me"]);
   assert.deepEqual(summary.deletedPackageVersions, [{ versionId: 101, digest: "sha256:fully" }]);
   assert.equal(summary.untaggedTags[0]?.tag, "delete-me");
@@ -123,7 +159,17 @@ test("buildCleanupSummary trusts planner-facing direct target tags as already fi
         }
       ],
       protectedRoots: [],
-      closureManifests: [],
+      closureManifests: [
+        {
+          sourceVersionId: 101,
+          sourceDigest: "sha256:fully",
+          memberVersionId: 101,
+          memberDigest: "sha256:fully",
+          memberManifestKind: "image_manifest",
+          hopsFromRoot: 0,
+          memberRole: "root"
+        }
+      ],
       blockedRoots: [],
       fullyDeletableRoots: [],
       collateralTags: []
@@ -131,9 +177,18 @@ test("buildCleanupSummary trusts planner-facing direct target tags as already fi
     {
       dryRun: true,
       listRootTags: () => ["release-1"],
-      listAffectedManifestDigests: () => []
+      plannedChanges: {
+        tagRemovals: 1,
+        imageDeletes: 1,
+        crossArchDeletes: 0,
+        artifactDeletes: 0,
+        attestationDeletes: 0,
+        signatureDeletes: 0,
+        totalManifestDeletes: 1
+      }
     }
   );
 
   assert.deepEqual(summary.directTargetTags, ["release-1"]);
+  assert.deepEqual(summary.affectedManifests, [{ digest: "sha256:fully", manifestKind: "image_manifest" }]);
 });

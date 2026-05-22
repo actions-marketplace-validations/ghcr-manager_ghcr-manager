@@ -155,12 +155,14 @@ export class DbMergeCleanupCopy {
       INSERT INTO cleanup_selected_tags(
         cleanup_run_id,
         scan_id,
-        tag
+        tag,
+        is_deleted
       )
       SELECT
         ?,
         ?,
-        tag
+        tag,
+        is_deleted
       FROM ${attachName}.cleanup_selected_tags
       WHERE cleanup_run_id = ?
         AND scan_id = ?

@@ -81,7 +81,7 @@ test("db merge cleanup copy copies selected cleanup tags with their cleanup run"
     const selectedTags = targetDatabase
       .prepare(
         `
-          SELECT cleanup_run_id, tag
+          SELECT cleanup_run_id, tag, is_deleted
           FROM cleanup_selected_tags
           ORDER BY cleanup_run_id, tag
         `
@@ -89,8 +89,9 @@ test("db merge cleanup copy copies selected cleanup tags with their cleanup run"
       .all() as Array<{
       cleanup_run_id: number;
       tag: string;
+      is_deleted: number | null;
     }>;
-    assert.deepEqual(selectedTags, [{ cleanup_run_id: 1, tag: "delete-me" }]);
+    assert.deepEqual(selectedTags, [{ cleanup_run_id: 1, tag: "delete-me", is_deleted: 1 }]);
   } finally {
     targetDatabase.exec("DETACH DATABASE source_db");
     targetDatabase.close();
@@ -120,7 +121,7 @@ test("db merge cleanup copy reuses cached statements for repeated attached clean
     const selectedTags = targetDatabase
       .prepare(
         `
-          SELECT scan_id, tag
+          SELECT scan_id, tag, is_deleted
           FROM cleanup_selected_tags
           ORDER BY scan_id, tag
         `
@@ -128,10 +129,11 @@ test("db merge cleanup copy reuses cached statements for repeated attached clean
       .all() as Array<{
       scan_id: number;
       tag: string;
+      is_deleted: number | null;
     }>;
     assert.deepEqual(selectedTags, [
-      { scan_id: 1, tag: "delete-me" },
-      { scan_id: 2, tag: "delete-two" }
+      { scan_id: 1, tag: "delete-me", is_deleted: 1 },
+      { scan_id: 2, tag: "delete-two", is_deleted: 1 }
     ]);
   } finally {
     targetDatabase.exec("DETACH DATABASE source_db");

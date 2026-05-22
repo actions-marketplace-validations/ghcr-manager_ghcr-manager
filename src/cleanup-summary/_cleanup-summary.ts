@@ -1,3 +1,4 @@
+import type { ManifestKind } from "../core/index.js";
 import type { DeletePlan, DeletePlanSelectionMode, DeletePlanSelectionReason } from "../db/index.js";
 import type { DeleteExecutionSummary } from "../execute/index.js";
 
@@ -23,6 +24,17 @@ export interface CleanupSummaryRoot {
 
 export interface CleanupSummaryAffectedManifest {
   digest: string;
+  manifestKind?: ManifestKind;
+}
+
+export interface CleanupSummaryPlannedChanges {
+  tagRemovals: number;
+  imageDeletes: number;
+  crossArchDeletes: number;
+  artifactDeletes: number;
+  attestationDeletes: number;
+  signatureDeletes: number;
+  totalManifestDeletes: number;
 }
 
 export interface CleanupSummary {
@@ -38,6 +50,7 @@ export interface CleanupSummary {
   untagOnlyRoots: CleanupSummaryRoot[];
   blockedRoots: CleanupSummaryRoot[];
   affectedManifests: CleanupSummaryAffectedManifest[];
+  plannedChanges: CleanupSummaryPlannedChanges;
   deletedPackageVersions: DeleteExecutionSummary["deletedPackageVersions"];
   untaggedTags: DeleteExecutionSummary["untaggedTags"];
   unsupportedUntagRoots: DeleteExecutionSummary["unsupportedUntagRoots"];
@@ -48,7 +61,7 @@ export function buildCleanupSummary(
   options: {
     dryRun: boolean;
     listRootTags: (versionId: number) => string[];
-    listAffectedManifestDigests: (rootDigests: string[]) => string[];
+    plannedChanges: CleanupSummaryPlannedChanges;
     executionSummary?: DeleteExecutionSummary;
   }
 ): CleanupSummary {
@@ -59,7 +72,10 @@ export function buildCleanupSummary(
   const fullyDeletableRoots = roots.filter((root) => root.validationStatus === "fully-deletable");
   const blockedRoots = roots.filter((root) => root.validationStatus === "blocked");
   const untagOnlyRoots = roots.filter((root) => root.validationStatus === "untag-only");
-  const affectedManifestDigests = options.listAffectedManifestDigests(fullyDeletableRoots.map((root) => root.digest));
+  const affectedManifests = _listAffectedManifests(
+    plan,
+    fullyDeletableRoots.map((root) => root.digest)
+  );
 
   return {
     command: "cleanup",
@@ -73,7 +89,8 @@ export function buildCleanupSummary(
     fullyDeletableRoots,
     untagOnlyRoots,
     blockedRoots,
-    affectedManifests: affectedManifestDigests.map((digest) => ({ digest })),
+    affectedManifests,
+    plannedChanges: options.plannedChanges,
     deletedPackageVersions: options.executionSummary?.deletedPackageVersions ?? [],
     untaggedTags: options.executionSummary?.untaggedTags ?? [],
     unsupportedUntagRoots: options.executionSummary?.unsupportedUntagRoots ?? []
@@ -103,4 +120,25 @@ function _mapRootDecision(
     overlapDigest: decision.overlapDigest,
     overlapManifestKind: decision.overlapManifestKind
   };
+}
+
+function _listAffectedManifests(
+  plan: DeletePlan,
+  fullyDeletableRootDigests: string[]
+): CleanupSummaryAffectedManifest[] {
+  const fullyDeletableRootDigestSet = new Set(fullyDeletableRootDigests);
+  const manifestsByDigest = new Map<string, CleanupSummaryAffectedManifest>();
+
+  for (const manifest of plan.closureManifests) {
+    if (!fullyDeletableRootDigestSet.has(manifest.sourceDigest)) {
+      continue;
+    }
+
+    manifestsByDigest.set(manifest.memberDigest, {
+      digest: manifest.memberDigest,
+      manifestKind: manifest.memberManifestKind as ManifestKind | undefined
+    });
+  }
+
+  return [...manifestsByDigest.values()].sort((left, right) => left.digest.localeCompare(right.digest));
 }

@@ -420,11 +420,14 @@ One row per concrete tag selected by a cleanup run.
 Important columns:
 
 - `tag`
+- `is_deleted`
 
 What this means:
 
 - this is the tag-side audit evidence for cleanup
 - it records concrete selected tags, not selector-clause provenance
+- `is_deleted = 1` means the selected tag is planned to disappear in a dry-run or does disappear in a live cleanup
+- `is_deleted = 0` means the selected tag survived because its root was blocked
 - version, digest, and root-outcome context are derived by joining through `tags`, `manifests`, and
   `cleanup_root_decisions`
 

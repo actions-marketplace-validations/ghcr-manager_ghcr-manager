@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { renderCleanupSummaryMarkdown } from "../../src/cleanup-summary/index.js";
 
-test("renderCleanupSummaryMarkdown renders sections and truncates long lists", () => {
+test("renderCleanupSummaryMarkdown renders user-facing counts and truncates long lists", () => {
   const markdown = renderCleanupSummaryMarkdown(
     {
       command: "cleanup",
@@ -17,6 +17,7 @@ test("renderCleanupSummaryMarkdown renders sections and truncates long lists", (
         {
           versionId: 101,
           digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          manifestKind: "image_index",
           rootTags: ["a", "b", "c"],
           matchedTags: ["a"],
           selectionMode: "delete-root",
@@ -28,7 +29,20 @@ test("renderCleanupSummaryMarkdown renders sections and truncates long lists", (
       ],
       untagOnlyRoots: [],
       blockedRoots: [],
-      affectedManifests: [{ digest: "sha256:a" }, { digest: "sha256:b" }, { digest: "sha256:c" }],
+      affectedManifests: [
+        { digest: "sha256:a", manifestKind: "image_index" },
+        { digest: "sha256:b", manifestKind: "image_manifest" },
+        { digest: "sha256:c", manifestKind: "signature_manifest" }
+      ],
+      plannedChanges: {
+        tagRemovals: 3,
+        imageDeletes: 1,
+        crossArchDeletes: 1,
+        artifactDeletes: 0,
+        attestationDeletes: 0,
+        signatureDeletes: 1,
+        totalManifestDeletes: 3
+      },
       deletedPackageVersions: [],
       untaggedTags: [],
       unsupportedUntagRoots: []
@@ -42,18 +56,28 @@ test("renderCleanupSummaryMarkdown renders sections and truncates long lists", (
 
   assert.match(markdown, /## Cleanup Summary/);
   assert.match(markdown, /\| 📦 Package \| `acme\/example` \|/);
+  assert.match(markdown, /\| 🔖 Planned tag removals \| 3 \|/);
+  assert.match(markdown, /\| 🖼️ Planned image deletes \| 1 \|/);
+  assert.match(markdown, /\| 📚 Planned cross-arch deletes \| 1 \|/);
+  assert.match(markdown, /\| 📄 Planned item deletes \| 3 \|/);
+  assert.match(markdown, /<summary>📦 Planned delete breakdown<\/summary>/);
   assert.match(markdown, /<summary>⚙️ Cleanup filter<\/summary>/);
-  assert.match(markdown, /<summary>🏷️ Matched tags<\/summary>/);
-  assert.match(markdown, /<summary>🗑️ Fully deletable roots<\/summary>/);
-  assert.match(markdown, /\| 📄 Affected manifests \| 3 \|/);
-  assert.match(markdown, /Showing first 2 of 3 matched tags/);
+  assert.match(markdown, /\| Delete tags \| a, b \|/);
+  assert.match(markdown, /\| Use regex \| yes \|/);
+  assert.match(markdown, /<summary>🏷️ Selected tags<\/summary>/);
+  assert.match(markdown, /<summary>🗑️ Items to delete<\/summary>/);
+  assert.match(markdown, /Showing first 2 of 3 selected tags/);
   assert.match(markdown, /sha256:aaaaaaaa\.\.\.aaaaaaaa/);
   assert.match(markdown, /a, b, \+1 more/);
-  assert.doesNotMatch(markdown, /<summary>🔗 Untag-only roots<\/summary>/);
-  assert.doesNotMatch(markdown, /<summary>🛡️ Blocked roots<\/summary>/);
+  assert.match(
+    markdown,
+    /\| 101 \| cross-arch \| `sha256:aaaaaaaa\.\.\.aaaaaaaa` \| a, b, \+1 more \| Delete this item and its descendants \|/
+  );
+  assert.doesNotMatch(markdown, /<summary>🔗 Tags to remove only<\/summary>/);
+  assert.doesNotMatch(markdown, /<summary>🛡️ Blocked items<\/summary>/);
 });
 
-test("renderCleanupSummaryMarkdown renders blocked, untag-only, and live-effect details", () => {
+test("renderCleanupSummaryMarkdown renders blocked, tag-only, and live-effect details", () => {
   const markdown = renderCleanupSummaryMarkdown(
     {
       command: "cleanup",
@@ -69,6 +93,7 @@ test("renderCleanupSummaryMarkdown renders blocked, untag-only, and live-effect 
         {
           versionId: 201,
           digest: "sha256:short",
+          manifestKind: "image_manifest",
           rootTags: [],
           matchedTags: ["keep|me"],
           selectionMode: "untag-only",
@@ -82,6 +107,7 @@ test("renderCleanupSummaryMarkdown renders blocked, untag-only, and live-effect 
         {
           versionId: 202,
           digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          manifestKind: "image_manifest",
           rootTags: ["line1\nline2"],
           matchedTags: [],
           selectionMode: "delete-root",
@@ -95,6 +121,7 @@ test("renderCleanupSummaryMarkdown renders blocked, untag-only, and live-effect 
         {
           versionId: 203,
           digest: "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          manifestKind: "artifact_manifest",
           rootTags: [],
           matchedTags: [],
           selectionMode: "delete-root",
@@ -106,6 +133,15 @@ test("renderCleanupSummaryMarkdown renders blocked, untag-only, and live-effect 
         }
       ],
       affectedManifests: [],
+      plannedChanges: {
+        tagRemovals: 1,
+        imageDeletes: 0,
+        crossArchDeletes: 0,
+        artifactDeletes: 0,
+        attestationDeletes: 0,
+        signatureDeletes: 0,
+        totalManifestDeletes: 0
+      },
       deletedPackageVersions: [
         { versionId: 202, digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" }
       ],
@@ -134,16 +170,15 @@ test("renderCleanupSummaryMarkdown renders blocked, untag-only, and live-effect 
   );
 
   assert.match(markdown, /`acme\\`team\/example`/);
-  assert.match(markdown, /<summary>🔗 Untag-only roots<\/summary>/);
-  assert.match(markdown, /<summary>🛡️ Blocked roots<\/summary>/);
+  assert.match(markdown, /<summary>🔗 Tags to remove only<\/summary>/);
+  assert.match(markdown, /<summary>🛡️ Blocked items<\/summary>/);
   assert.match(markdown, /\(untagged\)/);
   assert.match(markdown, /keep\\\|me/);
   assert.match(markdown, /line1 line2/);
-  assert.match(markdown, /Selected tags detach; root remains/);
-  assert.match(markdown, /Blocked by sha256:cccccccc\.\.\.cccccccc via sha256:dddddddd\.\.\.dddddddd/);
-  assert.match(markdown, /`sha256:short`/);
+  assert.match(markdown, /Remove selected tags, keep this item/);
+  assert.match(markdown, /Blocked by retained item sha256:cccccccc\.\.\.cccccccc via sha256:dddddddd\.\.\.dddddddd/);
+  assert.match(markdown, /\| Delete untagged \| yes \|/);
   assert.match(markdown, /### Applied changes/);
-  assert.match(markdown, /\| 📄 Affected manifests \| 0 \|/);
   assert.match(markdown, /Deleted package versions: 1/);
   assert.match(markdown, /Detached tags: 1/);
   assert.match(markdown, /Unsupported untag roots: 1/);
@@ -164,6 +199,7 @@ test("renderCleanupSummaryMarkdown notes when a root section is truncated", () =
         {
           versionId: 101,
           digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          manifestKind: "image_manifest",
           rootTags: ["a"],
           matchedTags: ["a"],
           selectionMode: "delete-root",
@@ -175,6 +211,7 @@ test("renderCleanupSummaryMarkdown notes when a root section is truncated", () =
         {
           versionId: 102,
           digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          manifestKind: "image_manifest",
           rootTags: ["a"],
           matchedTags: ["a"],
           selectionMode: "delete-root",
@@ -186,7 +223,16 @@ test("renderCleanupSummaryMarkdown notes when a root section is truncated", () =
       ],
       untagOnlyRoots: [],
       blockedRoots: [],
-      affectedManifests: [{ digest: "sha256:a" }, { digest: "sha256:b" }],
+      affectedManifests: [{ digest: "sha256:a", manifestKind: "image_manifest" }],
+      plannedChanges: {
+        tagRemovals: 1,
+        imageDeletes: 1,
+        crossArchDeletes: 0,
+        artifactDeletes: 0,
+        attestationDeletes: 0,
+        signatureDeletes: 0,
+        totalManifestDeletes: 1
+      },
       deletedPackageVersions: [],
       untaggedTags: [],
       unsupportedUntagRoots: []
@@ -198,7 +244,7 @@ test("renderCleanupSummaryMarkdown notes when a root section is truncated", () =
     }
   );
 
-  assert.match(markdown, /Showing first 1 of 2 🗑️ fully deletable roots\./i);
+  assert.match(markdown, /Showing first 1 of 2 🗑️ items to delete\./i);
 });
 
 test("renderCleanupSummaryMarkdown does not show digest-tag helper tags in user-facing markdown", () => {
@@ -216,6 +262,15 @@ test("renderCleanupSummaryMarkdown does not show digest-tag helper tags in user-
       untagOnlyRoots: [],
       blockedRoots: [],
       affectedManifests: [],
+      plannedChanges: {
+        tagRemovals: 0,
+        imageDeletes: 0,
+        crossArchDeletes: 0,
+        artifactDeletes: 0,
+        attestationDeletes: 0,
+        signatureDeletes: 0,
+        totalManifestDeletes: 0
+      },
       deletedPackageVersions: [],
       untaggedTags: [],
       unsupportedUntagRoots: []

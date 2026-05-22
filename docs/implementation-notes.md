@@ -143,6 +143,11 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
 ## Current Next Plan
 
 - [ ] Clean up remaining repo rough edges before first public release.
+- [x] Refactor the cleanup step summary toward release-facing terminology and counts:
+  - replace planner-heavy labels like `root`/`closure` in the Markdown surface with user-facing item wording
+  - derive planned delete counts for tags, images, cross-arch manifests, and optional artifact/signature classes from
+    one SQL query keyed by the persisted `cleanup_run_id`
+  - render cleanup filters as a table instead of a JSON blob in the Markdown summary
 - [x] Remove built-in DB artifact encryption and decryption support across actions, workflows, and docs.
 - [x] Remove active visibility ballast that only served the old encrypted-artifact model.
 - [x] Reframe the doc-refactor task brief around layered user docs, action-first entry, and task-oriented DB guidance.
@@ -151,16 +156,16 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
 - [x] Remove regex-based package filtering from the manual test-org package cleanup workflow.
 - [x] Move untag scenario verification onto `v_latest_scan_per_package` and align the user-owner cleanup workflow with
       post-cleanup DB upload.
-- [x] Replace the custom current-run artifact download helper in `merge-run-artifacts` with
-      `actions/download-artifact` and switch its selector input to glob semantics.
-- [x] Align workflow callers with `artifact-name-glob` and bump `actions/download-artifact` to `v8.0.1` to avoid
-      Node 20 deprecation warnings.
+- [x] Replace the custom current-run artifact download helper in `merge-run-artifacts` with `actions/download-artifact`
+      and switch its selector input to glob semantics.
+- [x] Align workflow callers with `artifact-name-glob` and bump `actions/download-artifact` to `v8.0.1` to avoid Node 20
+      deprecation warnings.
 - [ ] Port regex selector validation hardening for `--use-regex` cleanup selectors.
 - [x] Fix `merge-run-artifacts` repo-script resolution and merged-artifact exclusion:
   - resolve helper scripts from the repo root via the parent of `$GITHUB_ACTION_PATH`
   - exclude the just-uploaded merged artifact by `steps.upload.outputs.artifact-id` during source-artifact deletion
 - [x] Persist concrete selected cleanup tags as a small sibling audit table:
-  - new `cleanup_selected_tags(cleanup_run_id, scan_id, tag)` table
+  - new `cleanup_selected_tags(cleanup_run_id, scan_id, tag, is_deleted)` table
   - populated from `directTargetTags` during cleanup audit persistence
   - copied through DB merge with cleanup-run history
 - [x] Implement user-facing run output for `cleanup`:
@@ -206,6 +211,8 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
 - Cleanup summary note:
   - digest-tag `sha256-*` helper/referrer tags are not shown as ordinary matched tags
   - the DB still preserves them for audit, and recursive manifest closure now crosses those helper edges
+  - the user-facing Markdown summary now emphasizes planned tag/image/cross-arch delete counts and uses item-oriented
+    wording instead of planner-internal `root` / `closure` language
   - `DeletePlan` no longer carries denormalized `validationSummary` counts
   - those counts are now derived where needed:
     - in `buildCleanupSummary()` for user-facing summary JSON / markdown

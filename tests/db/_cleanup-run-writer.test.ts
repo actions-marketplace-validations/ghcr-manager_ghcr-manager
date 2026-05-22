@@ -186,7 +186,7 @@ test("cleanup run writer stores planner decisions and protected roots", () => {
   const selectedTags = database
     .prepare(
       `
-        SELECT scan_id, tag
+        SELECT scan_id, tag, is_deleted
         FROM cleanup_selected_tags
         WHERE cleanup_run_id = ?
         ORDER BY tag
@@ -195,8 +195,9 @@ test("cleanup run writer stores planner decisions and protected roots", () => {
     .all(cleanupRunId) as Array<{
     scan_id: number;
     tag: string;
+    is_deleted: number | null;
   }>;
-  assert.deepEqual(selectedTags, [{ scan_id: scanId, tag: "delete-me" }]);
+  assert.deepEqual(selectedTags, [{ scan_id: scanId, tag: "delete-me", is_deleted: 0 }]);
 
   const protectedRootBlocks = database
     .prepare(
@@ -534,9 +535,10 @@ test("cleanup selected tags must exist in the same scan as their cleanup run", (
             INSERT INTO cleanup_selected_tags(
               cleanup_run_id,
               scan_id,
-              tag
+              tag,
+              is_deleted
             )
-            VALUES(?, ?, ?)
+            VALUES(?, ?, ?, 0)
           `
         )
         .run(cleanupRunId, secondScanId, "second-tag"),
