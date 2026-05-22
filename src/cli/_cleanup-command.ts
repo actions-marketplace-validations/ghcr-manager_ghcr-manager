@@ -1,3 +1,4 @@
+import { ManifestKinds } from "../core/index.js";
 import { buildCleanupSummary } from "../cleanup-summary/index.js";
 import { CleanupRunWriter, openDatabase, PlannerRepository } from "../db/index.js";
 import { executeDeletePlan } from "../execute/index.js";
@@ -131,11 +132,11 @@ function _loadPlannedChanges(
 
   return {
     tagRemovals,
-    imageDeletes: countsByKind.get("image_manifest") ?? 0,
-    crossArchDeletes: countsByKind.get("image_index") ?? 0,
-    artifactDeletes: countsByKind.get("artifact_manifest") ?? 0,
-    attestationDeletes: countsByKind.get("attestation_manifest") ?? 0,
-    signatureDeletes: countsByKind.get("signature_manifest") ?? 0,
+    imageDeletes: countsByKind.get(ManifestKinds.imageManifest) ?? 0,
+    crossArchDeletes: countsByKind.get(ManifestKinds.imageIndex) ?? 0,
+    artifactDeletes: countsByKind.get(ManifestKinds.artifactManifest) ?? 0,
+    attestationDeletes: countsByKind.get(ManifestKinds.attestationManifest) ?? 0,
+    signatureDeletes: countsByKind.get(ManifestKinds.signatureManifest) ?? 0,
     totalManifestDeletes: manifestCounts.reduce((total, row) => total + row.count, 0)
   };
 }

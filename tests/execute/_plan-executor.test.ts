@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { DeletePlan } from "../../src/db/index.js";
+import { DeletePlanValidationReasonCodes, DeletePlanValidationStatuses, type DeletePlan } from "../../src/db/index.js";
 import { executeDeletePlan } from "../../src/execute/index.js";
 
 test("executeDeletePlan deletes fully deletable roots and returns a summary", async () => {
@@ -29,8 +29,8 @@ test("executeDeletePlan deletes fully deletable roots and returns a summary", as
         digest: "sha256:untagged-old",
         selectionMode: "delete-root",
         selectionReason: "delete-untagged",
-        validationStatus: "fully-deletable",
-        validationReasonCode: "fully-deletable-no-retained-overlap",
+        validationStatus: DeletePlanValidationStatuses.fullyDeletable,
+        validationReasonCode: DeletePlanValidationReasonCodes.fullyDeletableNoRetainedOverlap,
         validationReason: "root closure does not overlap any retained root"
       }
     ],
@@ -109,8 +109,8 @@ test("executeDeletePlan applies untag-only roots before deleting fully deletable
         digest: "sha256:index-current",
         selectionMode: "untag-only",
         selectionReason: "delete-tags-partial-tag-match",
-        validationStatus: "untag-only",
-        validationReasonCode: "untag-only-partial-tag-match",
+        validationStatus: DeletePlanValidationStatuses.untagOnly,
+        validationReasonCode: DeletePlanValidationReasonCodes.untagOnlyPartialTagMatch,
         validationReason: "selected tags do not cover every tag on the root"
       }
     ],
@@ -278,8 +278,8 @@ test("executeDeletePlan rejects untag-only roots without listRootTags support", 
         digest: "sha256:index-current",
         selectionMode: "untag-only",
         selectionReason: "delete-tags-partial-tag-match",
-        validationStatus: "untag-only",
-        validationReasonCode: "untag-only-partial-tag-match",
+        validationStatus: DeletePlanValidationStatuses.untagOnly,
+        validationReasonCode: DeletePlanValidationReasonCodes.untagOnlyPartialTagMatch,
         validationReason: "selected tags do not cover every tag on the root"
       }
     ],
@@ -330,8 +330,8 @@ test("executeDeletePlan rejects untag-only roots when no selected tags resolve",
         digest: "sha256:index-current",
         selectionMode: "untag-only",
         selectionReason: "delete-tags-partial-tag-match",
-        validationStatus: "untag-only",
-        validationReasonCode: "untag-only-partial-tag-match",
+        validationStatus: DeletePlanValidationStatuses.untagOnly,
+        validationReasonCode: DeletePlanValidationReasonCodes.untagOnlyPartialTagMatch,
         validationReason: "selected tags do not cover every tag on the root"
       }
     ],

@@ -10,8 +10,11 @@ export type {
   DeletePlan,
   DeletePlanBlockReasonCode,
   DeletePlanSelectionMode,
-  DeletePlanSelectionReason
+  DeletePlanSelectionReason,
+  DeletePlanValidationReasonCode,
+  DeletePlanValidationStatus
 } from "./planner/index.js";
+export { DeletePlanValidationReasonCodes, DeletePlanValidationStatuses } from "./planner/index.js";
 export type { DbMergeSourceSummary } from "./_db-merge-repository.js";
 
 export function openDatabase(databasePath: string): Database.Database {

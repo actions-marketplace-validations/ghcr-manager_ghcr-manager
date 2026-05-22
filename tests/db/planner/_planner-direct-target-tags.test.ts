@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { ManifestKinds } from "../../../src/core/index.js";
 import { PlannerRepository, ScanWriter, openDatabase } from "../../../src/db/index.js";
 
 test("planner repository enumerates direct target tags through the dedicated direct-tag helper", () => {
@@ -18,7 +19,7 @@ test("planner repository enumerates direct target tags through the dedicated dir
   writer.insertManifest({
     versionId: 1,
     digest: "sha256:release-root",
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   writer.insertTag({ tag: "release-1", versionId: 1 });
@@ -49,7 +50,7 @@ test("planner repository matches regex delete and exclude selectors in SQL", () 
   writer.insertManifest({
     versionId: 1,
     digest: "sha256:protected-root",
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   writer.insertTag({ tag: "latest", versionId: 1 });
@@ -82,7 +83,7 @@ test("planner repository lets exclude-tags protect a matched root", () => {
   writer.insertManifest({
     versionId: 1,
     digest: "sha256:protected-root",
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   writer.insertTag({ tag: "latest", versionId: 1 });
@@ -114,7 +115,7 @@ test("planner repository excludes digest-tag helper tags from top-level direct t
   writer.insertManifest({
     versionId: 1,
     digest: rootDigest,
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   writer.insertTag({ tag: "release-1", versionId: 1 });
@@ -126,7 +127,7 @@ test("planner repository excludes digest-tag helper tags from top-level direct t
   writer.insertManifest({
     versionId: 2,
     digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-    manifestKind: "artifact_manifest",
+    manifestKind: ManifestKinds.artifactManifest,
     mediaType: "application/vnd.oci.artifact.manifest.v1+json"
   });
   writer.insertTag({

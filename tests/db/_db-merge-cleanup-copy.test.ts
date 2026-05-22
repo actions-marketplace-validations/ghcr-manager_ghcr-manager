@@ -3,8 +3,9 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { ManifestKinds } from "../../src/core/index.js";
 import { DbMergeCleanupCopy } from "../../src/db/_db-merge-cleanup-copy.js";
-import { CleanupRunWriter, ScanWriter, openDatabase } from "../../src/db/index.js";
+import { CleanupRunWriter, DeletePlanValidationStatuses, ScanWriter, openDatabase } from "../../src/db/index.js";
 import type { DeletePlan } from "../../src/db/index.js";
 
 test("db merge cleanup copy lists cleanup UUIDs in local cleanup-run order", () => {
@@ -158,7 +159,7 @@ function _seedCleanupDatabase(databasePath: string, withCleanupRun: boolean): vo
     versionId: 101,
     digest: "sha256:delete-root",
     mediaType: "application/vnd.oci.image.manifest.v1+json",
-    manifestKind: "image_manifest"
+    manifestKind: ManifestKinds.imageManifest
   });
   scanWriter.insertTag({
     versionId: 101,
@@ -208,7 +209,7 @@ function _appendSeededScan(
     versionId: 201,
     digest,
     mediaType: "application/vnd.oci.image.manifest.v1+json",
-    manifestKind: "image_manifest"
+    manifestKind: ManifestKinds.imageManifest
   });
   scanWriter.insertTag({
     versionId: 201,
@@ -251,7 +252,7 @@ function _buildPlan(tag = "delete-me", digest = "sha256:delete-root", versionId 
         digest,
         selectionMode: "delete-root",
         selectionReason: "delete-tags-all-tags-selected",
-        validationStatus: "fully-deletable",
+        validationStatus: DeletePlanValidationStatuses.fullyDeletable,
         validationReasonCode: "fully-deletable-no-retained-overlap",
         validationReason: "root and closure can be deleted"
       }

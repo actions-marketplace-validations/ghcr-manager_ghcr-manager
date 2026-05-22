@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { ManifestKind } from "../../../src/core/index.js";
+import { ManifestKinds, type ManifestKind } from "../../../src/core/index.js";
 import { openDatabase, ScanWriter } from "../../../src/db/index.js";
 import { PlannerPlanArtifacts } from "../../../src/db/planner/_planner-plan-artifacts.js";
 
@@ -54,7 +54,7 @@ function _insertManifestVersion(
   writer.insertManifest({
     versionId,
     digest,
-    manifestKind: options.manifestKind ?? "image_index",
+    manifestKind: options.manifestKind ?? ManifestKinds.imageIndex,
     mediaType: options.mediaType ?? "application/vnd.oci.image.index.v1+json"
   });
   if (options.tag) {
@@ -69,7 +69,7 @@ test("planner plan artifacts derive closure members and retained-root blocks", (
   _insertManifestVersion(harness.writer, 1, "sha256:root-a", "2026-05-03T10:00:00.000Z", { tag: "latest" });
   _insertManifestVersion(harness.writer, 2, "sha256:root-b", "2026-05-02T10:00:00.000Z");
   _insertManifestVersion(harness.writer, 3, "sha256:shared-child", "2026-05-01T10:00:00.000Z", {
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   harness.writer.insertManifestEdge({
@@ -88,7 +88,7 @@ test("planner plan artifacts derive closure members and retained-root blocks", (
     {
       versionId: 2,
       digest: "sha256:root-b",
-      manifestKind: "image_index",
+      manifestKind: ManifestKinds.imageIndex,
       reason: "delete-untagged",
       selectionMode: "delete-root"
     }
@@ -105,7 +105,7 @@ test("planner plan artifacts derive closure members and retained-root blocks", (
       blockingVersionId: 1,
       blockingDigest: "sha256:root-a",
       overlapDigest: "sha256:shared-child",
-      overlapManifestKind: "image_manifest",
+      overlapManifestKind: ManifestKinds.imageManifest,
       reason: "overlap-with-retained-root"
     }
   ]);
@@ -117,7 +117,7 @@ test("planner plan artifacts ignore non-delete direct targets when building clos
   t.after(() => harness.database.close());
 
   _insertManifestVersion(harness.writer, 1, "sha256:shared-root", "2026-05-03T10:00:00.000Z", {
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json",
     tag: "stable"
   });
@@ -126,7 +126,7 @@ test("planner plan artifacts ignore non-delete direct targets when building clos
     {
       versionId: 1,
       digest: "sha256:shared-root",
-      manifestKind: "image_manifest",
+      manifestKind: ManifestKinds.imageManifest,
       reason: "delete-tags-partial-tag-match",
       selectionMode: "untag-only"
     }
@@ -145,15 +145,15 @@ test("planner plan artifacts expand multi-arch child manifests and referrers int
 
   _insertManifestVersion(harness.writer, 1, "sha256:multiarch-root", "2026-05-01T10:00:00.000Z");
   _insertManifestVersion(harness.writer, 2, "sha256:linux-amd64", "2026-05-01T10:01:00.000Z", {
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   _insertManifestVersion(harness.writer, 3, "sha256:linux-arm64", "2026-05-01T10:02:00.000Z", {
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   _insertManifestVersion(harness.writer, 4, "sha256:amd64-attestation", "2026-05-01T10:03:00.000Z", {
-    manifestKind: "artifact_manifest",
+    manifestKind: ManifestKinds.artifactManifest,
     mediaType: "application/vnd.oci.artifact.manifest.v1+json"
   });
   harness.writer.insertManifestEdge({
@@ -177,7 +177,7 @@ test("planner plan artifacts expand multi-arch child manifests and referrers int
     {
       versionId: 1,
       digest: "sha256:multiarch-root",
-      manifestKind: "image_index",
+      manifestKind: ManifestKinds.imageIndex,
       reason: "delete-untagged",
       selectionMode: "delete-root"
     }
@@ -192,7 +192,7 @@ test("planner plan artifacts expand multi-arch child manifests and referrers int
       sourceDigest: "sha256:multiarch-root",
       memberVersionId: 1,
       memberDigest: "sha256:multiarch-root",
-      memberManifestKind: "image_index",
+      memberManifestKind: ManifestKinds.imageIndex,
       hopsFromRoot: 0,
       memberRole: "root"
     },
@@ -201,7 +201,7 @@ test("planner plan artifacts expand multi-arch child manifests and referrers int
       sourceDigest: "sha256:multiarch-root",
       memberVersionId: 2,
       memberDigest: "sha256:linux-amd64",
-      memberManifestKind: "image_manifest",
+      memberManifestKind: ManifestKinds.imageManifest,
       hopsFromRoot: 1,
       memberRole: "descendant"
     },
@@ -210,7 +210,7 @@ test("planner plan artifacts expand multi-arch child manifests and referrers int
       sourceDigest: "sha256:multiarch-root",
       memberVersionId: 3,
       memberDigest: "sha256:linux-arm64",
-      memberManifestKind: "image_manifest",
+      memberManifestKind: ManifestKinds.imageManifest,
       hopsFromRoot: 1,
       memberRole: "descendant"
     },
@@ -219,7 +219,7 @@ test("planner plan artifacts expand multi-arch child manifests and referrers int
       sourceDigest: "sha256:multiarch-root",
       memberVersionId: 4,
       memberDigest: "sha256:amd64-attestation",
-      memberManifestKind: "artifact_manifest",
+      memberManifestKind: ManifestKinds.artifactManifest,
       hopsFromRoot: 2,
       memberRole: "descendant"
     }
@@ -235,11 +235,11 @@ test("planner plan artifacts do not treat sibling wrapper indexes as overlapping
   });
   _insertManifestVersion(harness.writer, 2, "sha256:untagged-wrapper", "2026-05-01T10:01:00.000Z");
   _insertManifestVersion(harness.writer, 3, "sha256:amd64-child", "2026-05-01T10:02:00.000Z", {
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   _insertManifestVersion(harness.writer, 4, "sha256:arm64-child", "2026-05-01T10:03:00.000Z", {
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   harness.writer.insertManifestEdge({
@@ -258,7 +258,7 @@ test("planner plan artifacts do not treat sibling wrapper indexes as overlapping
     {
       versionId: 2,
       digest: "sha256:untagged-wrapper",
-      manifestKind: "image_index",
+      manifestKind: ManifestKinds.imageIndex,
       reason: "delete-untagged",
       selectionMode: "delete-root"
     }
@@ -273,7 +273,7 @@ test("planner plan artifacts do not treat sibling wrapper indexes as overlapping
       sourceDigest: "sha256:untagged-wrapper",
       memberVersionId: 2,
       memberDigest: "sha256:untagged-wrapper",
-      memberManifestKind: "image_index",
+      memberManifestKind: ManifestKinds.imageIndex,
       hopsFromRoot: 0,
       memberRole: "root"
     },
@@ -282,7 +282,7 @@ test("planner plan artifacts do not treat sibling wrapper indexes as overlapping
       sourceDigest: "sha256:untagged-wrapper",
       memberVersionId: 4,
       memberDigest: "sha256:arm64-child",
-      memberManifestKind: "image_manifest",
+      memberManifestKind: ManifestKinds.imageManifest,
       hopsFromRoot: 1,
       memberRole: "descendant"
     }
@@ -298,7 +298,7 @@ test("planner plan artifacts let younger retained roots block older delete candi
     tag: "latest"
   });
   _insertManifestVersion(harness.writer, 3, "sha256:shared-child", "2026-05-03T10:00:00.000Z", {
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   harness.writer.insertManifestEdge({
@@ -317,7 +317,7 @@ test("planner plan artifacts let younger retained roots block older delete candi
     {
       versionId: 1,
       digest: "sha256:old-delete-root",
-      manifestKind: "image_index",
+      manifestKind: ManifestKinds.imageIndex,
       reason: "delete-tags-all-tags-selected",
       selectionMode: "delete-root"
     }
@@ -330,7 +330,7 @@ test("planner plan artifacts let younger retained roots block older delete candi
       blockingVersionId: 2,
       blockingDigest: "sha256:young-retained-root",
       overlapDigest: "sha256:shared-child",
-      overlapManifestKind: "image_manifest",
+      overlapManifestKind: ManifestKinds.imageManifest,
       reason: "overlap-with-retained-root"
     }
   ]);

@@ -1,9 +1,12 @@
-export type ManifestKind =
-  | "image_index"
-  | "image_manifest"
-  | "artifact_manifest"
-  | "attestation_manifest"
-  | "signature_manifest";
+export const ManifestKinds = {
+  imageIndex: "image_index",
+  imageManifest: "image_manifest",
+  artifactManifest: "artifact_manifest",
+  attestationManifest: "attestation_manifest",
+  signatureManifest: "signature_manifest"
+} as const;
+
+export type ManifestKind = (typeof ManifestKinds)[keyof typeof ManifestKinds];
 
 export type ManifestEdgeKind = "image-child" | "referrer" | "digest-tag-referrer";
 

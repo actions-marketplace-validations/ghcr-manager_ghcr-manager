@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { ManifestKinds } from "../../../src/core/index.js";
 import { loadManifestGraph } from "../../../src/ingest/github/_manifest-client.js";
 
 test("manifest client maps child and referrer edges", async () => {
@@ -59,7 +60,7 @@ test("manifest client maps child and referrer edges", async () => {
   assert.equal(manifest.record.digest, "sha256:index");
   assert.deepEqual(manifest.record, {
     digest: "sha256:index",
-    manifestKind: "image_index",
+    manifestKind: ManifestKinds.imageIndex,
     mediaType: "application/vnd.oci.image.index.v1+json",
     artifactType: undefined,
     configMediaType: "application/vnd.oci.empty.v1+json",

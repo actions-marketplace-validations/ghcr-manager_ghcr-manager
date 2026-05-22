@@ -1,4 +1,4 @@
-import type { DeletePlan } from "../db/index.js";
+import { DeletePlanValidationStatuses, type DeletePlan } from "../db/index.js";
 import { deletePackageVersion } from "./_package-version-delete-client.js";
 import { untagRootTags } from "./_untag-client.js";
 import {
@@ -16,7 +16,7 @@ export async function executeDeletePlan(
   const directTargetTagSet = new Set(plan.directTargetTags);
 
   for (const decision of plan.rootDecisions) {
-    if (decision.validationStatus !== "untag-only") {
+    if (decision.validationStatus !== DeletePlanValidationStatuses.untagOnly) {
       continue;
     }
     if (!options.listRootTags) {

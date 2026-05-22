@@ -1,6 +1,13 @@
 import type Database from "better-sqlite3";
 import type { PlanCommandInputs } from "./_planner-options.js";
 
+const BrokenIndexModes = {
+  allMissing: "all-missing",
+  someMissing: "some-missing"
+} as const;
+
+type BrokenIndexMode = (typeof BrokenIndexModes)[keyof typeof BrokenIndexModes];
+
 export function resolveTagSelectors(database: Database.Database, inputs: PlanCommandInputs): PlanCommandInputs {
   if (!inputs.deleteGhostImages && !inputs.deletePartialImages && !inputs.deleteOrphanedImages) {
     return inputs;
@@ -24,7 +31,7 @@ function _listLatestGhostTags(
   packageName: string,
   cutoffTimestamp?: string
 ): string[] {
-  return _listLatestBrokenIndexTags(database, owner, packageName, cutoffTimestamp, "all-missing");
+  return _listLatestBrokenIndexTags(database, owner, packageName, cutoffTimestamp, BrokenIndexModes.allMissing);
 }
 
 function _listLatestPartialTags(
@@ -33,7 +40,7 @@ function _listLatestPartialTags(
   packageName: string,
   cutoffTimestamp?: string
 ): string[] {
-  return _listLatestBrokenIndexTags(database, owner, packageName, cutoffTimestamp, "some-missing");
+  return _listLatestBrokenIndexTags(database, owner, packageName, cutoffTimestamp, BrokenIndexModes.someMissing);
 }
 
 function _listLatestBrokenIndexTags(
@@ -41,10 +48,10 @@ function _listLatestBrokenIndexTags(
   owner: string,
   packageName: string,
   cutoffTimestamp: string | undefined,
-  mode: "all-missing" | "some-missing"
+  mode: BrokenIndexMode
 ): string[] {
   const havingClause =
-    mode === "all-missing"
+    mode === BrokenIndexModes.allMissing
       ? "COUNT(*) > 0 AND COUNT(child.digest) = 0"
       : "COUNT(child.digest) > 0 AND COUNT(child.digest) < COUNT(*)";
   const rows = database

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { ManifestKinds } from "../../../src/core/index.js";
 import { PlannerRepository, ScanWriter, openDatabase } from "../../../src/db/index.js";
 
 test("planner repository traces SQL through the shared planner sql helper", () => {
@@ -27,7 +28,7 @@ test("planner repository traces SQL through the shared planner sql helper", () =
   writer.insertManifest({
     versionId: 1,
     digest: "sha256:root",
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   writer.markScanCompleted("2026-05-14T10:00:00.000Z");

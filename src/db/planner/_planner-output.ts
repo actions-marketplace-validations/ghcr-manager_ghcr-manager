@@ -6,6 +6,7 @@ import type {
   DeletePlanRootDecision,
   PlanArtifacts
 } from "./_planner-types.js";
+import { DeletePlanValidationReasonCodes, DeletePlanValidationStatuses } from "./_planner-types.js";
 
 export function buildPlanOutputs(
   directTargetTags: string[],
@@ -57,8 +58,8 @@ export function buildRootDecisions(
         manifestKind: root.manifestKind,
         selectionMode: root.selectionMode,
         selectionReason: root.reason,
-        validationStatus: "untag-only",
-        validationReasonCode: "untag-only-partial-tag-match",
+        validationStatus: DeletePlanValidationStatuses.untagOnly,
+        validationReasonCode: DeletePlanValidationReasonCodes.untagOnlyPartialTagMatch,
         validationReason:
           "matched tags cover only part of this root's tag set, so the version is retained and only those tags can be detached"
       };
@@ -71,8 +72,8 @@ export function buildRootDecisions(
         manifestKind: root.manifestKind,
         selectionMode: root.selectionMode,
         selectionReason: root.reason,
-        validationStatus: "fully-deletable",
-        validationReasonCode: "fully-deletable-no-retained-overlap",
+        validationStatus: DeletePlanValidationStatuses.fullyDeletable,
+        validationReasonCode: DeletePlanValidationReasonCodes.fullyDeletableNoRetainedOverlap,
         validationReason:
           "selected tags cover the whole root and its manifest closure does not overlap any retained root"
       };
@@ -85,8 +86,8 @@ export function buildRootDecisions(
       manifestKind: root.manifestKind,
       selectionMode: root.selectionMode,
       selectionReason: root.reason,
-      validationStatus: "blocked",
-      validationReasonCode: "blocked-overlap-with-retained-root",
+      validationStatus: DeletePlanValidationStatuses.blocked,
+      validationReasonCode: DeletePlanValidationReasonCodes.blockedOverlapWithRetainedRoot,
       validationReason: buildBlockedValidationReason(blockedRoot),
       blockingVersionId: blockedRoot?.blockingVersionId,
       blockingDigest: blockedRoot?.blockingDigest,

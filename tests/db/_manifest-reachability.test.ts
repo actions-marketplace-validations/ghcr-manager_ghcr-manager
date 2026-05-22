@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { ManifestKinds } from "../../src/core/index.js";
 import { rebuildManifestReachability } from "../../src/db/_manifest-reachability.js";
 import { openDatabase, ScanWriter } from "../../src/db/index.js";
 
@@ -18,7 +19,7 @@ test("rebuildManifestReachability builds reachability bottom-up from direct mani
   writer.insertManifest({
     versionId: 1,
     digest: "sha256:index",
-    manifestKind: "image_index",
+    manifestKind: ManifestKinds.imageIndex,
     mediaType: "application/vnd.oci.image.index.v1+json"
   });
   writer.insertPackageVersion({
@@ -29,7 +30,7 @@ test("rebuildManifestReachability builds reachability bottom-up from direct mani
   writer.insertManifest({
     versionId: 2,
     digest: "sha256:child-a",
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   writer.insertPackageVersion({
@@ -40,7 +41,7 @@ test("rebuildManifestReachability builds reachability bottom-up from direct mani
   writer.insertManifest({
     versionId: 3,
     digest: "sha256:child-b",
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   writer.insertPackageVersion({
@@ -51,7 +52,7 @@ test("rebuildManifestReachability builds reachability bottom-up from direct mani
   writer.insertManifest({
     versionId: 4,
     digest: "sha256:leaf",
-    manifestKind: "artifact_manifest",
+    manifestKind: ManifestKinds.artifactManifest,
     mediaType: "application/vnd.oci.artifact.manifest.v1+json"
   });
   writer.insertManifestEdge({
@@ -157,7 +158,7 @@ test("rebuildManifestReachability rejects cycles in manifest edges", () => {
   writer.insertManifest({
     versionId: 1,
     digest: "sha256:a",
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   writer.insertPackageVersion({
@@ -168,7 +169,7 @@ test("rebuildManifestReachability rejects cycles in manifest edges", () => {
   writer.insertManifest({
     versionId: 2,
     digest: "sha256:b",
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   writer.insertManifestEdge({
@@ -205,7 +206,7 @@ test("rebuildManifestReachability stitches digest-tag helper edges into recursiv
   writer.insertManifest({
     versionId: 1,
     digest: rootDigest,
-    manifestKind: "image_index",
+    manifestKind: ManifestKinds.imageIndex,
     mediaType: "application/vnd.oci.image.index.v1+json"
   });
   writer.insertPackageVersion({
@@ -216,7 +217,7 @@ test("rebuildManifestReachability stitches digest-tag helper edges into recursiv
   writer.insertManifest({
     versionId: 2,
     digest: helperDigest,
-    manifestKind: "artifact_manifest",
+    manifestKind: ManifestKinds.artifactManifest,
     mediaType: "application/vnd.oci.artifact.manifest.v1+json"
   });
   writer.insertTag({
@@ -231,7 +232,7 @@ test("rebuildManifestReachability stitches digest-tag helper edges into recursiv
   writer.insertManifest({
     versionId: 3,
     digest: childDigest,
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   writer.insertManifestEdge({

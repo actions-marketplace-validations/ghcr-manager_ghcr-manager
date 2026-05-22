@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { PlannerRepository, ScanWriter, openDatabase } from "../../../src/db/index.js";
+import { ManifestKinds } from "../../../src/core/index.js";
+import { DeletePlanValidationStatuses, PlannerRepository, ScanWriter, openDatabase } from "../../../src/db/index.js";
 
 test("planner repository builds output decisions and protected roots", () => {
   const database = openDatabase(":memory:");
@@ -18,7 +19,7 @@ test("planner repository builds output decisions and protected roots", () => {
   writer.insertManifest({
     versionId: 1,
     digest: "sha256:fully",
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   writer.insertTag({ tag: "latest", versionId: 1 });
@@ -30,7 +31,7 @@ test("planner repository builds output decisions and protected roots", () => {
   writer.insertManifest({
     versionId: 2,
     digest: "sha256:partial",
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   writer.insertTag({ tag: "release-1", versionId: 2 });
@@ -43,7 +44,7 @@ test("planner repository builds output decisions and protected roots", () => {
   writer.insertManifest({
     versionId: 3,
     digest: "sha256:blocked",
-    manifestKind: "image_index",
+    manifestKind: ManifestKinds.imageIndex,
     mediaType: "application/vnd.oci.image.index.v1+json"
   });
   writer.insertTag({ tag: "blocked", versionId: 3 });
@@ -55,7 +56,7 @@ test("planner repository builds output decisions and protected roots", () => {
   writer.insertManifest({
     versionId: 4,
     digest: "sha256:keeper",
-    manifestKind: "image_index",
+    manifestKind: ManifestKinds.imageIndex,
     mediaType: "application/vnd.oci.image.index.v1+json"
   });
   writer.insertPackageVersion({
@@ -66,7 +67,7 @@ test("planner repository builds output decisions and protected roots", () => {
   writer.insertManifest({
     versionId: 5,
     digest: "sha256:shared",
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   writer.insertManifestEdge({
@@ -86,9 +87,9 @@ test("planner repository builds output decisions and protected roots", () => {
   const fullyPlan = repository.getDeleteTagsPlan("acme", "pkg", ["latest"], []);
   const blockedPlan = repository.getDeleteTagsPlan("acme", "pkg", ["blocked"], []);
 
-  assert.equal(partialPlan.rootDecisions[0]?.validationStatus, "untag-only");
-  assert.equal(fullyPlan.rootDecisions[0]?.validationStatus, "fully-deletable");
-  assert.equal(blockedPlan.rootDecisions[0]?.validationStatus, "blocked");
+  assert.equal(partialPlan.rootDecisions[0]?.validationStatus, DeletePlanValidationStatuses.untagOnly);
+  assert.equal(fullyPlan.rootDecisions[0]?.validationStatus, DeletePlanValidationStatuses.fullyDeletable);
+  assert.equal(blockedPlan.rootDecisions[0]?.validationStatus, DeletePlanValidationStatuses.blocked);
   assert.equal(blockedPlan.protectedRoots[0]?.digest, "sha256:keeper");
 
   database.close();

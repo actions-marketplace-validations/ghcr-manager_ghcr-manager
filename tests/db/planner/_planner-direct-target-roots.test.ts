@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { ManifestKinds } from "../../../src/core/index.js";
 import { PlannerRepository, ScanWriter, openDatabase } from "../../../src/db/index.js";
 
 test("planner direct target roots can rank tagged and untagged overflow in one SQL pipeline", () => {
@@ -19,7 +20,7 @@ test("planner direct target roots can rank tagged and untagged overflow in one S
   writer.insertManifest({
     versionId: 1,
     digest: "sha256:newer-tagged",
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   writer.insertTag({ tag: "latest", versionId: 1 });
@@ -32,7 +33,7 @@ test("planner direct target roots can rank tagged and untagged overflow in one S
   writer.insertManifest({
     versionId: 2,
     digest: "sha256:older-tagged",
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   writer.insertTag({ tag: "stable", versionId: 2 });
@@ -45,7 +46,7 @@ test("planner direct target roots can rank tagged and untagged overflow in one S
   writer.insertManifest({
     versionId: 3,
     digest: "sha256:newer-untagged",
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
 
@@ -57,7 +58,7 @@ test("planner direct target roots can rank tagged and untagged overflow in one S
   writer.insertManifest({
     versionId: 4,
     digest: "sha256:older-untagged",
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
 
@@ -72,14 +73,14 @@ test("planner direct target roots can rank tagged and untagged overflow in one S
     {
       versionId: 2,
       digest: "sha256:older-tagged",
-      manifestKind: "image_manifest",
+      manifestKind: ManifestKinds.imageManifest,
       reason: "keep-n-tagged-overflow",
       selectionMode: "delete-root"
     },
     {
       versionId: 4,
       digest: "sha256:older-untagged",
-      manifestKind: "image_manifest",
+      manifestKind: ManifestKinds.imageManifest,
       reason: "keep-n-untagged-overflow",
       selectionMode: "delete-root"
     }

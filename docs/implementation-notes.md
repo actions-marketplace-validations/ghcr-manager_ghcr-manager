@@ -139,6 +139,11 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
   - `cleanup_root_decisions`
   - `cleanup_protected_root_blocks`
   - derived SQL views for closure/blocking reads
+- Shared domain string categories now go through exported constant objects in production code and mirrored TS tests:
+  - `ManifestKinds`
+  - `DeletePlanValidationStatuses`
+  - `DeletePlanValidationReasonCodes`
+  - broken-index resolver modes
 
 ## Current Next Plan
 
@@ -170,6 +175,11 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
   - new `cleanup_selected_tags(cleanup_run_id, scan_id, tag, is_deleted)` table
   - populated from `directTargetTags` during cleanup audit persistence
   - copied through DB merge with cleanup-run history
+- [x] Replace raw string literals for the main cleanup/planner domain enums in production code and mirrored TS tests:
+  - `manifestKind`
+  - `validationStatus`
+  - `validationReasonCode`
+  - broken-index resolver mode
 - [x] Implement user-facing run output for `cleanup`:
   - stable cleanup summary JSON from the CLI
   - action summary JSON file-path output

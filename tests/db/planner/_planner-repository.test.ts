@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { ManifestKinds } from "../../../src/core/index.js";
 import { PlannerRepository, ScanWriter, openDatabase } from "../../../src/db/index.js";
 import { importFileScan } from "../../helpers/index.js";
 
@@ -17,7 +18,7 @@ test("planner repository returns a delete-untagged plan for top-level untagged r
     {
       versionId: 104,
       digest: "sha256:untagged-old",
-      manifestKind: "image_manifest",
+      manifestKind: ManifestKinds.imageManifest,
       reason: "delete-untagged",
       selectionMode: "delete-root"
     }
@@ -31,7 +32,7 @@ test("planner repository returns a delete-untagged plan for top-level untagged r
       sourceDigest: "sha256:untagged-old",
       memberVersionId: 104,
       memberDigest: "sha256:untagged-old",
-      memberManifestKind: "image_manifest",
+      memberManifestKind: ManifestKinds.imageManifest,
       hopsFromRoot: 0,
       memberRole: "root"
     }
@@ -58,14 +59,14 @@ test("planner repository can combine tagged and untagged delete selectors in one
     {
       versionId: 101,
       digest: "sha256:index-current",
-      manifestKind: "image_index",
+      manifestKind: ManifestKinds.imageIndex,
       reason: "delete-tags-all-tags-selected",
       selectionMode: "delete-root"
     },
     {
       versionId: 104,
       digest: "sha256:untagged-old",
-      manifestKind: "image_manifest",
+      manifestKind: ManifestKinds.imageManifest,
       reason: "delete-untagged",
       selectionMode: "delete-root"
     }
@@ -180,7 +181,7 @@ test("planner repository carries delete-ghost-images planner metadata through ta
   writer.insertManifest({
     versionId: 201,
     digest: "sha256:ghost-index",
-    manifestKind: "image_index",
+    manifestKind: ManifestKinds.imageIndex,
     mediaType: "application/vnd.oci.image.index.v1+json"
   });
   writer.insertTag({
@@ -213,7 +214,7 @@ test("planner repository carries delete-ghost-images planner metadata through ta
     {
       versionId: 201,
       digest: "sha256:ghost-index",
-      manifestKind: "image_index",
+      manifestKind: ManifestKinds.imageIndex,
       reason: "delete-tags-all-tags-selected",
       selectionMode: "delete-root"
     }
@@ -239,7 +240,7 @@ test("planner repository carries delete-partial-images planner metadata through 
   writer.insertManifest({
     versionId: 201,
     digest: "sha256:partial-index",
-    manifestKind: "image_index",
+    manifestKind: ManifestKinds.imageIndex,
     mediaType: "application/vnd.oci.image.index.v1+json"
   });
   writer.insertTag({
@@ -266,7 +267,7 @@ test("planner repository carries delete-partial-images planner metadata through 
   writer.insertManifest({
     versionId: 202,
     digest: "sha256:present-child",
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   writer.rebuildManifestReachability();
@@ -283,7 +284,7 @@ test("planner repository carries delete-partial-images planner metadata through 
     {
       versionId: 201,
       digest: "sha256:partial-index",
-      manifestKind: "image_index",
+      manifestKind: ManifestKinds.imageIndex,
       reason: "delete-tags-all-tags-selected",
       selectionMode: "delete-root"
     }

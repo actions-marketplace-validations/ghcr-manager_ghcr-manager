@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CleanupRunWriter, ScanWriter, openDatabase } from "../../src/db/index.js";
+import { ManifestKinds } from "../../src/core/index.js";
+import {
+  CleanupRunWriter,
+  DeletePlanValidationReasonCodes,
+  DeletePlanValidationStatuses,
+  ScanWriter,
+  openDatabase
+} from "../../src/db/index.js";
 import type { DeletePlan } from "../../src/db/index.js";
 
 test("cleanup run writer stores planner decisions and protected roots", () => {
@@ -26,7 +33,7 @@ test("cleanup run writer stores planner decisions and protected roots", () => {
     versionId: 101,
     digest: "sha256:delete-root",
     mediaType: "application/vnd.oci.image.manifest.v1+json",
-    manifestKind: "image_manifest"
+    manifestKind: ManifestKinds.imageManifest
   });
   scanWriter.insertTag({ versionId: 101, tag: "delete-me" });
   scanWriter.insertPackageVersion({
@@ -38,7 +45,7 @@ test("cleanup run writer stores planner decisions and protected roots", () => {
     versionId: 102,
     digest: "sha256:keep-root",
     mediaType: "application/vnd.oci.image.manifest.v1+json",
-    manifestKind: "image_manifest"
+    manifestKind: ManifestKinds.imageManifest
   });
   scanWriter.insertPackageVersion({
     versionId: 103,
@@ -49,7 +56,7 @@ test("cleanup run writer stores planner decisions and protected roots", () => {
     versionId: 103,
     digest: "sha256:shared",
     mediaType: "application/vnd.oci.image.manifest.v1+json",
-    manifestKind: "image_manifest"
+    manifestKind: ManifestKinds.imageManifest
   });
   database
     .prepare(
@@ -95,8 +102,8 @@ test("cleanup run writer stores planner decisions and protected roots", () => {
         digest: "sha256:delete-root",
         selectionMode: "delete-root",
         selectionReason: "delete-tags-all-tags-selected",
-        validationStatus: "blocked",
-        validationReasonCode: "blocked-overlap-with-retained-root",
+        validationStatus: DeletePlanValidationStatuses.blocked,
+        validationReasonCode: DeletePlanValidationReasonCodes.blockedOverlapWithRetainedRoot,
         validationReason: "blocked because retained root sha256:keep-root still requires shared manifest sha256:shared",
         blockingVersionId: 102,
         blockingDigest: "sha256:keep-root",
@@ -178,8 +185,8 @@ test("cleanup run writer stores planner decisions and protected roots", () => {
     overlap_digest: string;
   };
   assert.equal(rootDecision.digest, "sha256:delete-root");
-  assert.equal(rootDecision.validation_status, "blocked");
-  assert.equal(rootDecision.validation_reason_code, "blocked-overlap-with-retained-root");
+  assert.equal(rootDecision.validation_status, DeletePlanValidationStatuses.blocked);
+  assert.equal(rootDecision.validation_reason_code, DeletePlanValidationReasonCodes.blockedOverlapWithRetainedRoot);
   assert.equal(rootDecision.blocking_digest, "sha256:keep-root");
   assert.equal(rootDecision.overlap_digest, "sha256:shared");
 
@@ -258,14 +265,14 @@ test("cleanup run writer stores planner decisions and protected roots", () => {
       member_digest: "sha256:delete-root",
       hops_from_root: 0,
       member_role: "root",
-      validation_reason_code: "blocked-overlap-with-retained-root"
+      validation_reason_code: DeletePlanValidationReasonCodes.blockedOverlapWithRetainedRoot
     },
     {
       root_digest: "sha256:delete-root",
       member_digest: "sha256:shared",
       hops_from_root: 1,
       member_role: "descendant",
-      validation_reason_code: "blocked-overlap-with-retained-root"
+      validation_reason_code: DeletePlanValidationReasonCodes.blockedOverlapWithRetainedRoot
     }
   ]);
 
@@ -293,7 +300,7 @@ test("cleanup run writer stores planner decisions and protected roots", () => {
     {
       protected_digest: "sha256:keep-root",
       blocked_digest: "sha256:delete-root",
-      blocked_validation_reason_code: "blocked-overlap-with-retained-root",
+      blocked_validation_reason_code: DeletePlanValidationReasonCodes.blockedOverlapWithRetainedRoot,
       block_reason_code: "overlap-with-retained-root",
       overlap_digest: "sha256:shared"
     }
@@ -440,7 +447,7 @@ test("cleanup audit rows must use the same scan as their cleanup run", () => {
           "sha256:second",
           "delete-root",
           "delete-untagged",
-          "fully-deletable",
+          DeletePlanValidationStatuses.fullyDeletable,
           "fully-deletable-no-retained-overlap",
           "test"
         ),

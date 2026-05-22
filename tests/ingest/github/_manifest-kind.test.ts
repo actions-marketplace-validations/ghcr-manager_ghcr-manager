@@ -1,20 +1,24 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { ManifestKinds } from "../../../src/core/index.js";
 import { classifyManifestKind } from "../../../src/ingest/github/_manifest-kind.js";
 
 test("classifyManifestKind identifies image indexes", () => {
-  assert.equal(classifyManifestKind({ mediaType: "application/vnd.oci.image.index.v1+json" }), "image_index");
+  assert.equal(classifyManifestKind({ mediaType: "application/vnd.oci.image.index.v1+json" }), ManifestKinds.imageIndex);
 });
 
 test("classifyManifestKind identifies docker manifest lists as image indexes", () => {
   assert.equal(
     classifyManifestKind({ mediaType: "application/vnd.docker.distribution.manifest.list.v2+json" }),
-    "image_index"
+    ManifestKinds.imageIndex
   );
 });
 
 test("classifyManifestKind identifies plain image manifests", () => {
-  assert.equal(classifyManifestKind({ mediaType: "application/vnd.oci.image.manifest.v1+json" }), "image_manifest");
+  assert.equal(
+    classifyManifestKind({ mediaType: "application/vnd.oci.image.manifest.v1+json" }),
+    ManifestKinds.imageManifest
+  );
 });
 
 test("classifyManifestKind identifies sigstore signature manifests", () => {
@@ -24,7 +28,7 @@ test("classifyManifestKind identifies sigstore signature manifests", () => {
       artifactType: "application/vnd.dev.sigstore.bundle.v0.3+json",
       subject: { digest: "sha256:subject" }
     }),
-    "signature_manifest"
+    ManifestKinds.signatureManifest
   );
 });
 
@@ -36,7 +40,7 @@ test("classifyManifestKind identifies sigstore signatures from config media type
         mediaType: "application/vnd.dev.sigstore.bundle.v0.3+json"
       }
     }),
-    "signature_manifest"
+    ManifestKinds.signatureManifest
   );
 });
 
@@ -48,7 +52,7 @@ test("classifyManifestKind identifies sigstore signatures from exact signature p
         "dev.sigstore.bundle.predicateType": "https://sigstore.dev/cosign/sign/v1"
       }
     }),
-    "signature_manifest"
+    ManifestKinds.signatureManifest
   );
 });
 
@@ -65,7 +69,7 @@ test("classifyManifestKind identifies in-toto attestations stored as image manif
         }
       ]
     }),
-    "attestation_manifest"
+    ManifestKinds.attestationManifest
   );
 });
 
@@ -77,7 +81,7 @@ test("classifyManifestKind identifies attestations from docker reference type an
         "vnd.docker.reference.type": "attestation-manifest"
       }
     }),
-    "attestation_manifest"
+    ManifestKinds.attestationManifest
   );
 });
 
@@ -89,7 +93,7 @@ test("classifyManifestKind identifies attestations from non-signature sigstore p
         "dev.sigstore.bundle.predicateType": "https://slsa.dev/provenance/v1"
       }
     }),
-    "attestation_manifest"
+    ManifestKinds.attestationManifest
   );
 });
 
@@ -98,7 +102,7 @@ test("classifyManifestKind falls back to artifact manifests", () => {
     classifyManifestKind({
       mediaType: "application/vnd.oci.artifact.manifest.v1+json"
     }),
-    "artifact_manifest"
+    ManifestKinds.artifactManifest
   );
 });
 
@@ -110,7 +114,7 @@ test("classifyManifestKind does not treat non-attestation docker reference type 
         "vnd.docker.reference.type": "not-attestation"
       }
     }),
-    "image_manifest"
+    ManifestKinds.imageManifest
   );
 });
 

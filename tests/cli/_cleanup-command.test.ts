@@ -4,7 +4,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { handleCleanup } from "../../src/cli/_cleanup-command.js";
-import { openDatabase, ScanWriter } from "../../src/db/index.js";
+import { ManifestKinds } from "../../src/core/index.js";
+import {
+  DeletePlanValidationReasonCodes,
+  DeletePlanValidationStatuses,
+  openDatabase,
+  ScanWriter
+} from "../../src/db/index.js";
 import { importFileScan } from "../helpers/index.js";
 
 test("handleCleanup dry-run does not require a token", async () => {
@@ -171,7 +177,7 @@ test("handleCleanup dry-run persists tagged fully-deletable cleanup decisions", 
     affectedManifests: Array<{ digest: string }>;
   };
   assert.equal(summary.fullyDeletableRoots.length, 1);
-  assert.equal(summary.fullyDeletableRoots[0]?.validationStatus, "fully-deletable");
+  assert.equal(summary.fullyDeletableRoots[0]?.validationStatus, DeletePlanValidationStatuses.fullyDeletable);
   assert.equal(summary.fullyDeletableRoots[0]?.selectionMode, "delete-root");
   assert.equal(summary.affectedManifests.length, 2);
   assert.deepEqual(
@@ -226,7 +232,7 @@ test("handleCleanup live mode applies untag-only roots and records cleanup audit
     versionId: 101,
     digest: "sha256:index-current",
     mediaType: "application/vnd.oci.image.manifest.v1+json",
-    manifestKind: "image_manifest"
+    manifestKind: ManifestKinds.imageManifest
   });
   writer.markScanCompleted("2026-05-17T09:00:00.000Z");
   database.close();
@@ -431,8 +437,8 @@ test("handleCleanup live mode applies untag-only roots and records cleanup audit
     validation_status: string;
     validation_reason_code: string;
   };
-  assert.equal(rootDecision.validation_status, "untag-only");
-  assert.equal(rootDecision.validation_reason_code, "untag-only-partial-tag-match");
+  assert.equal(rootDecision.validation_status, DeletePlanValidationStatuses.untagOnly);
+  assert.equal(rootDecision.validation_reason_code, DeletePlanValidationReasonCodes.untagOnlyPartialTagMatch);
   persistedDatabase.close();
   rmSync(tempDirectory, { recursive: true, force: true });
 });

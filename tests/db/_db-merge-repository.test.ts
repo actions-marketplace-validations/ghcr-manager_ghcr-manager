@@ -3,6 +3,7 @@ import { cpSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { ManifestKinds } from "../../src/core/index.js";
 import {
   CleanupRunWriter,
   DbMergeRepository,
@@ -49,7 +50,7 @@ function _seedDatabase(databasePath: string, cleanupStartedAtTimestamps: string[
     versionId: 101,
     digest: "sha256:root",
     mediaType: "application/vnd.oci.image.manifest.v1+json",
-    manifestKind: "image_manifest"
+    manifestKind: ManifestKinds.imageManifest
   });
   scanWriter.insertTag({
     tag: "latest",

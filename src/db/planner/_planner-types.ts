@@ -54,10 +54,28 @@ export type DeletePlanSelectionReason =
 
 export type DeletePlanBlockReasonCode = "overlap-with-retained-root";
 
+export const DeletePlanValidationStatuses = {
+  fullyDeletable: "fully-deletable",
+  blocked: "blocked",
+  untagOnly: "untag-only"
+} as const;
+
+export type DeletePlanValidationStatus =
+  (typeof DeletePlanValidationStatuses)[keyof typeof DeletePlanValidationStatuses];
+
+export const DeletePlanValidationReasonCodes = {
+  untagOnlyPartialTagMatch: "untag-only-partial-tag-match",
+  fullyDeletableNoRetainedOverlap: "fully-deletable-no-retained-overlap",
+  blockedOverlapWithRetainedRoot: "blocked-overlap-with-retained-root"
+} as const;
+
+export type DeletePlanValidationReasonCode =
+  (typeof DeletePlanValidationReasonCodes)[keyof typeof DeletePlanValidationReasonCodes];
+
 export interface DeletePlanRoot {
   versionId: number;
   digest: string;
-  manifestKind?: string;
+  manifestKind?: ManifestKind;
   reason: DeletePlanSelectionReason;
   selectionMode: DeletePlanSelectionMode;
 }
@@ -67,7 +85,7 @@ export interface DeletePlanClosureManifest {
   sourceDigest: string;
   memberVersionId: number;
   memberDigest: string;
-  memberManifestKind?: string;
+  memberManifestKind?: ManifestKind;
   hopsFromRoot: number;
   memberRole: string;
 }
@@ -78,26 +96,23 @@ export interface DeletePlanBlockedRoot {
   blockingVersionId: number;
   blockingDigest: string;
   overlapDigest: string;
-  overlapManifestKind?: string;
+  overlapManifestKind?: ManifestKind;
   reason: DeletePlanBlockReasonCode;
 }
 
 export interface DeletePlanRootDecision {
   versionId: number;
   digest: string;
-  manifestKind?: string;
+  manifestKind?: ManifestKind;
   selectionMode: DeletePlanSelectionMode;
   selectionReason: DeletePlanSelectionReason;
-  validationStatus: "fully-deletable" | "blocked" | "untag-only";
-  validationReasonCode:
-    | "untag-only-partial-tag-match"
-    | "fully-deletable-no-retained-overlap"
-    | "blocked-overlap-with-retained-root";
+  validationStatus: DeletePlanValidationStatus;
+  validationReasonCode: DeletePlanValidationReasonCode;
   validationReason: string;
   blockingVersionId?: number;
   blockingDigest?: string;
   overlapDigest?: string;
-  overlapManifestKind?: string;
+  overlapManifestKind?: ManifestKind;
 }
 
 export interface DeletePlanProtectedRoot {
@@ -108,7 +123,7 @@ export interface DeletePlanProtectedRoot {
     blockedDigest: string;
     blockReasonCode: DeletePlanBlockReasonCode;
     overlapDigest: string;
-    overlapManifestKind?: string;
+    overlapManifestKind?: ManifestKind;
   }>;
 }
 
@@ -154,7 +169,7 @@ export function mapPlanRootRow(row: _PlanRootRow): DeletePlanRoot {
   return {
     versionId: row.version_id,
     digest: row.root_digest,
-    manifestKind: row.root_manifest_kind ?? undefined,
+    manifestKind: (row.root_manifest_kind ?? undefined) as ManifestKind | undefined,
     reason: row.direct_target_reason,
     selectionMode: row.selection_mode
   };
@@ -170,7 +185,7 @@ export function mapClosureManifestRow(row: _ClosureManifestRow): DeletePlanClosu
     sourceDigest: row.source_digest,
     memberVersionId: row.member_version_id,
     memberDigest: row.member_digest,
-    memberManifestKind: row.member_manifest_kind ?? undefined,
+    memberManifestKind: (row.member_manifest_kind ?? undefined) as ManifestKind | undefined,
     hopsFromRoot: row.hops_from_root,
     memberRole: row.member_role
   };
@@ -183,7 +198,8 @@ export function mapBlockedRootRow(row: _BlockedRootRow): DeletePlanBlockedRoot {
     blockingVersionId: row.blocking_version_id,
     blockingDigest: row.blocking_digest,
     overlapDigest: row.overlap_digest,
-    overlapManifestKind: row.overlap_manifest_kind ?? undefined,
+    overlapManifestKind: (row.overlap_manifest_kind ?? undefined) as ManifestKind | undefined,
     reason: row.block_reason
   };
 }
+import type { ManifestKind } from "../../core/index.js";

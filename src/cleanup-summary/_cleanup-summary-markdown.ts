@@ -1,3 +1,5 @@
+import { ManifestKinds } from "../core/index.js";
+import { DeletePlanValidationStatuses } from "../db/index.js";
 import type { CleanupSummary, CleanupSummaryRoot } from "./_cleanup-summary.js";
 
 const _DEFAULT_MAX_DIRECT_TARGET_TAGS = 100;
@@ -158,13 +160,13 @@ function _formatTags(root: CleanupSummaryRoot, maxTagsPerRoot: number): string {
 }
 
 function _formatReason(root: CleanupSummaryRoot): string {
-  if (root.validationStatus === "blocked") {
+  if (root.validationStatus === DeletePlanValidationStatuses.blocked) {
     const blocking = root.blockingDigest ? _shortDigest(root.blockingDigest) : "another item";
     const overlap = root.overlapDigest ? ` via ${_shortDigest(root.overlapDigest)}` : "";
     return `Blocked by retained item ${blocking}${overlap}`;
   }
 
-  if (root.validationStatus === "untag-only") {
+  if (root.validationStatus === DeletePlanValidationStatuses.untagOnly) {
     return "Remove selected tags, keep this item";
   }
 
@@ -261,15 +263,15 @@ function _getPlannerPatternLines(plannerInputs: CleanupSummary["plannerInputs"])
 
 function _describeManifestKind(manifestKind?: string): string {
   switch (manifestKind) {
-    case "image_manifest":
+    case ManifestKinds.imageManifest:
       return "image";
-    case "image_index":
+    case ManifestKinds.imageIndex:
       return "cross-arch";
-    case "signature_manifest":
+    case ManifestKinds.signatureManifest:
       return "signature";
-    case "attestation_manifest":
+    case ManifestKinds.attestationManifest:
       return "attestation";
-    case "artifact_manifest":
+    case ManifestKinds.artifactManifest:
       return "artifact";
     default:
       return "item";

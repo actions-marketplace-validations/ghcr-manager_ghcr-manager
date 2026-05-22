@@ -1,4 +1,4 @@
-import type { ManifestKind } from "../../core/index.js";
+import { ManifestKinds, type ManifestKind } from "../../core/index.js";
 
 interface _RegistryLayer {
   mediaType?: string;
@@ -24,23 +24,23 @@ export function classifyManifestKind(document: _RegistryManifestDocument): Manif
     document.mediaType === "application/vnd.oci.image.index.v1+json" ||
     document.mediaType === "application/vnd.docker.distribution.manifest.list.v2+json"
   ) {
-    return "image_index";
+    return ManifestKinds.imageIndex;
   }
 
   if (_isSignatureManifest(document)) {
-    return "signature_manifest";
+    return ManifestKinds.signatureManifest;
   }
 
   if (_isAttestationManifest(document)) {
-    return "attestation_manifest";
+    return ManifestKinds.attestationManifest;
   }
 
   if (document.mediaType === "application/vnd.oci.image.manifest.v1+json") {
-    return "image_manifest";
+    return ManifestKinds.imageManifest;
   }
 
   if (document.mediaType === "application/vnd.oci.artifact.manifest.v1+json") {
-    return "artifact_manifest";
+    return ManifestKinds.artifactManifest;
   }
 
   return undefined;

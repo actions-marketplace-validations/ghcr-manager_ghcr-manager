@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 import { randomUUID } from "node:crypto";
 import { resolveGitHubActionsRunUrl } from "./_github-actions-run-url.js";
-import type { DeletePlan } from "./planner/index.js";
+import { DeletePlanValidationStatuses, type DeletePlan } from "./planner/index.js";
 
 export class CleanupRunWriter {
   readonly #database: Database.Database;
@@ -136,11 +136,11 @@ export class CleanupRunWriter {
       (root) => root.selectionMode === "delete-root"
     ).length;
     const untagOnlyRootCount = plan.rootDecisions.filter(
-      (decision) => decision.validationStatus === "untag-only"
+      (decision) => decision.validationStatus === DeletePlanValidationStatuses.untagOnly
     ).length;
     const fullyDeletableRootCount = plan.fullyDeletableRoots.length;
     const blockedDeleteRootCount = plan.rootDecisions.filter(
-      (decision) => decision.validationStatus === "blocked"
+      (decision) => decision.validationStatus === DeletePlanValidationStatuses.blocked
     ).length;
     const protectedRootCount = plan.protectedRoots.length;
     const result = this.#insertCleanupRunStatement.run(

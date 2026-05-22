@@ -1,4 +1,5 @@
 export { PlannerRepository } from "./_planner-repository.js";
+export { DeletePlanValidationReasonCodes, DeletePlanValidationStatuses } from "./_planner-repository.js";
 export type {
   DeletePlan,
   DeletePlanBlockReasonCode,
@@ -8,5 +9,7 @@ export type {
   DeletePlanRoot,
   DeletePlanRootDecision,
   DeletePlanSelectionMode,
-  DeletePlanSelectionReason
+  DeletePlanSelectionReason,
+  DeletePlanValidationReasonCode,
+  DeletePlanValidationStatus
 } from "./_planner-repository.js";

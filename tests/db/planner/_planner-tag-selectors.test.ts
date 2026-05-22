@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { ManifestKinds } from "../../../src/core/index.js";
 import { PlannerRepository, ScanWriter, openDatabase } from "../../../src/db/index.js";
 
 test("planner repository handles wildcard and regex tag selectors", () => {
@@ -18,7 +19,7 @@ test("planner repository handles wildcard and regex tag selectors", () => {
   writer.insertManifest({
     versionId: 1,
     digest: "sha256:release-root",
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   writer.insertTag({ tag: "release-1", versionId: 1 });
@@ -30,7 +31,7 @@ test("planner repository handles wildcard and regex tag selectors", () => {
   writer.insertManifest({
     versionId: 2,
     digest: "sha256:regex-root",
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   writer.insertTag({ tag: "v12", versionId: 2 });

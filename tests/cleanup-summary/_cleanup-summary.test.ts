@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { ManifestKinds } from "../../src/core/index.js";
+import { DeletePlanValidationReasonCodes, DeletePlanValidationStatuses } from "../../src/db/index.js";
 import { buildCleanupSummary } from "../../src/cleanup-summary/index.js";
 
 test("buildCleanupSummary groups root decisions and carries live execution effects", () => {
@@ -17,8 +19,8 @@ test("buildCleanupSummary groups root decisions and carries live execution effec
           digest: "sha256:fully",
           selectionMode: "delete-root",
           selectionReason: "delete-tags-all-tags-selected",
-          validationStatus: "fully-deletable",
-          validationReasonCode: "fully-deletable-no-retained-overlap",
+          validationStatus: DeletePlanValidationStatuses.fullyDeletable,
+          validationReasonCode: DeletePlanValidationReasonCodes.fullyDeletableNoRetainedOverlap,
           validationReason: "No retained overlap"
         },
         {
@@ -26,8 +28,8 @@ test("buildCleanupSummary groups root decisions and carries live execution effec
           digest: "sha256:untag",
           selectionMode: "delete-root",
           selectionReason: "delete-tags-partial-tag-match",
-          validationStatus: "untag-only",
-          validationReasonCode: "untag-only-partial-tag-match",
+          validationStatus: DeletePlanValidationStatuses.untagOnly,
+          validationReasonCode: DeletePlanValidationReasonCodes.untagOnlyPartialTagMatch,
           validationReason: "Only selected tags can be detached"
         },
         {
@@ -35,8 +37,8 @@ test("buildCleanupSummary groups root decisions and carries live execution effec
           digest: "sha256:blocked",
           selectionMode: "delete-root",
           selectionReason: "delete-tags-all-tags-selected",
-          validationStatus: "blocked",
-          validationReasonCode: "blocked-overlap-with-retained-root",
+          validationStatus: DeletePlanValidationStatuses.blocked,
+          validationReasonCode: DeletePlanValidationReasonCodes.blockedOverlapWithRetainedRoot,
           validationReason: "Retained overlap exists",
           blockingVersionId: 104,
           blockingDigest: "sha256:blocker",
@@ -50,7 +52,7 @@ test("buildCleanupSummary groups root decisions and carries live execution effec
           sourceDigest: "sha256:fully",
           memberVersionId: 101,
           memberDigest: "sha256:fully",
-          memberManifestKind: "image_index",
+          memberManifestKind: ManifestKinds.imageIndex,
           hopsFromRoot: 0,
           memberRole: "root"
         },
@@ -59,7 +61,7 @@ test("buildCleanupSummary groups root decisions and carries live execution effec
           sourceDigest: "sha256:fully",
           memberVersionId: 201,
           memberDigest: "sha256:child",
-          memberManifestKind: "image_manifest",
+          memberManifestKind: ManifestKinds.imageManifest,
           hopsFromRoot: 1,
           memberRole: "child"
         }
@@ -120,8 +122,8 @@ test("buildCleanupSummary groups root decisions and carries live execution effec
   assert.equal(summary.untagOnlyRoots.length, 1);
   assert.equal(summary.blockedRoots.length, 1);
   assert.deepEqual(summary.affectedManifests, [
-    { digest: "sha256:child", manifestKind: "image_manifest" },
-    { digest: "sha256:fully", manifestKind: "image_index" }
+    { digest: "sha256:child", manifestKind: ManifestKinds.imageManifest },
+    { digest: "sha256:fully", manifestKind: ManifestKinds.imageIndex }
   ]);
   assert.deepEqual(summary.plannedChanges, {
     tagRemovals: 1,
@@ -153,8 +155,8 @@ test("buildCleanupSummary trusts planner-facing direct target tags as already fi
           digest: "sha256:fully",
           selectionMode: "delete-root",
           selectionReason: "delete-tags-all-tags-selected",
-          validationStatus: "fully-deletable",
-          validationReasonCode: "fully-deletable-no-retained-overlap",
+          validationStatus: DeletePlanValidationStatuses.fullyDeletable,
+          validationReasonCode: DeletePlanValidationReasonCodes.fullyDeletableNoRetainedOverlap,
           validationReason: "No retained overlap"
         }
       ],
@@ -165,7 +167,7 @@ test("buildCleanupSummary trusts planner-facing direct target tags as already fi
           sourceDigest: "sha256:fully",
           memberVersionId: 101,
           memberDigest: "sha256:fully",
-          memberManifestKind: "image_manifest",
+          memberManifestKind: ManifestKinds.imageManifest,
           hopsFromRoot: 0,
           memberRole: "root"
         }
@@ -190,5 +192,5 @@ test("buildCleanupSummary trusts planner-facing direct target tags as already fi
   );
 
   assert.deepEqual(summary.directTargetTags, ["release-1"]);
-  assert.deepEqual(summary.affectedManifests, [{ digest: "sha256:fully", manifestKind: "image_manifest" }]);
+  assert.deepEqual(summary.affectedManifests, [{ digest: "sha256:fully", manifestKind: ManifestKinds.imageManifest }]);
 });

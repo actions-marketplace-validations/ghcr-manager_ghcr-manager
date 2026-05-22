@@ -16,8 +16,11 @@ export type {
   DeletePlanRoot,
   DeletePlanRootDecision,
   DeletePlanSelectionMode,
-  DeletePlanSelectionReason
+  DeletePlanSelectionReason,
+  DeletePlanValidationReasonCode,
+  DeletePlanValidationStatus
 } from "./_planner-types.js";
+export { DeletePlanValidationReasonCodes, DeletePlanValidationStatuses } from "./_planner-types.js";
 
 export class PlannerRepository {
   readonly #latestScan: PlannerLatestScan;

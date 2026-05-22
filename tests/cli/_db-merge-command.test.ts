@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { handleDbMerge } from "../../src/cli/_db-merge-command.js";
+import { ManifestKinds } from "../../src/core/index.js";
 import { ScanWriter, openDatabase } from "../../src/db/index.js";
 
 test("handleDbMerge requires at least one source database", async () => {
@@ -29,7 +30,7 @@ test("handleDbMerge merges source databases and prints a summary", async () => {
     versionId: 101,
     digest: "sha256:root",
     mediaType: "application/vnd.oci.image.manifest.v1+json",
-    manifestKind: "image_manifest"
+    manifestKind: ManifestKinds.imageManifest
   });
   writer.markScanCompleted("2026-05-17T09:00:00.000Z");
   sourceDatabase.close();

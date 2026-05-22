@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { ManifestKinds } from "../../src/core/index.js";
 import { openDatabase, ScanWriter } from "../../src/db/index.js";
 import { resolveTagSelectors } from "../../src/cli/_tag-selector-resolver.js";
 import { importFileScan } from "../helpers/index.js";
@@ -62,7 +63,10 @@ function _insertVersionWithManifest(
   createdAt: string,
   options: {
     mediaType: string;
-    manifestKind: "image_index" | "image_manifest" | "signature_manifest";
+    manifestKind:
+      | typeof ManifestKinds.imageIndex
+      | typeof ManifestKinds.imageManifest
+      | typeof ManifestKinds.signatureManifest;
     tag?: string;
     platform?: {
       os: string;
@@ -113,12 +117,12 @@ test("resolveTagSelectors treats sql wildcard characters literally in wildcard m
     });
     _insertVersionWithManifest(writer, 201, "sha256:literal-percent", "2026-05-10T00:00:00.000Z", {
       mediaType: "application/vnd.oci.image.manifest.v1+json",
-      manifestKind: "image_manifest",
+      manifestKind: ManifestKinds.imageManifest,
       tag: "release%candidate_1"
     });
     _insertVersionWithManifest(writer, 202, "sha256:similar", "2026-05-11T00:00:00.000Z", {
       mediaType: "application/vnd.oci.image.manifest.v1+json",
-      manifestKind: "image_manifest",
+      manifestKind: ManifestKinds.imageManifest,
       tag: "releasexcandidatez1"
     });
     writer.markScanCompleted("2026-05-15T00:00:00.000Z");
@@ -181,17 +185,17 @@ test("resolveTagSelectors resolves orphaned sha256 tags with missing parent dige
     });
     _insertVersionWithManifest(writer, 201, "sha256:orphaned-signature", "2026-05-10T00:00:00.000Z", {
       mediaType: "application/vnd.oci.image.manifest.v1+json",
-      manifestKind: "signature_manifest",
+      manifestKind: ManifestKinds.signatureManifest,
       tag: `${orphanParentDigest.replace("sha256:", "sha256-")}.sig`
     });
     _insertVersionWithManifest(writer, 202, "sha256:linked-signature", "2026-05-11T00:00:00.000Z", {
       mediaType: "application/vnd.oci.image.manifest.v1+json",
-      manifestKind: "signature_manifest",
+      manifestKind: ManifestKinds.signatureManifest,
       tag: `${existingParentDigest.replace("sha256:", "sha256-")}.sig`
     });
     _insertVersionWithManifest(writer, 203, existingParentDigest, "2026-05-09T00:00:00.000Z", {
       mediaType: "application/vnd.oci.image.manifest.v1+json",
-      manifestKind: "image_manifest"
+      manifestKind: ManifestKinds.imageManifest
     });
     writer.markScanCompleted("2026-05-15T00:00:00.000Z");
 
@@ -216,7 +220,7 @@ test("resolveTagSelectors resolves ghost image tags when all image index childre
     });
     _insertVersionWithManifest(writer, 201, "sha256:ghost-index", "2026-05-10T00:00:00.000Z", {
       mediaType: "application/vnd.oci.image.index.v1+json",
-      manifestKind: "image_index",
+      manifestKind: ManifestKinds.imageIndex,
       tag: "ghost"
     });
     writer.insertManifestDescriptor({
@@ -233,7 +237,7 @@ test("resolveTagSelectors resolves ghost image tags when all image index childre
     });
     _insertVersionWithManifest(writer, 202, "sha256:partial-index", "2026-05-11T00:00:00.000Z", {
       mediaType: "application/vnd.oci.image.index.v1+json",
-      manifestKind: "image_index",
+      manifestKind: ManifestKinds.imageIndex,
       tag: "partial"
     });
     writer.insertManifestDescriptor({
@@ -250,7 +254,7 @@ test("resolveTagSelectors resolves ghost image tags when all image index childre
     });
     _insertVersionWithManifest(writer, 203, "sha256:present-child", "2026-05-11T00:00:00.000Z", {
       mediaType: "application/vnd.oci.image.manifest.v1+json",
-      manifestKind: "image_manifest",
+      manifestKind: ManifestKinds.imageManifest,
       platform: { os: "linux", architecture: "amd64" }
     });
     writer.rebuildManifestReachability();
@@ -277,7 +281,7 @@ test("resolveTagSelectors resolves partial image tags when some image index chil
     });
     _insertVersionWithManifest(writer, 201, "sha256:partial-index", "2026-05-10T00:00:00.000Z", {
       mediaType: "application/vnd.oci.image.index.v1+json",
-      manifestKind: "image_index",
+      manifestKind: ManifestKinds.imageIndex,
       tag: "partial"
     });
     writer.insertManifestDescriptor({
@@ -294,12 +298,12 @@ test("resolveTagSelectors resolves partial image tags when some image index chil
     });
     _insertVersionWithManifest(writer, 202, "sha256:present-child", "2026-05-11T00:00:00.000Z", {
       mediaType: "application/vnd.oci.image.manifest.v1+json",
-      manifestKind: "image_manifest",
+      manifestKind: ManifestKinds.imageManifest,
       platform: { os: "linux", architecture: "amd64" }
     });
     _insertVersionWithManifest(writer, 203, "sha256:ghost-index", "2026-05-12T00:00:00.000Z", {
       mediaType: "application/vnd.oci.image.index.v1+json",
-      manifestKind: "image_index",
+      manifestKind: ManifestKinds.imageIndex,
       tag: "ghost"
     });
     writer.insertManifestDescriptor({

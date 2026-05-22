@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { ManifestKinds } from "../../../src/core/index.js";
 import { openDatabase, ScanWriter, SnapshotRepository } from "../../../src/db/index.js";
 import { importGitHubScan } from "../../../src/ingest/github/index.js";
 
@@ -217,7 +218,7 @@ test("GitHub ingest writes package and manifest data directly into SQLite", asyn
       config_media_type: "application/vnd.oci.empty.v1+json",
       subject_digest: "sha256:index",
       annotations_json: '{"dev.sigstore.bundle.content":"dsse-envelope"}',
-      manifest_kind: "attestation_manifest"
+      manifest_kind: ManifestKinds.attestationManifest
     }
   );
   assert.equal(

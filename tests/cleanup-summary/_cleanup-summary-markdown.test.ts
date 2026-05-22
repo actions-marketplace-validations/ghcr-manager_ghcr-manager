@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { ManifestKinds } from "../../src/core/index.js";
+import { DeletePlanValidationReasonCodes, DeletePlanValidationStatuses } from "../../src/db/index.js";
 import { renderCleanupSummaryMarkdown } from "../../src/cleanup-summary/index.js";
 
 test("renderCleanupSummaryMarkdown renders user-facing counts and truncates long lists", () => {
@@ -17,22 +19,22 @@ test("renderCleanupSummaryMarkdown renders user-facing counts and truncates long
         {
           versionId: 101,
           digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          manifestKind: "image_index",
+          manifestKind: ManifestKinds.imageIndex,
           rootTags: ["a", "b", "c"],
           matchedTags: ["a"],
           selectionMode: "delete-root",
           selectionReason: "delete-tags-partial-tag-match",
-          validationStatus: "fully-deletable",
-          validationReasonCode: "fully-deletable-no-retained-overlap",
+          validationStatus: DeletePlanValidationStatuses.fullyDeletable,
+          validationReasonCode: DeletePlanValidationReasonCodes.fullyDeletableNoRetainedOverlap,
           validationReason: "No retained overlap"
         }
       ],
       untagOnlyRoots: [],
       blockedRoots: [],
       affectedManifests: [
-        { digest: "sha256:a", manifestKind: "image_index" },
-        { digest: "sha256:b", manifestKind: "image_manifest" },
-        { digest: "sha256:c", manifestKind: "signature_manifest" }
+        { digest: "sha256:a", manifestKind: ManifestKinds.imageIndex },
+        { digest: "sha256:b", manifestKind: ManifestKinds.imageManifest },
+        { digest: "sha256:c", manifestKind: ManifestKinds.signatureManifest }
       ],
       plannedChanges: {
         tagRemovals: 3,
@@ -96,13 +98,13 @@ test("renderCleanupSummaryMarkdown renders blocked, tag-only, and live-effect de
         {
           versionId: 201,
           digest: "sha256:short",
-          manifestKind: "image_manifest",
+          manifestKind: ManifestKinds.imageManifest,
           rootTags: [],
           matchedTags: ["keep|me"],
           selectionMode: "untag-only",
           selectionReason: "delete-tags-partial-tag-match",
-          validationStatus: "untag-only",
-          validationReasonCode: "untag-only-partial-tag-match",
+          validationStatus: DeletePlanValidationStatuses.untagOnly,
+          validationReasonCode: DeletePlanValidationReasonCodes.untagOnlyPartialTagMatch,
           validationReason: "detaches"
         }
       ],
@@ -110,13 +112,13 @@ test("renderCleanupSummaryMarkdown renders blocked, tag-only, and live-effect de
         {
           versionId: 202,
           digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-          manifestKind: "image_manifest",
+          manifestKind: ManifestKinds.imageManifest,
           rootTags: ["line1\nline2"],
           matchedTags: [],
           selectionMode: "delete-root",
           selectionReason: "delete-tags-all-tags-selected",
-          validationStatus: "blocked",
-          validationReasonCode: "blocked-overlap-with-retained-root",
+          validationStatus: DeletePlanValidationStatuses.blocked,
+          validationReasonCode: DeletePlanValidationReasonCodes.blockedOverlapWithRetainedRoot,
           validationReason: "blocked",
           blockingDigest: "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
           overlapDigest: "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
@@ -124,13 +126,13 @@ test("renderCleanupSummaryMarkdown renders blocked, tag-only, and live-effect de
         {
           versionId: 203,
           digest: "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
-          manifestKind: "artifact_manifest",
+          manifestKind: ManifestKinds.artifactManifest,
           rootTags: [],
           matchedTags: [],
           selectionMode: "delete-root",
           selectionReason: "delete-tags-all-tags-selected",
-          validationStatus: "blocked",
-          validationReasonCode: "blocked-overlap-with-retained-root",
+          validationStatus: DeletePlanValidationStatuses.blocked,
+          validationReasonCode: DeletePlanValidationReasonCodes.blockedOverlapWithRetainedRoot,
           validationReason: "blocked",
           blockingDigest: "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
         }
@@ -202,31 +204,31 @@ test("renderCleanupSummaryMarkdown notes when a root section is truncated", () =
         {
           versionId: 101,
           digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          manifestKind: "image_manifest",
+          manifestKind: ManifestKinds.imageManifest,
           rootTags: ["a"],
           matchedTags: ["a"],
           selectionMode: "delete-root",
           selectionReason: "delete-tags-all-tags-selected",
-          validationStatus: "fully-deletable",
-          validationReasonCode: "fully-deletable-no-retained-overlap",
+          validationStatus: DeletePlanValidationStatuses.fullyDeletable,
+          validationReasonCode: DeletePlanValidationReasonCodes.fullyDeletableNoRetainedOverlap,
           validationReason: "No retained overlap"
         },
         {
           versionId: 102,
           digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-          manifestKind: "image_manifest",
+          manifestKind: ManifestKinds.imageManifest,
           rootTags: ["a"],
           matchedTags: ["a"],
           selectionMode: "delete-root",
           selectionReason: "delete-tags-all-tags-selected",
-          validationStatus: "fully-deletable",
-          validationReasonCode: "fully-deletable-no-retained-overlap",
+          validationStatus: DeletePlanValidationStatuses.fullyDeletable,
+          validationReasonCode: DeletePlanValidationReasonCodes.fullyDeletableNoRetainedOverlap,
           validationReason: "No retained overlap"
         }
       ],
       untagOnlyRoots: [],
       blockedRoots: [],
-      affectedManifests: [{ digest: "sha256:a", manifestKind: "image_manifest" }],
+      affectedManifests: [{ digest: "sha256:a", manifestKind: ManifestKinds.imageManifest }],
       plannedChanges: {
         tagRemovals: 1,
         imageDeletes: 1,

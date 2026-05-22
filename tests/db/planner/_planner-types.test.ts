@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { ManifestKinds } from "../../../src/core/index.js";
 import { PlannerRepository, ScanWriter, openDatabase } from "../../../src/db/index.js";
 
 test("planner repository returns normalized typed planner rows", () => {
@@ -18,7 +19,7 @@ test("planner repository returns normalized typed planner rows", () => {
   writer.insertManifest({
     versionId: 1,
     digest: "sha256:root-a",
-    manifestKind: "image_index",
+    manifestKind: ManifestKinds.imageIndex,
     mediaType: "application/vnd.oci.image.index.v1+json"
   });
   writer.insertPackageVersion({
@@ -29,7 +30,7 @@ test("planner repository returns normalized typed planner rows", () => {
   writer.insertManifest({
     versionId: 2,
     digest: "sha256:root-b",
-    manifestKind: "image_index",
+    manifestKind: ManifestKinds.imageIndex,
     mediaType: "application/vnd.oci.image.index.v1+json"
   });
   writer.insertPackageVersion({
@@ -40,7 +41,7 @@ test("planner repository returns normalized typed planner rows", () => {
   writer.insertManifest({
     versionId: 3,
     digest: "sha256:shared-child",
-    manifestKind: "image_manifest",
+    manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
   writer.insertManifestEdge({
@@ -58,9 +59,9 @@ test("planner repository returns normalized typed planner rows", () => {
 
   const plan = repository.getKeepNUntaggedPlan("acme", "pkg", 1);
 
-  assert.equal(plan.directTargetRoots[0]?.manifestKind, "image_index");
-  assert.equal(plan.closureManifests[1]?.memberManifestKind, "image_manifest");
-  assert.equal(plan.blockedRoots[0]?.overlapManifestKind, "image_manifest");
+  assert.equal(plan.directTargetRoots[0]?.manifestKind, ManifestKinds.imageIndex);
+  assert.equal(plan.closureManifests[1]?.memberManifestKind, ManifestKinds.imageManifest);
+  assert.equal(plan.blockedRoots[0]?.overlapManifestKind, ManifestKinds.imageManifest);
 
   database.close();
 });

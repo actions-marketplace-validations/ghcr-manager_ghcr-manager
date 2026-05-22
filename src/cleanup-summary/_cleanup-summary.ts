@@ -1,25 +1,29 @@
 import type { ManifestKind } from "../core/index.js";
-import type { DeletePlan, DeletePlanSelectionMode, DeletePlanSelectionReason } from "../db/index.js";
+import { DeletePlanValidationStatuses } from "../db/index.js";
+import type {
+  DeletePlan,
+  DeletePlanSelectionMode,
+  DeletePlanSelectionReason,
+  DeletePlanValidationReasonCode,
+  DeletePlanValidationStatus
+} from "../db/index.js";
 import type { DeleteExecutionSummary } from "../execute/index.js";
 
 export interface CleanupSummaryRoot {
   versionId: number;
   digest: string;
-  manifestKind?: string;
+  manifestKind?: ManifestKind;
   rootTags: string[];
   matchedTags: string[];
   selectionMode: DeletePlanSelectionMode;
   selectionReason: DeletePlanSelectionReason;
-  validationStatus: "fully-deletable" | "blocked" | "untag-only";
-  validationReasonCode:
-    | "untag-only-partial-tag-match"
-    | "fully-deletable-no-retained-overlap"
-    | "blocked-overlap-with-retained-root";
+  validationStatus: DeletePlanValidationStatus;
+  validationReasonCode: DeletePlanValidationReasonCode;
   validationReason: string;
   blockingVersionId?: number;
   blockingDigest?: string;
   overlapDigest?: string;
-  overlapManifestKind?: string;
+  overlapManifestKind?: ManifestKind;
 }
 
 export interface CleanupSummaryAffectedManifest {
@@ -69,9 +73,11 @@ export function buildCleanupSummary(
   const roots = plan.rootDecisions.map((decision) =>
     _mapRootDecision(decision, directTargetTagSet, options.listRootTags)
   );
-  const fullyDeletableRoots = roots.filter((root) => root.validationStatus === "fully-deletable");
-  const blockedRoots = roots.filter((root) => root.validationStatus === "blocked");
-  const untagOnlyRoots = roots.filter((root) => root.validationStatus === "untag-only");
+  const fullyDeletableRoots = roots.filter(
+    (root) => root.validationStatus === DeletePlanValidationStatuses.fullyDeletable
+  );
+  const blockedRoots = roots.filter((root) => root.validationStatus === DeletePlanValidationStatuses.blocked);
+  const untagOnlyRoots = roots.filter((root) => root.validationStatus === DeletePlanValidationStatuses.untagOnly);
   const affectedManifests = _listAffectedManifests(
     plan,
     fullyDeletableRoots.map((root) => root.digest)

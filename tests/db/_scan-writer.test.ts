@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { ManifestKinds } from "../../src/core/index.js";
 import { openDatabase, ScanWriter, SnapshotRepository } from "../../src/db/index.js";
 
 test("scan writer stores scan metadata and rows incrementally", () => {
@@ -29,7 +30,7 @@ test("scan writer stores scan metadata and rows incrementally", () => {
     writer.insertManifest({
       versionId: 1,
       digest: "sha256:index",
-      manifestKind: "image_index",
+      manifestKind: ManifestKinds.imageIndex,
       mediaType: "application/vnd.oci.image.index.v1+json"
     });
     writer.insertPackageVersion({
@@ -40,7 +41,7 @@ test("scan writer stores scan metadata and rows incrementally", () => {
     writer.insertManifest({
       versionId: 2,
       digest: "sha256:child",
-      manifestKind: "image_manifest",
+      manifestKind: ManifestKinds.imageManifest,
       mediaType: "application/vnd.oci.image.manifest.v1+json"
     });
     writer.insertManifestEdge({
