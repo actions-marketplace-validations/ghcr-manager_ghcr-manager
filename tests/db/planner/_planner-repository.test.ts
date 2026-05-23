@@ -293,3 +293,51 @@ test("planner repository carries delete-partial-images planner metadata through 
 
   database.close();
 });
+
+test("planner repository carries delete-orphaned-images planner metadata through orphaned digest-tag planning", () => {
+  const database = openDatabase(":memory:");
+  const writer = new ScanWriter(database);
+  const repository = new PlannerRepository(database);
+  const orphanParentDigest = `sha256:${"a".repeat(64)}`;
+  const orphanTag = `${orphanParentDigest.replace("sha256:", "sha256-")}.sig`;
+
+  writer.startScan("acme", "orphaned-images", "2026-05-15T00:00:00.000Z", {
+    rawJson: JSON.stringify({ visibility: "private" })
+  });
+  writer.insertPackageVersion({
+    versionId: 201,
+    createdAt: "2026-05-10T00:00:00.000Z",
+    updatedAt: "2026-05-10T00:00:00.000Z"
+  });
+  writer.insertManifest({
+    versionId: 201,
+    digest: "sha256:orphaned-signature",
+    manifestKind: ManifestKinds.signatureManifest,
+    mediaType: "application/vnd.oci.image.manifest.v1+json"
+  });
+  writer.insertTag({
+    tag: orphanTag,
+    versionId: 201
+  });
+  writer.markScanCompleted("2026-05-15T00:00:00.000Z");
+
+  const plan = repository.getDeleteTagsPlanWithCutoff("acme", "orphaned-images", [orphanTag], [], {
+    deleteOrphanedImages: true,
+    deleteTagsRequested: true
+  });
+
+  assert.equal(plan.plannerInputs.deleteOrphanedImages, true);
+  assert.deepEqual(plan.directTargetTags, [orphanTag]);
+  assert.deepEqual(plan.directTargetRoots, [
+    {
+      versionId: 201,
+      digest: "sha256:orphaned-signature",
+      manifestKind: ManifestKinds.signatureManifest,
+      reason: "delete-tags-all-tags-selected",
+      selectionMode: "delete-root"
+    }
+  ]);
+  assert.deepEqual(plan.fullyDeletableRoots, plan.directTargetRoots);
+
+  database.close();
+});

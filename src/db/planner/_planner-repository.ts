@@ -139,11 +139,13 @@ export class PlannerRepository {
       deleteTags,
       excludeTags,
       options?.useRegex ?? false,
+      options?.deleteOrphanedImages ?? false,
       options?.cutoffTimestamp
     );
     const directTargetRoots = this.#directTargetRoots.list(scan.scan_id, {
       deleteTags,
       deleteTagsRequested: options?.deleteTagsRequested ?? false,
+      deleteOrphanedImages: options?.deleteOrphanedImages ?? false,
       excludeTags,
       deleteUntagged: options?.deleteUntagged ?? false,
       keepNTagged: options?.keepNTagged,

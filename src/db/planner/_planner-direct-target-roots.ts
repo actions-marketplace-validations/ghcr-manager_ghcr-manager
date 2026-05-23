@@ -5,6 +5,7 @@ import { mapPlanRootRow, type DeletePlanRoot } from "./_planner-types.js";
 export interface DirectTargetRootOptions {
   deleteTags: string[];
   deleteTagsRequested: boolean;
+  deleteOrphanedImages?: boolean;
   excludeTags: string[];
   deleteUntagged: boolean;
   keepNTagged?: number;
@@ -35,21 +36,22 @@ export class PlannerDirectTargetRoots {
     if (options.cutoffTimestamp) {
       params.push(options.cutoffTimestamp);
     }
+    const selectedTagDigestFlag = options.deleteOrphanedImages ? 1 : 0;
 
     const selectedTagsSql = selectedTagPredicate
       ? `
-        SELECT DISTINCT t.version_id, t.tag
-        FROM tags t
-        WHERE t.scan_id = ?
-          AND t.is_digest_tag = 0
-          AND (${selectedTagPredicate.sql})
-      `
+          SELECT DISTINCT t.version_id, t.tag
+          FROM tags t
+          WHERE t.scan_id = ?
+            AND t.is_digest_tag = ?
+            AND (${selectedTagPredicate.sql})
+        `
       : `
-        SELECT NULL AS version_id, NULL AS tag
-        WHERE 1 = 0
-      `;
+          SELECT NULL AS version_id, NULL AS tag
+          WHERE 1 = 0
+        `;
     if (selectedTagPredicate) {
-      params.push(scanId, ...selectedTagPredicate.params);
+      params.push(scanId, selectedTagDigestFlag, ...selectedTagPredicate.params);
     }
 
     const excludedVersionsSql = excludedTagPredicate
@@ -70,10 +72,13 @@ export class PlannerDirectTargetRoots {
 
     const taggedBranchEnabled = options.deleteTagsRequested || options.keepNTagged !== undefined ? 1 : 0;
     const deleteTagsRequested = options.deleteTagsRequested ? 1 : 0;
+    const deleteOrphanedImages = options.deleteOrphanedImages ? 1 : 0;
     const keepNTaggedActive = options.keepNTagged !== undefined ? 1 : 0;
     const deleteUntagged = options.deleteUntagged ? 1 : 0;
     const keepNUntaggedActive = options.keepNUntagged !== undefined ? 1 : 0;
     const paramsTail: Array<number | string> = [
+      deleteOrphanedImages,
+      deleteOrphanedImages,
       taggedBranchEnabled,
       deleteTagsRequested,
       deleteTagsRequested,
@@ -122,14 +127,21 @@ export class PlannerDirectTargetRoots {
           rc.root_digest,
           rc.root_manifest_kind,
           rc.created_at,
-          rc.tag_count AS total_tag_count,
+          CASE
+            WHEN ? = 1 AND rc.tag_count = 0 AND COALESCE(mtc.matched_tag_count, 0) > 0
+              THEN COALESCE(mtc.matched_tag_count, 0)
+            ELSE rc.tag_count
+          END AS total_tag_count,
           COALESCE(mtc.matched_tag_count, 0) AS matched_tag_count
         FROM root_candidates rc
         LEFT JOIN matched_tag_counts mtc
           ON mtc.version_id = rc.version_id
         LEFT JOIN excluded_versions ev
           ON ev.version_id = rc.version_id
-        WHERE rc.is_tagged = 1
+        WHERE (
+            rc.is_tagged = 1
+            OR (? = 1 AND COALESCE(mtc.matched_tag_count, 0) > 0)
+          )
           AND ev.version_id IS NULL
           AND ? = 1
       ),

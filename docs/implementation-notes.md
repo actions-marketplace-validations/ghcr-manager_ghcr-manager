@@ -180,6 +180,11 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
 - [x] Align workflow callers with `artifact-name-glob` and bump `actions/download-artifact` to `v8.0.1` to avoid Node 20
       deprecation warnings.
 - [ ] Port regex selector validation hardening for `--use-regex` cleanup selectors.
+- [x] Fix planner handling for `delete-orphaned-images` digest-tag targets:
+  - keep normal digest-tag exclusion for ordinary tagged selector families
+  - for `delete-orphaned-images`, source selected tags from a scan-local orphaned digest-tag query instead
+  - allow digest-tag-only roots with matched orphaned tags to enter the tagged-root planner branch without duplicating
+    the planner pipeline
 - [x] Fix `merge-run-artifacts` repo-script resolution and merged-artifact exclusion:
   - resolve helper scripts from the repo root via the parent of `$GITHUB_ACTION_PATH`
   - exclude the just-uploaded merged artifact by `steps.upload.outputs.artifact-id` during source-artifact deletion
@@ -242,6 +247,12 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
 - Cleanup summary note:
   - digest-tag `sha256-*` helper/referrer tags are not shown as ordinary matched tags
   - the DB still preserves them for audit, and recursive manifest closure now crosses those helper edges
+- Orphaned digest-tag planner note:
+  - `resolveTagSelectors()` may still resolve `delete-orphaned-images` to digest-tag names
+  - the planner now keeps ordinary tagged selectors on the `is_digest_tag = 0` path
+  - only the orphaned-image selector family switches to a scan-local orphaned digest-tag source inside the planner
+  - tagged-root planning treats digest-tag-only artifact roots as tagged when those orphaned digest tags are the matched
+    selected tags for that selector family
 - Root action argv note:
   - the root action now prepares `cleanup`/`untag` argv in `tools/prepare-action-args.mjs`
   - `action.yml` still shows the direct public CLI invocation with `npm run ... ghcr-manager:dist -- cleanup|untag`

@@ -14,6 +14,7 @@ export class PlannerDirectTargetTags {
     deleteTags: string[],
     excludeTags: string[],
     useRegex: boolean,
+    deleteOrphanedImages: boolean,
     cutoffTimestamp?: string
   ): string[] {
     if (deleteTags.length === 0) {
@@ -42,6 +43,9 @@ export class PlannerDirectTargetTags {
       params.push(cutoffTimestamp);
     }
 
+    const digestTagFlag = deleteOrphanedImages ? 1 : 0;
+    params.splice(1, 0, digestTagFlag);
+
     const sql = `
       SELECT DISTINCT tag AS target_tag
       FROM tags t
@@ -52,7 +56,7 @@ export class PlannerDirectTargetTags {
         ON roots.scan_id = t.scan_id
        AND roots.root_version_id = t.version_id
       WHERE t.scan_id = ?
-        AND t.is_digest_tag = 0
+        AND t.is_digest_tag = ?
         AND roots.has_ancestor = 0
         AND (${selectedTagPredicate.sql})
         ${excludedRootSql}
