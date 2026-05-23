@@ -202,12 +202,10 @@ Current naming:
 
 ## Documentation Map
 
-- [docs/action-usage.md](docs/action-usage.md): action commands, including `cleanup`, `scan`, and `untag`
-- [docs/db-merge-workflows.md](docs/db-merge-workflows.md): cleaning up multiple packages with one combined DB
-- [docs/schema-description.md](docs/schema-description.md): practical explanation of the SQLite schema
-- [docs/queries/missing-manifests-queries.md](docs/queries/missing-manifests-queries.md): SQL recipes for missing
-  manifest references
-- [docs/cli-usage.md](docs/cli-usage.md): companion CLI usage
+- [GitHub Action usage](docs/action-usage.md): action commands, including `cleanup`, `scan`, and `untag`
+- [Multi-package workflows](docs/db-merge-workflows.md): cleaning up multiple packages with one combined DB
+- [SQLite schema guide](docs/schema-description.md): practical explanation of the SQLite schema
+- [CLI usage](docs/cli-usage.md): companion CLI usage
 
 ## Acknowledgment
 

@@ -242,8 +242,10 @@ Historical notes were compacted into [docs/implementation-notes.archive.md](arch
   - `db-merge-workflows.md` for multi-package workflows and combined DBs
   - `cli-usage.md` for the secondary local CLI surface
   - `schema-description.md` for DB orientation
-  - `queries/missing-manifests-queries.md` for a narrow advanced SQL recipe
 - Keep internal planner/semantics notes out of the user-facing doc path.
+- Schema cleanup note:
+  - retired `v_missing_digests` and its old query recipe doc because that surface was no longer used by runtime code and
+    reflected pre-helper-tag handling assumptions
 - Cleanup summary note:
   - digest-tag `sha256-*` helper/referrer tags are not shown as ordinary matched tags
   - the DB still preserves them for audit, and recursive manifest closure now crosses those helper edges

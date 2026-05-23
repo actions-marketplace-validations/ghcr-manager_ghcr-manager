@@ -267,21 +267,6 @@ One latest completed scan per `owner/package`.
 
 Use this when you want "current latest picture" style queries instead of manually picking a `scan_id`.
 
-### `v_missing_digests`
-
-Referenced digests that appear in manifest data but do not exist in `manifests`.
-
-It reports:
-
-- the missing digest
-- the known manifest that referenced it
-
-This is useful for understanding partial visibility in GHCR graphs.
-
-Related query recipes:
-
-- [queries/missing-manifests-queries.md](queries/missing-manifests-queries.md)
-
 ### `v_scan_root_manifests`
 
 One root manifest per package version, enriched with query-friendly flags.

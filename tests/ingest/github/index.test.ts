@@ -191,10 +191,6 @@ test("GitHub ingest writes package and manifest data directly into SQLite", asyn
     (database.prepare("SELECT COUNT(*) AS total FROM manifest_payloads").get() as { total: number }).total,
     2
   );
-  assert.deepEqual(database.prepare("SELECT missing_digest, anchor_digest FROM v_missing_digests").get(), {
-    missing_digest: "sha256:child",
-    anchor_digest: "sha256:index"
-  });
   assert.match(
     (
       database.prepare("SELECT raw_json FROM manifest_payloads WHERE digest = 'sha256:index'").get() as {
