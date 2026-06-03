@@ -25,7 +25,7 @@ jobs:
 
       - name: Cleanup package one
         id: first-package
-        uses: gh-workflow/ghcr-manager@v0
+        uses: ghcr-manager/ghcr-manager@v0
         with:
           command: cleanup
           token: ${{ github.token }}
@@ -35,7 +35,7 @@ jobs:
           delete-untagged: true
 
       - name: Cleanup package two
-        uses: gh-workflow/ghcr-manager@v0
+        uses: ghcr-manager/ghcr-manager@v0
         with:
           command: cleanup
           token: ${{ github.token }}
@@ -56,7 +56,7 @@ The key points are:
 ## Parallel Jobs
 
 When processing packages in separate jobs, especially in parallel, let each job upload its own DB and merge them
-afterward using the helper action `gh-workflow/ghcr-manager/merge-run-artifacts`.
+afterward using the helper action `ghcr-manager/ghcr-manager/merge-run-artifacts`.
 
 Example shape:
 
@@ -70,7 +70,7 @@ jobs:
       actions: write
     steps:
       - uses: actions/checkout@v6
-      - uses: gh-workflow/ghcr-manager@v0
+      - uses: ghcr-manager/ghcr-manager@v0
         with:
           command: cleanup
           token: ${{ github.token }}
@@ -88,7 +88,7 @@ jobs:
       actions: write
     steps:
       - uses: actions/checkout@v6
-      - uses: gh-workflow/ghcr-manager@v0
+      - uses: ghcr-manager/ghcr-manager@v0
         with:
           command: cleanup
           token: ${{ github.token }}
@@ -108,7 +108,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Merge current-run DB artifacts
-        uses: gh-workflow/ghcr-manager/merge-run-artifacts@v0
+        uses: ghcr-manager/ghcr-manager/merge-run-artifacts@v0
         with:
           artifact-name-glob: "*.sqlite" #default
           db-file: ghcr-manager-merged.sqlite #default

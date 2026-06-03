@@ -868,7 +868,7 @@ src/
 ### 2026-04-30 (npm provenance metadata fix)
 
 - [x] Added explicit npm package metadata in `package.json` for provenance validation:
-  - `repository.url` set to `https://github.com/gh-workflow/ghcr-manager`
+  - `repository.url` set to `https://github.com/ghcr-manager/ghcr-manager`
   - `homepage` set to the repository README URL
   - `bugs.url` set to the repository issues URL
 - [x] Reason: npm provenance bundle verification requires `package.json` repository metadata to match GitHub Actions

@@ -1,9 +1,9 @@
 # ghcr-manager
 
-[![Release](https://img.shields.io/github/v/release/gh-workflow/ghcr-manager?style=flat-square)](https://github.com/gh-workflow/ghcr-manager/releases)
+[![Release](https://img.shields.io/github/v/release/ghcr-manager/ghcr-manager?style=flat-square)](https://github.com/ghcr-manager/ghcr-manager/releases)
 [![Immutable Releases](https://img.shields.io/badge/releases-immutable-blue?labelColor=333)](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/immutable-releases)
 [![GitHub Marketplace](https://img.shields.io/badge/marketplace-ghcr--manager-blue?logo=github&labelColor=333&style=flat-square)](https://github.com/marketplace/actions/ghcr-manager)
-[![Tests](https://img.shields.io/github/actions/workflow/status/gh-workflow/ghcr-manager/.github/workflows/ci_change-validation.yml?branch=main&label=test&style=flat-square)](https://github.com/gh-workflow/ghcr-manager/actions/workflows/change-validation.yml)
+[![Tests](https://img.shields.io/github/actions/workflow/status/ghcr-manager/ghcr-manager/.github/workflows/ci_change-validation.yml?branch=main&label=test&style=flat-square)](https://github.com/ghcr-manager/ghcr-manager/actions/workflows/change-validation.yml)
 
 Inspect, review, and manage GitHub Container Registry packages.
 
@@ -33,7 +33,7 @@ jobs:
 
       - name: Preview GHCR cleanup
         id: ghcr-manager
-        uses: gh-workflow/ghcr-manager@0.9.7
+        uses: ghcr-manager/ghcr-manager@0.9.7
         with:
           command: cleanup
           token: ${{ github.token }}
@@ -72,7 +72,7 @@ The action supports three commands:
 ### Preview cleanup
 
 ```yaml
-- uses: gh-workflow/ghcr-manager@0.9.7
+- uses: ghcr-manager/ghcr-manager@0.9.7
   with:
     command: cleanup
     token: ${{ github.token }}
@@ -93,7 +93,7 @@ The action supports three commands:
 ### Apply cleanup
 
 ```yaml
-- uses: gh-workflow/ghcr-manager@0.9.7
+- uses: ghcr-manager/ghcr-manager@0.9.7
   with:
     command: cleanup
     token: ${{ github.token }}
@@ -112,7 +112,7 @@ Note: the second scan only runs if cleanup actually makes changes.
 ### Remove selected tags directly
 
 ```yaml
-- uses: gh-workflow/ghcr-manager@0.9.7
+- uses: ghcr-manager/ghcr-manager@0.9.7
   with:
     command: untag
     token: ${{ github.token }}
@@ -128,7 +128,7 @@ Note: the second scan only runs if cleanup actually makes changes.
 ### Scan one package
 
 ```yaml
-- uses: gh-workflow/ghcr-manager@0.9.7
+- uses: ghcr-manager/ghcr-manager@0.9.7
   with:
     command: scan
     token: ${{ github.token }}
