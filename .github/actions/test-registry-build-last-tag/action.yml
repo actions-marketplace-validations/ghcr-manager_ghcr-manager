@@ -1,0 +1,43 @@
+name: Test Registry Build Last Tag
+description: Build and push a minimal image tag that keeps a package from becoming single-tagged.
+
+inputs:
+  image_ref:
+    description: Image reference to push the dummy tag to.
+    required: true
+  registry_username:
+    description: GHCR username used for docker login.
+    required: true
+  registry_password:
+    description: GHCR token or password used for docker login.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Buildx
+      uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+    - name: Log in to GHCR
+      uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+      with:
+        registry: ghcr.io
+        username: ${{ inputs.registry_username }}
+        password: ${{ inputs.registry_password }}
+
+    - name: Build dummy image
+      shell: bash
+      env:
+        GITHUB_ACTION_PATH: ${{ github.action_path }}
+        IMAGE_REF: ${{ inputs.image_ref }}
+      run: |
+        set -euo pipefail
+        dummy_dir="$(mktemp -d)"
+        cp "$GITHUB_ACTION_PATH/../../../tools/tests/fixtures/minimal-image/Dockerfile" "$dummy_dir/Dockerfile"
+        printf '%s\n' "${GITHUB_RUN_ID} keep dummy" > "$dummy_dir/payload.txt"
+        docker buildx build \
+          --platform linux/amd64 \
+          --provenance=false \
+          --push \
+          --tag "$IMAGE_REF:keep-dummy" \
+          "$dummy_dir"
