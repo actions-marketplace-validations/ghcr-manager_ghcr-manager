@@ -202,7 +202,8 @@ Current naming:
 
 ## Documentation Map
 
-- [GitHub Action usage](docs/action-usage.md): action commands, including `cleanup`, `scan`, and `untag`
+- [GitHub Action usage](docs/action-usage.md): action commands, including `cleanup` and `scan`
+- [Visualizer](docs/visualizer.md): local graph inspection and scan-to-scan comparison
 - [Multi-package workflows](docs/db-merge-workflows.md): cleaning up multiple packages with one combined DB
 - [SQLite schema guide](docs/schema-description.md): practical explanation of the SQLite schema
 - [CLI usage](docs/cli-usage.md): companion CLI usage
