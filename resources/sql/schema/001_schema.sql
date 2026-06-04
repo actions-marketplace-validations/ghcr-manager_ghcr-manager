@@ -204,10 +204,16 @@ CREATE INDEX IF NOT EXISTS idx_cleanup_runs_scan_id ON cleanup_runs(scan_id);
 CREATE INDEX IF NOT EXISTS idx_cleanup_protected_root_blocks_run_blocked
   ON cleanup_protected_root_blocks(cleanup_run_id, blocked_digest);
 CREATE INDEX IF NOT EXISTS idx_tags_scan_version ON tags(scan_id, version_id);
+CREATE INDEX IF NOT EXISTS idx_tags_scan_version_nondigest
+  ON tags(scan_id, version_id)
+  WHERE is_digest_tag = 0;
 CREATE INDEX IF NOT EXISTS idx_manifest_descriptors_scan_child ON manifest_descriptors(scan_id, child_digest);
 CREATE INDEX IF NOT EXISTS idx_manifest_edges_scan_parent ON manifest_edges(scan_id, parent_digest);
 CREATE INDEX IF NOT EXISTS idx_manifest_edges_scan_child ON manifest_edges(scan_id, child_digest);
 CREATE INDEX IF NOT EXISTS idx_manifest_edges_scan_child_kind ON manifest_edges(scan_id, child_digest, edge_kind);
+CREATE INDEX IF NOT EXISTS idx_manifest_edges_scan_child_nondigest_referrer
+  ON manifest_edges(scan_id, child_digest)
+  WHERE edge_kind != 'digest-tag-referrer';
 CREATE INDEX IF NOT EXISTS idx_manifest_reachability_scan_descendant
   ON manifest_reachability(scan_id, descendant_digest);
 CREATE INDEX IF NOT EXISTS idx_manifest_reachability_scan_descendant_distance

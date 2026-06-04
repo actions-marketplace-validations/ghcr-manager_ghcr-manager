@@ -24,6 +24,6 @@ export function listCombinedDirectTargetRoots(
   return sql
     .all<
       Parameters<typeof mapPlanRootRow>[0]
-    >(query, [...baseParams, scanId, scanId, ...selectedParams, ...excludedParams, ...tailParams])
+    >(query, [...baseParams, ...selectedParams, ...excludedParams, ...tailParams])
     .map(mapPlanRootRow);
 }

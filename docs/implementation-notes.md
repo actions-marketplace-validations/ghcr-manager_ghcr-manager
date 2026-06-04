@@ -16,13 +16,14 @@ Previous handoff material was archived to
 - [x] Complete the cleanup/planner rethink, graph-matrix scenario work, and visualizer first-pass refinement.
 - [x] Start the next active implementation task and record it here before substantial changes begin.
 - [x] Apply graph-scoped `graph_id` narrowing to blocked-roots planner SQL.
-- [ ] Measure the updated blocked-roots query on the large large test package DB dry-run workload.
+- [x] Measure the updated blocked-roots query on the large large test package DB dry-run workload.
+- [x] Optimize combined direct-target-root planning to avoid broad edge and tag pre-aggregation.
 
 ## Current Next Plan
 
-- Re-run the dry-run with large test package DB after the blocked-roots `graph_id` narrowing change.
-- If blocked-roots is still dominant, inspect the direct-target-roots query next rather than
-  the already-fast supported-untag-only query.
+- No active planner follow-up is pending.
+- If a future workload makes planner time noticeable again, inspect remaining closure and reporting work before
+  considering `graph_id` denormalization into `manifest_reachability`.
 
 ## Current Status
 
@@ -46,5 +47,7 @@ Previous handoff material was archived to
   - do not create workflow-managed release commits that add `dist/`
 - Visualizer packaging stays separate from the main package.
 - Task and handoff history should be archived rather than left as stale active notes in `docs/`.
-- Use `graph_id` narrowing in planner SQL where the workload is already graph-scoped; do not
-  denormalize `graph_id` into `manifest_reachability` before measuring query-level gains.
+- Use `graph_id` narrowing in planner SQL where the workload is already graph-scoped; do not denormalize `graph_id` into
+  `manifest_reachability` before measuring query-level gains.
+- Prefer indexed per-root `EXISTS` and `COUNT` lookups over broad pre-aggregating CTEs when large-table scans dominate
+  planner runtime.

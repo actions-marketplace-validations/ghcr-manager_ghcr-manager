@@ -17,6 +17,7 @@ export function buildCombinedDirectTargetRootsQuery(
   if (options.cutoffTimestamp) {
     baseParams.push(options.cutoffTimestamp);
   }
+  baseParams.push(scanId, scanId);
 
   const taggedBranchEnabled = options.deleteTagsRequested || options.keepNTagged !== undefined ? 1 : 0;
   const deleteTagsRequested = options.deleteTagsRequested ? 1 : 0;
@@ -56,35 +57,31 @@ export function buildCombinedDirectTargetRootsQuery(
       WHERE m.scan_id = ?
         ${cutoffSql}
     ),
-    tag_counts AS (
-      SELECT
-        t.version_id,
-        COUNT(t.tag) AS tag_count
-      FROM tags t
-      WHERE t.scan_id = ?
-        AND t.is_digest_tag = 0
-      GROUP BY t.version_id
-    ),
-    parented_digests AS (
-      SELECT DISTINCT me.child_digest
-      FROM manifest_edges me
-      WHERE me.scan_id = ?
-        AND me.edge_kind != 'digest-tag-referrer'
-    ),
     root_candidates AS (
       SELECT
         bm.version_id,
         bm.root_digest,
         bm.root_manifest_kind,
         bm.created_at,
-        COALESCE(tc.tag_count, 0) AS tag_count,
-        CASE WHEN COALESCE(tc.tag_count, 0) > 0 THEN 1 ELSE 0 END AS is_tagged,
-        CASE WHEN pd.child_digest IS NULL THEN 0 ELSE 1 END AS has_ancestor
+        (
+          SELECT COUNT(*)
+          FROM tags t
+          WHERE t.scan_id = ?
+            AND t.version_id = bm.version_id
+            AND t.is_digest_tag = 0
+        ) AS tag_count,
+        CASE
+          WHEN EXISTS (
+            SELECT 1
+            FROM manifest_edges me
+            WHERE me.scan_id = ?
+              AND me.child_digest = bm.root_digest
+              AND me.edge_kind != 'digest-tag-referrer'
+          )
+            THEN 1
+          ELSE 0
+        END AS has_ancestor
       FROM base_manifests bm
-      LEFT JOIN tag_counts tc
-        ON tc.version_id = bm.version_id
-      LEFT JOIN parented_digests pd
-        ON pd.child_digest = bm.root_digest
     ),
     selected_tags AS (
       ${selectedTagsSql}
@@ -117,7 +114,7 @@ export function buildCombinedDirectTargetRootsQuery(
       LEFT JOIN excluded_versions ev
         ON ev.version_id = rc.version_id
       WHERE (
-          rc.is_tagged = 1
+          rc.tag_count > 0
           OR (? = 1 AND COALESCE(mtc.matched_tag_count, 0) > 0)
         )
         AND ev.version_id IS NULL
@@ -171,7 +168,7 @@ export function buildCombinedDirectTargetRootsQuery(
           ORDER BY rc.created_at DESC, rc.version_id DESC, rc.root_digest DESC
         ) AS recency_rank
       FROM root_candidates rc
-      WHERE rc.is_tagged = 0
+      WHERE rc.tag_count = 0
         AND rc.has_ancestor = 0
         AND (? = 1 OR ? = 1)
     ),
