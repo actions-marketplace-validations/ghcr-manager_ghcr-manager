@@ -13,8 +13,8 @@ So I want to bring up an old idea of mine: Visualize manifest graphs.
 
 Seeing how manifest graphs actually look would help me understand how cosign and attestations affect graphs.
 
-I laid down the rough idea in the [ideas bucket](../../../ai/IDEAS_BUCKET.md) a while ago. That must not be taken word
-per word as it's just an early note about my idea of showing graphs in a browser UI.
+I laid down the rough idea in the [ideas bucket](../../IDEAS_BUCKET.md) a while ago. That must not be taken word per
+word as it's just an early note about my idea of showing graphs in a browser UI.
 
 ## Details to discuss
 
