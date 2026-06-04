@@ -50,8 +50,8 @@ Those are useful for our own tool comparisons, but they are not necessarily a na
 
 ## Goal
 
-Find out whether `ghcrctl` can be used cleanly as a 3rd executor for at least a meaningful subset of the
-graph-matrix scenarios.
+Find out whether `ghcrctl` can be used cleanly as a 3rd executor for at least a meaningful subset of the graph-matrix
+scenarios.
 
 The bar is:
 
@@ -164,3 +164,70 @@ Produce a concrete support matrix with categories such as:
 And if the fit is good enough, propose the smallest implementation shape.
 
 Implementation is optional and should only follow if the mapping stays clean.
+
+## Evaluation Outcome
+
+### Decision rule
+
+Use `ghcrctl` only where one existing graph-matrix scenario maps directly to one `ghcrctl delete graph` call.
+
+That means:
+
+- graph-matrix only
+- no mixed cleanup matrix support
+- exactly one cleanup tag target
+- no regex or bulk graph targeting
+- no multiple `ghcrctl` calls to match one scenario
+
+Executor result mismatches are acceptable and expected in some cases.
+
+The purpose of adding `ghcrctl` is not to require parity with `ghcr-manager`. It is to run the same seeded scenario
+through another tool where the mapping is direct and small, then compare outcomes.
+
+### Concrete support matrix
+
+Supported cleanly now:
+
+- `graph-1image-*--delete-image-a`
+- `graph-2images-*--delete-image-a`
+- `graph-2images-*--delete-multiarch`
+- `graph-2multiarch-*--delete-image-a`
+- `graph-2multiarch-*--delete-multiarch-a`
+- `graph-2multiarch2tags-*--delete-multiarch-a`
+
+These rows each have exactly one delete-tag target and map directly to:
+
+```text
+ghcrctl delete graph <owner/package> --tag <resolved-tag> --force
+```
+
+Maybe later:
+
+- none for the current graph-matrix set
+
+Under the current bar, rows are either a clean one-call fit or they are out of scope.
+
+Not a fit:
+
+- `graph-2images-*--delete-image-a-and-multiarch`
+- `graph-2multiarch-*--delete-image-a-and-multiarch-a`
+
+These rows require more than one graph target. `ghcrctl delete graph` accepts one selector per call and does not provide
+regex or bulk graph deletion.
+
+### Smallest implementation shape
+
+If implemented, keep the integration narrow:
+
+- add one `ghcrctl` executor name
+- add it only to supported graph scenarios
+- resolve one explicit `ghcrctl` tag target per supported scenario
+- add one executor branch in the reusable scenario workflow
+- keep post-run scanning and assertions unchanged
+
+Avoid:
+
+- forcing support for the older mixed cleanup matrix
+- adapter logic that maps one scenario into multiple `ghcrctl` commands
+- overloading `dataaxiomInputs` with `ghcrctl` semantics
+- regex or heuristic bulk mapping

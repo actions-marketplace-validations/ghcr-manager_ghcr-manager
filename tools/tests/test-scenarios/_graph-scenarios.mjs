@@ -157,13 +157,14 @@ for (const [baseCase, extension] of _graphVariants()) {
       id,
       packageSuffix: `scenario--${id}`,
       seedStrategy,
-      supportedExecutors: ["ghcr-manager", "ghcr-cleanup-action"],
+      supportedExecutors: _supportedExecutorsForOperation(operation),
       includeInMatrix: false,
       includeInGraphMatrix: true,
       ghcrManagerArgs: _buildDeleteTagArgs(operation.deleteTagKeys),
       dataaxiomInputs: {
         "delete-tags": _buildDeleteTagInput(operation.deleteTagKeys)
       },
+      ghcrctlTagNameKey: _ghcrctlTagNameKeyForOperation(operation),
       tagNames: _graphTagNamesByBaseCase[baseCase],
       scanAssertions: operation.presentTagNameKeys.map((tagNameKey) => ({ tagNameKey })),
       latestScanAssertions: {
@@ -196,4 +197,16 @@ function _extensionUsesCosign(extension) {
 
 function _extensionUsesAttestationsWithoutCosign(extension) {
   return extension === "attestations";
+}
+
+function _supportedExecutorsForOperation(operation) {
+  const executors = ["ghcr-manager", "ghcr-cleanup-action"];
+  if (operation.deleteTagKeys.length === 1) {
+    executors.push("ghcrctl");
+  }
+  return executors;
+}
+
+function _ghcrctlTagNameKeyForOperation(operation) {
+  return operation.deleteTagKeys.length === 1 ? operation.deleteTagKeys[0] : null;
 }

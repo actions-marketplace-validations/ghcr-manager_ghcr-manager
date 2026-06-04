@@ -13,6 +13,7 @@ run-name: "Test Scenario Graph Matrix (executors: ${{ inputs.executors }})"
           - all
           - ghcr-manager
           - ghcr-cleanup-action
+          - ghcrctl
       upload_artifacts:
         description: Upload the final rescan DB artifact from inside the action.
         required: false

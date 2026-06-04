@@ -30,6 +30,7 @@ process.stdout.write(
     packageName: `${repositoryName}-${scenario.packageSuffix}`,
     seedStrategy: scenario.seedStrategy,
     digestSelectorTagNameKey: scenario.digestSelectorTagNameKey ?? null,
+    ghcrctlTag: scenario.ghcrctlTagNameKey ? (resolvedTagNames[scenario.ghcrctlTagNameKey] ?? null) : null,
     tagNames: resolvedTagNames,
     ghcrManagerArgs: scenario.ghcrManagerArgs.map((value) => _replaceTagTokens(value, resolvedTagNames)),
     dataaxiomInputs: Object.fromEntries(

@@ -18,12 +18,15 @@ Previous handoff material was archived to
 - [x] Apply graph-scoped `graph_id` narrowing to blocked-roots planner SQL.
 - [x] Measure the updated blocked-roots query on the large large test package DB dry-run workload.
 - [x] Optimize combined direct-target-root planning to avoid broad edge and tag pre-aggregation.
+- [x] Evaluate `ghcrctl` as an optional third graph-matrix executor.
+- [x] Limit `ghcrctl` support to graph-matrix scenarios with exactly one delete-tag target.
+- [x] Add minimal workflow support for one-call `ghcrctl delete graph --tag` execution.
 
 ## Current Next Plan
 
-- No active planner follow-up is pending.
-- If a future workload makes planner time noticeable again, inspect remaining closure and reporting work before
-  considering `graph_id` denormalization into `manifest_reachability`.
+- No active follow-up is pending.
+- If `ghcrctl` matrix runs reveal mismatches worth documenting, summarize those per-scenario rather than broadening the
+  adapter surface.
 
 ## Current Status
 
@@ -36,6 +39,7 @@ Previous handoff material was archived to
 - Current major areas already in place:
   - cleanup/planner rethink and current graph-based deletion behavior
   - graph-matrix scenario workflows and test harness
+  - optional `ghcrctl` graph-matrix executor for single-tag graph deletions
   - local `visualizer/` workspace for manifest-graph inspection
 
 ## Current Decisions
@@ -51,3 +55,8 @@ Previous handoff material was archived to
   `manifest_reachability` before measuring query-level gains.
 - Prefer indexed per-root `EXISTS` and `COUNT` lookups over broad pre-aggregating CTEs when large-table scans dominate
   planner runtime.
+- `ghcrctl` support stays graph-matrix-only and single-target-only:
+  - no mixed cleanup matrix support
+  - no multi-tag scenario support
+  - no multi-call mapping to emulate one scenario
+  - executor outcome mismatches are valid comparison signal, not an adapter bug by default
