@@ -7,6 +7,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.10] - 2026-06-04
+
+### Changed
+
+- Cleanup planning for large package databases is much faster while preserving the existing cleanup behavior.
+- On a large validation package with more than 100k manifests, dry-run planning and summary generation dropped from more
+  than 20 minutes to roughly 15 seconds.
+
+### Fixed
+
+- Internal GHCR validation workflows now avoid GitHub's "cannot delete the last tagged version" failure mode during
+  temporary-tag cleanup.
+
 ## [0.9.9] - 2026-05-30
 
 No additional user-facing changes were introduced beyond `0.9.8`.
