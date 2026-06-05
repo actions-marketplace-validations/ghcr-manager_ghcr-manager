@@ -26,7 +26,7 @@ export function renderCleanupSummaryMarkdown(
     `| 🔖 Deleted tags | ${summary.changes.deletedTags} |`,
     `| 🖼️ Deleted images | ${summary.changes.deletedImages} |`,
     `| 📚 Deleted multi-arch manifests | ${summary.changes.deletedMultiArchManifests} |`,
-    `| 🧱 Deleted indexes | ${summary.changes.deletedIndexes} |`,
+    `| 🗂️ Deleted indexes | ${summary.changes.deletedIndexes} |`,
     `| 📄 Deleted total | ${summary.changes.deletedTotal} |`,
     `| 🔗 Tag-only updates | ${summary.untagOnlyRoots.length} |`,
     `| 🛡️ Blocked items | ${summary.blockedRoots.length} |`,

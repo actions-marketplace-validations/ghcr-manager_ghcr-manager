@@ -60,7 +60,7 @@ test("renderCleanupSummaryMarkdown renders user-facing counts and truncates long
   assert.match(markdown, /\| 🔖 Deleted tags \| 3 \|/);
   assert.match(markdown, /\| 🖼️ Deleted images \| 1 \|/);
   assert.match(markdown, /\| 📚 Deleted multi-arch manifests \| 1 \|/);
-  assert.match(markdown, /\| 🧱 Deleted indexes \| 1 \|/);
+  assert.match(markdown, /\| 🗂️ Deleted indexes \| 1 \|/);
   assert.match(markdown, /\| 📄 Deleted total \| 3 \|/);
   assert.match(markdown, /<summary>📦 Deleted item breakdown<\/summary>/);
   assert.match(markdown, /\| Images \| 1 \|/);
