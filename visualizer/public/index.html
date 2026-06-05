@@ -62,10 +62,12 @@
       </section>
       <section class="graph-panel">
         <div class="graph-toolbar" aria-label="Graph controls">
+          <button id="toggle-grid" type="button" title="Toggle screenshot grid" aria-pressed="false">Grid</button>
           <button id="zoom-in" type="button" title="Zoom in">+</button>
           <button id="zoom-out" type="button" title="Zoom out">-</button>
           <button id="zoom-fit" type="button" title="Fit graph">Fit</button>
         </div>
+        <div id="graph-grid" class="graph-grid" hidden aria-hidden="true"></div>
         <div id="graph"></div>
       </section>
       <aside class="details">

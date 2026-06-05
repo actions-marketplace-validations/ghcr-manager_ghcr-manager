@@ -37,6 +37,8 @@ body {
   top: 1rem;
   right: 1rem;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 0.5rem;
   z-index: 2;
 }
@@ -51,6 +53,29 @@ body {
 #graph {
   width: 100%;
   height: 100vh;
+  background: #ffffff;
+}
+
+.graph-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background-image:
+    linear-gradient(rgba(32, 64, 48, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(32, 64, 48, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(32, 64, 48, 0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(32, 64, 48, 0.18) 1px, transparent 1px);
+  background-position:
+    0 0,
+    0 0,
+    0 0,
+    0 0;
+  background-size:
+    24px 24px,
+    24px 24px,
+    120px 120px,
+    120px 120px;
 }
 
 form {

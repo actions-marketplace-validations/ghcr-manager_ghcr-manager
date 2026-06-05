@@ -29,6 +29,8 @@ const elements = {
   detailArtifactType: document.querySelector("#detail-artifact-type"),
   detailSubject: document.querySelector("#detail-subject"),
   detailTags: document.querySelector("#detail-tags"),
+  toggleGrid: document.querySelector("#toggle-grid"),
+  graphGrid: document.querySelector("#graph-grid"),
   zoomIn: document.querySelector("#zoom-in"),
   zoomOut: document.querySelector("#zoom-out"),
   zoomFit: document.querySelector("#zoom-fit")
@@ -41,7 +43,8 @@ const state = {
   positionsByViewKey: new Map(),
   selectedDigest: null,
   selectedManifestDetails: null,
-  lookupSuggestionRequestId: 0
+  lookupSuggestionRequestId: 0,
+  gridVisible: false
 };
 
 const _ZOOM_STEP = 1.15;
@@ -174,6 +177,10 @@ elements.closeRawJson.addEventListener("click", () => {
   elements.rawJsonDialog.close();
 });
 
+elements.toggleGrid.addEventListener("click", () => {
+  setGridVisible(!state.gridVisible);
+});
+
 elements.zoomIn.addEventListener("click", () => {
   zoomBy(_ZOOM_STEP);
 });
@@ -191,6 +198,7 @@ cy.on("tap", "node", async (event) => {
 });
 
 await initializeSelectors();
+setGridVisible(false);
 
 async function loadGraphFromForm() {
   persistCurrentLayoutState();
@@ -520,6 +528,12 @@ async function fetchJson(url) {
 
 function setStatus(message) {
   elements.status.textContent = message;
+}
+
+function setGridVisible(visible) {
+  state.gridVisible = visible;
+  elements.graphGrid.hidden = !visible;
+  elements.toggleGrid.setAttribute("aria-pressed", String(visible));
 }
 
 function replaceLookupSuggestions(values) {

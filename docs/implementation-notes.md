@@ -36,10 +36,13 @@ Previous handoff material was archived to
 - [x] Add the `v1.0.2` changelog entry for the visualizer compare-mode metadata fix.
 - [x] Add the `v1.0.3` changelog entry for npm package keyword metadata.
 - [x] Fix the visualizer npm `bin` packaging so `npx ghcr-manager-visualizer` runs under Node instead of `sh`.
+- [x] Add a visualizer screenshot grid toggle that can be enabled without reloading or re-laying out the graph.
 
 ## Current Next Plan
 
 - No active follow-up is pending.
+- Review whether the visualizer screenshot grid should gain spacing presets or a keyboard shortcut after a few real doc
+  screenshot sessions.
 - If `ghcrctl` matrix runs reveal mismatches worth documenting, summarize those per-scenario rather than broadening the
   adapter surface.
 
@@ -83,3 +86,5 @@ Previous handoff material was archived to
   - executor outcome mismatches are valid comparison signal, not an adapter bug by default
 - Visualizer npm packaging should match the main CLI pattern:
   keep the shebang in `src/index.ts`, publish `dist/src/index.js`, and point the package `bin` at that built file.
+- Visualizer screenshot aids should stay DOM/CSS overlays above Cytoscape so toggling them does not reset graph layout
+  state.
