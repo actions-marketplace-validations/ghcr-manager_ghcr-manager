@@ -7,6 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [v1.0.2] - 2026-06-05
+
+### Fixed
+
+- Visualizer compare mode now prefers the older/base scan for manifest details and labels, so unchanged manifests keep
+  platform metadata such as `arch:` even when the newer scan no longer has the descriptor context.
+
 ## [v1.0.1] - 2026-06-05
 
 ### Fixed
