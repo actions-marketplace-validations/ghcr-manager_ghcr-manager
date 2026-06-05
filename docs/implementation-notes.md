@@ -34,6 +34,7 @@ Previous handoff material was archived to
 - [x] Add the `v1.0.0` changelog entry covering all changes since `0.9.10`.
 - [x] Fix visualizer compare mode so manifest details prefer older/base scan metadata instead of newer-scan metadata.
 - [x] Add the `v1.0.2` changelog entry for the visualizer compare-mode metadata fix.
+- [x] Add the `v1.0.3` changelog entry for npm package keyword metadata.
 
 ## Current Next Plan
 

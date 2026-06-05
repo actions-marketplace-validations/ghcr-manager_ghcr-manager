@@ -1,19 +1,23 @@
 {
   "name": "ghcr-manager-visualizer",
-  "version": "v1.0.2",
   "description": "Inspect ghcr-manager SQLite scan databases in a local browser graph visualizer.",
+  "homepage": "https://github.com/ghcr-manager/ghcr-manager#readme",
+  "version": "v1.0.3",
+  "license": "MIT",
+  "type": "module",
   "keywords": [
     "ghcr",
     "github-container-registry",
+    "github-packages",
+    "container-registry",
     "docker",
     "visualizer",
     "graph",
     "sqlite",
     "oci",
+    "sqlite",
     "cytoscape"
   ],
-  "type": "module",
-  "homepage": "https://github.com/ghcr-manager/ghcr-manager#readme",
   "bugs": {
     "url": "https://github.com/ghcr-manager/ghcr-manager/issues"
   },
@@ -21,7 +25,6 @@
     "type": "git",
     "url": "https://github.com/ghcr-manager/ghcr-manager"
   },
-  "license": "MIT",
   "engines": {
     "node": ">=24.0.0"
   },

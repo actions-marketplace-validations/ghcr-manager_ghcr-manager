@@ -1,6 +1,10 @@
 {
   "name": "ghcr-manager",
   "description": "Inspect, analyze, and manage GitHub Container Registry packages.",
+  "homepage": "https://github.com/ghcr-manager/ghcr-manager#readme",
+  "version": "v1.0.3",
+  "license": "MIT",
+  "type": "module",
   "keywords": [
     "ghcr",
     "github-container-registry",
@@ -12,7 +16,6 @@
     "github-actions",
     "sqlite"
   ],
-  "homepage": "https://github.com/ghcr-manager/ghcr-manager#readme",
   "bugs": {
     "url": "https://github.com/ghcr-manager/ghcr-manager/issues"
   },
@@ -20,9 +23,6 @@
     "type": "git",
     "url": "https://github.com/ghcr-manager/ghcr-manager"
   },
-  "license": "MIT",
-  "version": "v1.0.2",
-  "type": "module",
   "workspaces": [
     "visualizer"
   ],

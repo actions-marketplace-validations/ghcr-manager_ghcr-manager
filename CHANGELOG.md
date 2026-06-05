@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [v1.0.3] - 2026-06-05
+
+### Changed
+
+- Added npm package keywords for both `ghcr-manager` and `ghcr-manager-visualizer` to improve package discovery.
+
 ## [v1.0.2] - 2026-06-05
 
 ### Fixed
