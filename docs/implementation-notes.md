@@ -37,12 +37,15 @@ Previous handoff material was archived to
 - [x] Add the `v1.0.3` changelog entry for npm package keyword metadata.
 - [x] Fix the visualizer npm `bin` packaging so `npx ghcr-manager-visualizer` runs under Node instead of `sh`.
 - [x] Add a visualizer screenshot grid toggle that can be enabled without reloading or re-laying out the graph.
+- [x] Add a user-facing cleanup behavior explainer covering graph-aware cleanup, tag-based protection, and digest-only
+      caveats.
 
 ## Current Next Plan
 
 - No active follow-up is pending.
 - Review whether the visualizer screenshot grid should gain spacing presets or a keyboard shortcut after a few real doc
   screenshot sessions.
+- Review whether the new cleanup behavior explainer should stay as one doc or grow a short scenario-linked appendix.
 - If `ghcrctl` matrix runs reveal mismatches worth documenting, summarize those per-scenario rather than broadening the
   adapter surface.
 
@@ -84,7 +87,10 @@ Previous handoff material was archived to
   - no multi-tag scenario support
   - no multi-call mapping to emulate one scenario
   - executor outcome mismatches are valid comparison signal, not an adapter bug by default
-- Visualizer npm packaging should match the main CLI pattern:
-  keep the shebang in `src/index.ts`, publish `dist/src/index.js`, and point the package `bin` at that built file.
+- Visualizer npm packaging should match the main CLI pattern: keep the shebang in `src/index.ts`, publish
+  `dist/src/index.js`, and point the package `bin` at that built file.
 - Visualizer screenshot aids should stay DOM/CSS overlays above Cytoscape so toggling them does not reset graph layout
   state.
+- Cleanup documentation should state the current planner contract in user terms: retained tags protect reachable
+  manifests, and cleanup may remove adjacent unprotected graph sections to leave the remaining package in a correct
+  working state.

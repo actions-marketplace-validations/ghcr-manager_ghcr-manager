@@ -18,6 +18,13 @@ Behavior:
 - optionally uploads the DB and the cleanup summary JSON as artifacts
 - supports `scan-after-cleanup`
 
+Model:
+
+- cleanup is graph-aware and uses retained tags as the main protection boundary
+- in complex shared graphs, one selected deletion can remove additional unprotected manifests to leave the remaining
+  package in a correct working state
+- see [Cleanup Behavior](cleanup-behavior.md)
+
 Note: `scan-after-cleanup` only runs a second scan when cleanup actually makes changes.
 
 Permissions:

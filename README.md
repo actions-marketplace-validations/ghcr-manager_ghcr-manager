@@ -199,6 +199,8 @@ Current naming:
 
 - [GitHub Action usage](https://github.com/ghcr-manager/ghcr-manager/blob/main/docs/action-usage.md): action commands,
   including `cleanup` and `scan`
+- [Cleanup behavior](https://github.com/ghcr-manager/ghcr-manager/blob/main/docs/cleanup-behavior.md): how graph-aware
+  cleanup decides what stays, what can be deleted, and why some graph sections are removed together
 - [ghcr-manager-visualizer](https://github.com/ghcr-manager/ghcr-manager/blob/main/visualizer/README.md): local graph
   inspection and scan-to-scan comparison
 - [Multi-package workflows](https://github.com/ghcr-manager/ghcr-manager/blob/main/docs/db-merge-workflows.md): cleaning
@@ -225,6 +227,18 @@ For a first look in the visualizer, start with:
 
 For more details, see
 [visualizer/README.md](https://github.com/ghcr-manager/ghcr-manager/blob/main/visualizer/README.md).
+
+## Cleanup Behavior
+
+Cleanup is tag-based for both selection and protection. Use tags to say what should be cleaned up, and use retained tags
+to keep image and multi-arch graphs protected.
+
+Manifests reachable from retained tags stay protected. Manifests no longer reachable from any retained tag may be
+removed during cleanup. If you pull images by digest, make sure those digests are still reachable through tags that your
+cleanup rules keep.
+
+For the full explanation and graph examples, see
+[docs/cleanup-behavior.md](https://github.com/ghcr-manager/ghcr-manager/blob/main/docs/cleanup-behavior.md).
 
 ## Project
 
