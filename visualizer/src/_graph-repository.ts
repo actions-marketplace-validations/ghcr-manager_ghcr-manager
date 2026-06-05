@@ -409,6 +409,7 @@ export class GraphRepository {
     newerScanId: number,
     olderScanId: number | undefined
   ): Map<string, ManifestDetails> {
+    const preferredManifestScanId = olderScanId ?? newerScanId;
     const scanInClause = placeholders(scanIds.length);
     const inClause = placeholders(digests.length);
     const payloadColumn = includePayload ? "payload.raw_json" : "NULL";
@@ -469,7 +470,7 @@ export class GraphRepository {
     `;
     const rows = this.#database
       .prepare(sql)
-      .all(...scanIds, ...digests, ...scanIds, ...digests, newerScanId) as _ManifestRow[];
+      .all(...scanIds, ...digests, ...scanIds, ...digests, preferredManifestScanId) as _ManifestRow[];
     const manifests = new Map<string, ManifestDetails>();
     const scanMemberships = new Map<string, Set<number>>();
     const tagsByDigest = new Map<string, Map<string, Set<number>>>();
@@ -483,7 +484,7 @@ export class GraphRepository {
       scanMembership.add(row.scan_id);
 
       let manifest = manifests.get(row.digest);
-      if (!manifest || row.scan_id === newerScanId) {
+      if (!manifest || row.scan_id === preferredManifestScanId) {
         manifest = {
           id: row.digest,
           digest: row.digest,

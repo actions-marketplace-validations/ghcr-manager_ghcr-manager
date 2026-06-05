@@ -241,6 +241,73 @@ test("graph repository returns removed manifests from compare mode details", () 
   }
 });
 
+test("graph repository compare mode prefers older-scan metadata for unchanged manifests", () => {
+  const directory = mkdtempSync(join(tmpdir(), "ghcr-visualizer-"));
+  const databasePath = join(directory, "scan.sqlite");
+  const database = new Database(databasePath);
+  _initializeSchema(database);
+  const olderScanId = _insertScan(database, "scan-uuid-older-platform", "2026-05-29T10:00:00.000Z");
+  const newerScanId = _insertScan(database, "scan-uuid-newer-platform", "2026-05-30T10:00:00.000Z");
+
+  _insertPackageVersion(database, olderScanId, 1, "2026-05-29T10:00:00.000Z");
+  _insertPackageVersion(database, olderScanId, 2, "2026-05-29T10:00:00.000Z");
+  _insertTag(database, olderScanId, "single", 1);
+  _insertManifest(
+    database,
+    olderScanId,
+    1,
+    "sha256:center",
+    "application/vnd.oci.image.index.v1+json",
+    "multi_arch_manifest"
+  );
+  _insertManifest(
+    database,
+    olderScanId,
+    2,
+    "sha256:shared",
+    "application/vnd.oci.image.manifest.v1+json",
+    "image_manifest"
+  );
+  _insertPayload(database, olderScanId, "sha256:center", { kind: "center", scan: "older" });
+  _insertPayload(database, olderScanId, "sha256:shared", { kind: "shared", scan: "older" });
+  _insertEdge(database, olderScanId, "sha256:center", "sha256:shared", "image-child");
+  _insertDescriptor(database, olderScanId, "sha256:center", "sha256:shared", "linux", "amd64");
+
+  _insertPackageVersion(database, newerScanId, 1, "2026-05-30T10:00:00.000Z");
+  _insertPackageVersion(database, newerScanId, 2, "2026-05-30T10:00:00.000Z");
+  _insertTag(database, newerScanId, "single", 1);
+  _insertManifest(
+    database,
+    newerScanId,
+    1,
+    "sha256:center",
+    "application/vnd.oci.image.index.v1+json",
+    "multi_arch_manifest"
+  );
+  _insertManifest(
+    database,
+    newerScanId,
+    2,
+    "sha256:shared",
+    "application/vnd.oci.image.manifest.v1+json",
+    "image_manifest"
+  );
+  _insertPayload(database, newerScanId, "sha256:center", { kind: "center", scan: "newer" });
+  _insertPayload(database, newerScanId, "sha256:shared", { kind: "shared", scan: "newer" });
+
+  const repository = new GraphRepository(database);
+  try {
+    const manifest = repository.getManifest("acme", "demo", newerScanId, olderScanId, "sha256:shared");
+    assert.equal(manifest.changeStatus, "unchanged");
+    assert.equal(manifest.displayPlatform, "linux/amd64");
+    assert.equal(manifest.rawJson, JSON.stringify({ kind: "shared", scan: "older" }));
+    assert.equal(manifest.createdAt, "2026-05-29T10:00:00.000Z");
+  } finally {
+    database.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 function _insertScan(database: Database.Database, scanUuid: string, completedAt: string): number {
   return Number(
     database

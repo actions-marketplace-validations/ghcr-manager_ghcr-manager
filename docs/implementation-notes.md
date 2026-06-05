@@ -32,6 +32,7 @@ Previous handoff material was archived to
   - fix small prose issues in the workflow-to-visualizer doc
 - [x] Align release docs and workflow with the planned `v1.0.0` tag style.
 - [x] Add the `v1.0.0` changelog entry covering all changes since `0.9.10`.
+- [x] Fix visualizer compare mode so manifest details prefer older/base scan metadata instead of newer-scan metadata.
 
 ## Current Next Plan
 
