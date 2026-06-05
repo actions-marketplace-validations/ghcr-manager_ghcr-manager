@@ -6,7 +6,7 @@ Related docs:
 
 - [Scenarios](scenarios.md)
 - [Test Package Setup](package-setup.md)
-- [Visualizer](../../visualizer/README.md)
+- [ghcr-manager-visualizer](../../visualizer/README.md)
 
 ## Purpose
 
@@ -127,7 +127,7 @@ If you need a different comparison, change the scan selectors explicitly.
 
 ## Reading The Delta
 
-See [Visualizer](../../visualizer/README.md) for the exact delta markers used in compare mode.
+See [ghcr-manager-visualizer](../../visualizer/README.md) for the exact delta markers used in compare mode.
 
 In practice, search for any of the scenario's tags to load the graph and inspect which manifests or tags disappeared.
 

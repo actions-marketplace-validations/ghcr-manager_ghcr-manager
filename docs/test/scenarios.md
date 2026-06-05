@@ -6,7 +6,7 @@ Related docs:
 
 - [Test Package Setup](package-setup.md)
 - [Matrix Workflow To Visualizer](matrix-workflow-to-visualizer.md)
-- [Visualizer](../../visualizer/README.md)
+- [ghcr-manager-visualizer](../../visualizer/README.md)
 
 ## Graph Scenarios
 

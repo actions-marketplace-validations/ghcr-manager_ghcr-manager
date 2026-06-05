@@ -13,7 +13,7 @@ Inspect, analyze, and manage large GitHub Container Registry packages.
 - cleanup packages: with a GitHub step summary and optional DB artifact
 - preview cleanup: with `dry-run` before making changes
 - visualize graphs: and their changes with the
-  [visualizer](https://github.com/ghcr-manager/ghcr-manager/blob/main/visualizer/README.md)
+  [ghcr-manager-visualizer](https://github.com/ghcr-manager/ghcr-manager/blob/main/visualizer/README.md)
 
 ![Example compare view: red-bordered manifests are present in the older scan and removed in the newer one.](https://raw.githubusercontent.com/ghcr-manager/ghcr-manager/main/docs/images/visualizer/graph-2images-cosign--wide.png "Example compare view: red-bordered manifests are present in the older scan and removed in the newer one.")
 
@@ -199,8 +199,8 @@ Current naming:
 
 - [GitHub Action usage](https://github.com/ghcr-manager/ghcr-manager/blob/main/docs/action-usage.md): action commands,
   including `cleanup` and `scan`
-- [Visualizer](https://github.com/ghcr-manager/ghcr-manager/blob/main/visualizer/README.md): local graph inspection and
-  scan-to-scan comparison
+- [ghcr-manager-visualizer](https://github.com/ghcr-manager/ghcr-manager/blob/main/visualizer/README.md): local graph
+  inspection and scan-to-scan comparison
 - [Multi-package workflows](https://github.com/ghcr-manager/ghcr-manager/blob/main/docs/db-merge-workflows.md): cleaning
   up multiple packages with one combined DB
 - [SQLite schema guide](https://github.com/ghcr-manager/ghcr-manager/blob/main/docs/schema-description.md): practical
