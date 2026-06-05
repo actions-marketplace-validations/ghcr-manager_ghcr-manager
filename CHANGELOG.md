@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [v1.0.1] - 2026-06-05
+
+### Fixed
+
+- The GitHub release job now grants correct permissions.
+
 ## [v1.0.0] - 2026-06-05
 
 `v1.0.0` is the first stable `v1.x` release of `ghcr-manager`.
