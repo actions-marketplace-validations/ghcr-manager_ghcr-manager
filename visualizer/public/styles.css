@@ -1,7 +1,6 @@
 body {
   margin: 0;
   font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
-  background: linear-gradient(180deg, #edf2f0 0%, #dde7e2 100%);
   color: #112218;
 }
 
@@ -14,8 +13,6 @@ body {
 .controls,
 .details {
   padding: 1rem;
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(8px);
   min-width: 0;
 }
 
