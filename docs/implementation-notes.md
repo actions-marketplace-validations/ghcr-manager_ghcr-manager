@@ -35,6 +35,7 @@ Previous handoff material was archived to
 - [x] Fix visualizer compare mode so manifest details prefer older/base scan metadata instead of newer-scan metadata.
 - [x] Add the `v1.0.2` changelog entry for the visualizer compare-mode metadata fix.
 - [x] Add the `v1.0.3` changelog entry for npm package keyword metadata.
+- [x] Fix the visualizer npm `bin` packaging so `npx ghcr-manager-visualizer` runs under Node instead of `sh`.
 
 ## Current Next Plan
 
@@ -80,3 +81,5 @@ Previous handoff material was archived to
   - no multi-tag scenario support
   - no multi-call mapping to emulate one scenario
   - executor outcome mismatches are valid comparison signal, not an adapter bug by default
+- Visualizer npm packaging should match the main CLI pattern:
+  keep the shebang in `src/index.ts`, publish `dist/src/index.js`, and point the package `bin` at that built file.

@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { isAbsolute, resolve } from "node:path";
 import { startVisualizerServer } from "./_server.js";
 export type { VisualizerServerHandle } from "./_server.js";
