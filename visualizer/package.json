@@ -1,6 +1,6 @@
 {
   "name": "ghcr-manager-visualizer",
-  "version": "0.9.10",
+  "version": "v1.0.0",
   "description": "Inspect ghcr-manager SQLite scan databases in a local browser graph visualizer.",
   "type": "module",
   "homepage": "https://github.com/ghcr-manager/ghcr-manager#readme",

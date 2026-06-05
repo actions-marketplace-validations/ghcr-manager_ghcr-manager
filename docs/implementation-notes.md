@@ -31,6 +31,7 @@ Previous handoff material was archived to
   - align terminology docs with current manifest kinds and edge kinds
   - fix small prose issues in the workflow-to-visualizer doc
 - [x] Align release docs and workflow with the planned `v1.0.0` tag style.
+- [x] Add the `v1.0.0` changelog entry covering all changes since `0.9.10`.
 
 ## Current Next Plan
 

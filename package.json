@@ -10,7 +10,7 @@
     "url": "https://github.com/ghcr-manager/ghcr-manager"
   },
   "license": "MIT",
-  "version": "0.9.10",
+  "version": "v1.0.0",
   "type": "module",
   "workspaces": [
     "visualizer"

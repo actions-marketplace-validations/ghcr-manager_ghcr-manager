@@ -7,6 +7,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [v1.0.0] - 2026-06-05
+
+`v1.0.0` is the first stable `v1.x` release of `ghcr-manager`.
+
+This milestone reflects the current project shape after repeated live testing, cleanup-planner tuning, visualizer
+refinement, and a full documentation pass.
+
+### Added
+
+- Added one merged graph-scenario SQLite database to the GitHub release assets as
+  `ghcr-manager-release-scenarios.sqlite`, so users can explore real before/after cleanup cases immediately in the
+  visualizer.
+- Added dedicated user docs for live test scenarios, package setup, and the workflow-to-visualizer path.
+
+### Changed
+
+- The release workflow now builds and attaches the merged scenario DB as part of the GitHub release publish flow.
+- Visualizer docs are now centered on one canonical `visualizer/README.md`, with richer screenshots and a release-asset
+  quick-demo path.
+- README and companion docs now explain the stable action/CLI/visualizer workflows more directly, including permission
+  guidance for dry-runs versus live cleanup and explicit Node.js 24 requirements for local npm installs.
+- Visualizer node labeling was clarified so manifest metadata is easier to interpret during graph inspection.
+
 ## [0.9.10] - 2026-06-04
 
 ### Changed
