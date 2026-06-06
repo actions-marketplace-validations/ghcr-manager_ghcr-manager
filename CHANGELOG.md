@@ -7,6 +7,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [v1.0.4] - 2026-06-06
+
+### Added
+
+- Added user-facing cleanup behavior documentation, including the tag-based protection model, graph-aware cleanup
+  explanation, and digest-pull caveats.
+- Added a visualizer grid toggle so graphs can be aligned for screenshots.
+
+### Changed
+
+- Visualizer screenshots and graph-related docs were refreshed.
+- The visualizer graph area now uses a simpler, cleaner white background.
+- Cleanup summary Markdown now uses an updated index icon label in its rendered output.
+
+### Fixed
+
+- Fixed the published `ghcr-manager-visualizer` npm package so `npx ghcr-manager-visualizer` runs correctly under Node.
+
 ## [v1.0.3] - 2026-06-05
 
 ### Changed
