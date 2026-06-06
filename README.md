@@ -15,7 +15,7 @@ Inspect, analyze, and manage large GitHub Container Registry packages.
 - visualize graphs: and their changes with the
   [ghcr-manager-visualizer](https://github.com/ghcr-manager/ghcr-manager/blob/main/visualizer/README.md)
 
-![Example compare view: red-bordered manifests are present in the older scan and removed in the newer one.](https://raw.githubusercontent.com/ghcr-manager/ghcr-manager/main/docs/images/visualizer/graph-2images-cosign--wide.png "Example compare view: red-bordered manifests are present in the older scan and removed in the newer one.")
+[![Example compare view: red-bordered manifests are present in the older scan and removed in the newer one.](https://raw.githubusercontent.com/ghcr-manager/ghcr-manager/main/docs/images/visualizer/graph-2images-cosign--wide.png "Example compare view: red-bordered manifests are present in the older scan and removed in the newer one.")](https://github.com/ghcr-manager/ghcr-manager/blob/main/docs/images/visualizer/graph-2images-cosign--wide.png)
 
 _Example graph compare view: red-bordered manifests are present in the older scan and removed in the newer one._
 
@@ -199,8 +199,8 @@ Current naming:
 
 - [GitHub Action usage](https://github.com/ghcr-manager/ghcr-manager/blob/main/docs/action-usage.md): action commands,
   including `cleanup` and `scan`
-- [Cleanup behavior](https://github.com/ghcr-manager/ghcr-manager/blob/main/docs/cleanup-behavior.md): how graph-aware
-  cleanup decides what stays, what can be deleted, and why some graph sections are removed together
+- [Cleanup behavior](https://github.com/ghcr-manager/ghcr-manager/blob/main/docs/cleanup-behavior.md): how cleanup
+  protects retained tags and handles shared graphs
 - [ghcr-manager-visualizer](https://github.com/ghcr-manager/ghcr-manager/blob/main/visualizer/README.md): local graph
   inspection and scan-to-scan comparison
 - [Multi-package workflows](https://github.com/ghcr-manager/ghcr-manager/blob/main/docs/db-merge-workflows.md): cleaning

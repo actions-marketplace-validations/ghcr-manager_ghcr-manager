@@ -4,7 +4,7 @@ Local browser visualizer for `ghcr-manager` SQLite scan databases.
 
 Use it to inspect manifest graphs, compare two scans of the same package, and investigate cleanup edge cases.
 
-![Example compare view: red-bordered manifests are present in the older scan and removed in the newer one.](https://raw.githubusercontent.com/ghcr-manager/ghcr-manager/main/docs/images/visualizer/graph-2images-cosign--wide.png "Example compare view: red-bordered manifests are present in the older scan and removed in the newer one.")
+[![Example compare view: red-bordered manifests are present in the older scan and removed in the newer one.](https://raw.githubusercontent.com/ghcr-manager/ghcr-manager/main/docs/images/visualizer/graph-2images-cosign--wide.png "Example compare view: red-bordered manifests are present in the older scan and removed in the newer one.")](https://github.com/ghcr-manager/ghcr-manager/blob/main/docs/images/visualizer/graph-2images-cosign--wide.png)
 
 _Example compare view: red-bordered manifests are present in the older scan and removed in the newer one._
 
