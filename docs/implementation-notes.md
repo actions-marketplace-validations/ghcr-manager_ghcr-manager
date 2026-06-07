@@ -40,9 +40,9 @@ Previous handoff material was archived to
 - [x] Add a user-facing cleanup behavior explainer covering graph-aware cleanup, tag-based protection, and digest-only
       caveats.
 - [x] Collapse visualizer local-start scripts to one built-mode entrypoint so root `npm run visualize` always builds and
-  starts the same way.
+      starts the same way.
 - [x] Block selected helper roots that `digest-tag-referrer` point into the protected closure of retained manifests,
-  instead of only expanding closure membership after selection.
+      instead of only expanding closure membership after selection.
 - [x] Start Task 09 and record the first-pass and deeper-pass candidate-tool evaluation in `docs/tasks/09/`.
 - [x] Refactor test-scenario executor config to a generic per-scenario `executors` mapping with legacy normalization for
       current scenarios.
@@ -51,7 +51,16 @@ Previous handoff material was archived to
 - [x] Add a first pass of scan expectations to the mixed cleanup matrix so only the remaining non-obvious scenarios
       still fail fast for missing validation.
 - [x] Rename the runnable `graph-2multiarch2tags-*` base rows to explicit `--delete-untagged` graph scenarios so their
-  ids match the existing graph operation naming pattern.
+      ids match the existing graph operation naming pattern.
+- [x] Add a one-retry local Buildx setup wrapper for test seeding/build actions so transient Docker Hub bootstrap
+      failures do not immediately force a full failed-job rerun.
+- [x] Add `vlaurin/action-ghcr-prune` as a fourth executor on a small compatible non-graph scenario subset.
+- [x] Wire `vlaurin/action-ghcr-prune` into the graph-matrix path on the existing `graph-2multiarch2tags-*` base
+      scenarios without changing scenario expectations.
+- [x] Make `merge-run-artifacts` deterministic by listing matching current-run artifacts once, then downloading,
+      merging, and deleting that exact same artifact set by ID.
+- [x] Add `chizkiyahu/delete-untagged-ghcr-action` as another comparison executor on the initial untagged-only scenario
+      subset.
 
 ## Current Next Plan
 
