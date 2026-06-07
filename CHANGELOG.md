@@ -7,6 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [v1.0.5] - 2026-06-07
+
+### Fixed
+
+- Fixed the published `ghcr-manager-visualizer` npm package so `npx ghcr-manager-visualizer` starts the visualizer
+  server correctly.
+
 ## [v1.0.4] - 2026-06-06
 
 ### Added
