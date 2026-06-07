@@ -43,6 +43,7 @@ Previous handoff material was archived to
   starts the same way.
 - [x] Block selected helper roots that `digest-tag-referrer` point into the protected closure of retained manifests,
   instead of only expanding closure membership after selection.
+- [x] Start Task 09 and record the first-pass and deeper-pass candidate-tool evaluation in `docs/tasks/09/`.
 
 ## Current Next Plan
 
@@ -104,3 +105,7 @@ Previous handoff material was archived to
 - The cosign helper-index bug needs a root-validation rule for selected helper roots.
 - If a selected root directly `digest-tag-referrer` points to a retained/protected manifest, that root is blocked.
 - Helper roots that point only to unretained manifests should still remain deletable.
+- For Task 09, evaluate candidate cleanup tools by best scenario fit:
+  - prefer graph scenarios when the fit is real
+  - otherwise recommend the non-graph scenarios they match best
+  - do not force delete-tag graph executors onto tools that only do untagged or policy pruning
