@@ -1,0 +1,80 @@
+name: Test Scenario Executor vlaurin
+description: Run one scenario cleanup using vlaurin/action-ghcr-prune.
+
+inputs:
+  token:
+    description: GitHub token with package permissions.
+    required: true
+  owner:
+    description: Test owner.
+    required: true
+  package_name:
+    description: Scenario package name.
+    required: true
+  resolution_path:
+    description: Path to the resolved scenario JSON.
+    required: true
+  summary_path:
+    description: Path where a short executor summary should be written.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve vlaurin inputs
+      id: cleanup-inputs
+      shell: bash
+      env:
+        RESOLUTION_PATH: ${{ inputs.resolution_path }}
+      run: |
+        set -euo pipefail
+        delete_tags="$(jq -r '.executorConfig.inputs["delete-tags"] // ""' "$RESOLUTION_PATH")"
+        delete_untagged="$(jq -r '.executorConfig.inputs["delete-untagged"] // ""' "$RESOLUTION_PATH")"
+        keep_n_tagged="$(jq -r '.executorConfig.inputs["keep-n-tagged"] // ""' "$RESOLUTION_PATH")"
+        use_regex="$(jq -r '.executorConfig.inputs["use-regex"] // ""' "$RESOLUTION_PATH")"
+        keep_last="$keep_n_tagged"
+        keep_tags=""
+        keep_tags_regexes=""
+        keep_younger_than=""
+        prune_tags_regexes=""
+        if [[ -n "$delete_tags" ]]; then
+          prune_tags_regexes="$(node tools/tests/resolve-vlaurin-prune-tags-regexes.mjs "$delete_tags" "$use_regex")"
+        elif [[ -n "$keep_last" ]]; then
+          prune_tags_regexes="^.*$"
+        fi
+        prune_untagged="$delete_untagged"
+        echo "keep_last=$keep_last" >> "$GITHUB_OUTPUT"
+        echo "keep_younger_than=$keep_younger_than" >> "$GITHUB_OUTPUT"
+        echo "prune_untagged=$prune_untagged" >> "$GITHUB_OUTPUT"
+        {
+          echo "keep_tags<<EOF"
+          printf '%s\n' "$keep_tags"
+          echo "EOF"
+          echo "keep_tags_regexes<<EOF"
+          printf '%s\n' "$keep_tags_regexes"
+          echo "EOF"
+          echo "prune_tags_regexes<<EOF"
+          printf '%s\n' "$prune_tags_regexes"
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Execute with vlaurin/action-ghcr-prune
+      uses: vlaurin/action-ghcr-prune@45006c484f4e7d98c6f6f4c5ba738dd2a441f9c7
+      with:
+        token: ${{ inputs.token }}
+        organization: ${{ inputs.owner }}
+        container: ${{ inputs.package_name }}
+        keep-last: ${{ steps.cleanup-inputs.outputs.keep_last }}
+        keep-tags: ${{ steps.cleanup-inputs.outputs.keep_tags }}
+        keep-tags-regexes: ${{ steps.cleanup-inputs.outputs.keep_tags_regexes }}
+        keep-younger-than: ${{ steps.cleanup-inputs.outputs.keep_younger_than }}
+        prune-tags-regexes: ${{ steps.cleanup-inputs.outputs.prune_tags_regexes }}
+        prune-untagged: ${{ steps.cleanup-inputs.outputs.prune_untagged }}
+
+    - name: Record vlaurin executor summary
+      shell: bash
+      env:
+        SUMMARY_PATH: ${{ inputs.summary_path }}
+      run: |
+        set -euo pipefail
+        printf '%s\n' '{"executor":"vlaurin","status":"completed"}' > "$SUMMARY_PATH"

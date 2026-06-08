@@ -229,7 +229,7 @@ function _graphBaseScenario(baseCase) {
       {
         "delete-untagged": "true"
       },
-      ["ghcr-manager", "ghcr-cleanup-action" ]
+      ["ghcr-manager", "ghcr-cleanup-action", "vlaurin-action-ghcr-prune"]
     );
   }
 

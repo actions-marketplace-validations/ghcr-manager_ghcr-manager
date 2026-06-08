@@ -16,7 +16,7 @@ export const cleanupScenarios = {
       {
         "delete-untagged": "true"
       },
-      ["ghcr-manager", "ghcr-cleanup-action"]
+      ["ghcr-manager", "ghcr-cleanup-action", "vlaurin-action-ghcr-prune"]
     ),
     tagNames: {
       keepTag: "keep"
@@ -255,7 +255,7 @@ export const cleanupScenarios = {
       {
         "delete-untagged": "true"
       },
-      ["ghcr-manager", "ghcr-cleanup-action"]
+      ["ghcr-manager", "ghcr-cleanup-action", "vlaurin-action-ghcr-prune"]
     ),
     tagNames: {
       trackedTag: "tracked"
@@ -295,7 +295,7 @@ export const cleanupScenarios = {
       {
         "keep-n-tagged": "1"
       },
-      ["ghcr-manager", "ghcr-cleanup-action"]
+      ["ghcr-manager", "ghcr-cleanup-action", "vlaurin-action-ghcr-prune"]
     ),
     tagNames: {
       oldestTag: "oldest",
@@ -508,7 +508,7 @@ export const cleanupScenarios = {
       {
         "delete-tags": "*delete-me"
       },
-      ["ghcr-manager", "ghcr-cleanup-action" ]
+      ["ghcr-manager", "ghcr-cleanup-action", "vlaurin-action-ghcr-prune"]
     ),
     tagNames: {
       keepTag: "keep",

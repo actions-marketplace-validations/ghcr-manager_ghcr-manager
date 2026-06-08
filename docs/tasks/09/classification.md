@@ -223,6 +223,13 @@ Classes:
   - add executor lane
   - add vlaurin-specific scenario input mapping
   - likely reuse existing non-graph scenarios instead of creating new ones
+- current implementation:
+  - first-pass wiring added on:
+    - `delete-untagged-noop`
+    - `delete-untagged-real`
+    - `wildcard-tagged-fully-deletable`
+    - `keep-n-tagged-overflow`
+  - shared scenario assertions stay unchanged on purpose; mismatches are comparison signal
 
 ### `freke/github_docker_package_cleanup`
 
@@ -256,6 +263,7 @@ Classes:
 - strongest near-term non-graph add: `vlaurin/action-ghcr-prune`
   - best reuse of existing scenarios
   - lowest adaptation cost
+  - first implementation now added on a small non-graph subset
 - leave `freke/github_docker_package_cleanup` out for now
 
 ## Feature ideas spotted

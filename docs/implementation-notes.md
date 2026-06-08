@@ -77,6 +77,15 @@ Previous handoff material was archived to
   `delete-untagged` comparisons.
 - If Task 09 continues immediately, implement the chosen executor/scenario direction before returning to the older
   follow-up ideas.
+- Decide whether Task 09 should prioritize:
+  - graph `delete-untagged` evaluation first using the existing `2multiarch2tags` family for
+    `quartx-analytics/ghcr-cleaner` and `chizkiyahu/delete-untagged-ghcr-action`, now that `vlaurin/action-ghcr-prune`
+    is wired into both the non-graph matrix and the graph-matrix base `2multiarch2tags` rows, or
+  - expand the `vlaurin` scenario set further if more non-graph comparison lanes look useful.
+- Consider whether to add a smaller `2images1tag` graph family as a follow-up, not a prerequisite, for clearer
+  `delete-untagged` comparisons.
+- If Task 09 continues immediately, implement the chosen executor/scenario direction before returning to the older
+  follow-up ideas.
 
 ## Current Status
 

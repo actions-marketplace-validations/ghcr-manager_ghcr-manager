@@ -68,10 +68,20 @@ runs:
         resolution_path: ${{ inputs.resolution_path }}
         summary_path: ${{ inputs.summary_path }}
 
+    - name: Execute with vlaurin executor action
+      if: ${{ inputs.executor == 'vlaurin-action-ghcr-prune' }}
+      uses: ./.github/actions/test-scenario-executor-vlaurin
+      with:
+        token: ${{ inputs.token }}
+        owner: ${{ inputs.owner }}
+        package_name: ${{ inputs.package_name }}
+        resolution_path: ${{ inputs.resolution_path }}
+        summary_path: ${{ inputs.summary_path }}
+
     - name: Reject unsupported executor
       if:
         ${{ inputs.executor != 'ghcr-manager' && inputs.executor != 'ghcr-cleanup-action' && inputs.executor !=
-        'ghcrctl' }}
+        'ghcrctl' && inputs.executor != 'vlaurin-action-ghcr-prune' }}
       shell: bash
       run: |
         set -euo pipefail
