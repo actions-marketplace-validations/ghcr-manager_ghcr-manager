@@ -38,7 +38,6 @@
   },
   "scripts": {
     "build": "tsc --project tsconfig.json && node scripts/copy-public.mjs",
-    "dev": "tsx src/index.ts",
     "start": "node dist/src/index.js",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\"",

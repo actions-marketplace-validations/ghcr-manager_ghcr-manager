@@ -104,14 +104,8 @@ _Example compare view: tags with '(-)' were removed. Here the manifest with the 
 From this repository checkout, you can run the visualizer without publishing:
 
 ```sh
+npm run build
 npm run visualize -- --db ./artifacts/acme__demo.sqlite
-```
-
-Or build and run the workspace directly:
-
-```sh
-npm run build:visualizer
-npm run visualizer:start -- --db ./artifacts/acme__demo.sqlite
 ```
 
 ## Project

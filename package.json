@@ -40,12 +40,11 @@
     "ghcr-manager": "./dist/cli/index.js"
   },
   "scripts": {
-    "build": "tsc --project tsconfig.json",
+    "build": "tsc --project tsconfig.json && npm run build:visualizer",
     "build:visualizer": "npm run build --workspace visualizer",
     "ghcr-manager": "tsx src/cli/index.ts",
     "ghcr-manager:dist": "node dist/cli/index.js",
-    "visualize": "npm run dev --workspace visualizer --",
-    "visualizer:start": "npm run start --workspace visualizer --",
+    "visualize": "npm run start --workspace visualizer --",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "npm run check:file-names && npm run check:test-mapping && npm run typecheck && npm run typecheck --workspace visualizer && npm run lint:ts && npm run lint:yaml && npm run lint:markdown && npm run lint --workspace visualizer && npm run format:check",

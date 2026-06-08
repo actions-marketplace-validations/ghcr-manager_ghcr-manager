@@ -39,6 +39,8 @@ Previous handoff material was archived to
 - [x] Add a visualizer screenshot grid toggle that can be enabled without reloading or re-laying out the graph.
 - [x] Add a user-facing cleanup behavior explainer covering graph-aware cleanup, tag-based protection, and digest-only
       caveats.
+- [x] Collapse visualizer local-start scripts to one built-mode entrypoint so root `npm run visualize` always builds and
+  starts the same way.
 
 ## Current Next Plan
 
@@ -84,6 +86,10 @@ Previous handoff material was archived to
   - executor outcome mismatches are valid comparison signal, not an adapter bug by default
 - Visualizer npm packaging should match the main CLI pattern: keep the shebang in `src/index.ts`, publish
   `dist/src/index.js`, and point the package `bin` at that built file.
+- Local visualizer startup should not expose separate source-mode vs built-mode behavior at repo root:
+  - root `npm run build` also builds the visualizer
+  - root `npm run visualize` uses the built visualizer path
+  - avoid a separate root `visualizer:start` alias
 - Visualizer screenshot aids should stay DOM/CSS overlays above Cytoscape so toggling them does not reset graph layout
   state.
 - Cleanup documentation should state the current planner contract in user terms: retained tags protect reachable
