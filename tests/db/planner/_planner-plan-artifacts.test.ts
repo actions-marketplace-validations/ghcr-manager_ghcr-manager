@@ -398,6 +398,119 @@ test("planner plan artifacts include reverse-linked untagged manifests connected
   );
 });
 
+test("planner plan artifacts block helper roots that sha-tag point to retained manifests", (t) => {
+  const harness = _createHarness("protected-sha-tag-parent");
+  t.after(() => harness.database.close());
+
+  const retainedDigest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const signatureDigest = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+  const helperIndexDigest = "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
+
+  _insertManifestVersion(harness.writer, 1, retainedDigest, "2026-05-01T10:00:00.000Z", {
+    manifestKind: ManifestKinds.imageManifest,
+    mediaType: "application/vnd.oci.image.manifest.v1+json",
+    tag: "image-a"
+  });
+  _insertManifestVersion(harness.writer, 2, signatureDigest, "2026-05-01T10:01:00.000Z", {
+    manifestKind: ManifestKinds.signatureManifest,
+    mediaType: "application/vnd.oci.image.manifest.v1+json"
+  });
+  _insertManifestVersion(harness.writer, 3, helperIndexDigest, "2026-05-01T10:02:00.000Z", {
+    manifestKind: ManifestKinds.indexManifest,
+    mediaType: "application/vnd.oci.image.index.v1+json",
+    tag: "sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.sig"
+  });
+  harness.writer.insertManifestEdge({
+    parentDigest: retainedDigest,
+    childDigest: signatureDigest,
+    edgeKind: "referrer"
+  });
+  harness.writer.insertManifestEdge({
+    parentDigest: helperIndexDigest,
+    childDigest: signatureDigest,
+    edgeKind: "image-child"
+  });
+  harness.writer.rebuildManifestReachability();
+
+  const directTargetRoots: DeletePlanRoot[] = [
+    {
+      versionId: 3,
+      digest: helperIndexDigest,
+      manifestKind: ManifestKinds.indexManifest,
+      reason: "delete-untagged",
+      selectionMode: "delete-root"
+    }
+  ];
+  const artifacts = harness.artifacts.build(harness.scanId, directTargetRoots);
+
+  assert.deepEqual(artifacts.blockedRoots, [
+    {
+      blockedVersionId: 3,
+      blockedDigest: helperIndexDigest,
+      blockingVersionId: 1,
+      blockingDigest: retainedDigest,
+      overlapDigest: retainedDigest,
+      overlapManifestKind: ManifestKinds.indexManifest,
+      reason: "overlap-with-retained-root"
+    }
+  ]);
+  assert.deepEqual(artifacts.fullyDeletableRoots, []);
+  assert.deepEqual(artifacts.supportedUntagOnlyRootDigests, new Set());
+  assert.deepEqual(
+    artifacts.closureManifests.map((manifest) => [manifest.memberDigest, manifest.memberRole]),
+    [[helperIndexDigest, "root"]]
+  );
+});
+
+test("planner plan artifacts still delete helper roots that sha-tag point only to unretained manifests", (t) => {
+  const harness = _createHarness("unretained-sha-tag-parent");
+  t.after(() => harness.database.close());
+
+  const imageDigest = "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd";
+  const signatureDigest = "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+  const helperIndexDigest = "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+
+  _insertManifestVersion(harness.writer, 1, imageDigest, "2026-05-01T10:00:00.000Z", {
+    manifestKind: ManifestKinds.imageManifest,
+    mediaType: "application/vnd.oci.image.manifest.v1+json"
+  });
+  _insertManifestVersion(harness.writer, 2, signatureDigest, "2026-05-01T10:01:00.000Z", {
+    manifestKind: ManifestKinds.signatureManifest,
+    mediaType: "application/vnd.oci.image.manifest.v1+json"
+  });
+  _insertManifestVersion(harness.writer, 3, helperIndexDigest, "2026-05-01T10:02:00.000Z", {
+    manifestKind: ManifestKinds.indexManifest,
+    mediaType: "application/vnd.oci.image.index.v1+json",
+    tag: "sha256-dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd.sig"
+  });
+  harness.writer.insertManifestEdge({
+    parentDigest: imageDigest,
+    childDigest: signatureDigest,
+    edgeKind: "referrer"
+  });
+  harness.writer.insertManifestEdge({
+    parentDigest: helperIndexDigest,
+    childDigest: signatureDigest,
+    edgeKind: "image-child"
+  });
+  harness.writer.rebuildManifestReachability();
+
+  const directTargetRoots: DeletePlanRoot[] = [
+    {
+      versionId: 3,
+      digest: helperIndexDigest,
+      manifestKind: ManifestKinds.indexManifest,
+      reason: "delete-untagged",
+      selectionMode: "delete-root"
+    }
+  ];
+  const artifacts = harness.artifacts.build(harness.scanId, directTargetRoots);
+
+  assert.deepEqual(artifacts.blockedRoots, []);
+  assert.deepEqual(artifacts.fullyDeletableRoots, directTargetRoots);
+  assert.deepEqual(artifacts.supportedUntagOnlyRootDigests, new Set());
+});
+
 test("planner plan artifacts do not delete graph members behind a preserved barrier", (t) => {
   const harness = _createHarness("recursive-preserve-barrier");
   t.after(() => harness.database.close());

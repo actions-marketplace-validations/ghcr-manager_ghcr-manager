@@ -64,7 +64,7 @@ export class PlannerPlanArtifacts {
 
   #listBlockedRoots(scanId: number) {
     return this.#sql
-      .all<Parameters<typeof mapBlockedRootRow>[0]>(_LIST_BLOCKED_ROOTS_SQL, [scanId, scanId, scanId])
+      .all<Parameters<typeof mapBlockedRootRow>[0]>(_LIST_BLOCKED_ROOTS_SQL, [scanId, scanId, scanId, scanId, scanId])
       .map(mapBlockedRootRow);
   }
 

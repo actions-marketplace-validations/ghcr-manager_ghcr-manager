@@ -41,6 +41,8 @@ Previous handoff material was archived to
       caveats.
 - [x] Collapse visualizer local-start scripts to one built-mode entrypoint so root `npm run visualize` always builds and
   starts the same way.
+- [x] Block selected helper roots that `digest-tag-referrer` point into the protected closure of retained manifests,
+  instead of only expanding closure membership after selection.
 
 ## Current Next Plan
 
@@ -99,3 +101,6 @@ Previous handoff material was archived to
   - enumerate matching run artifacts once
   - download by explicit artifact IDs
   - delete that exact same ID set after uploading the merged DB artifact
+- The cosign helper-index bug needs a root-validation rule for selected helper roots.
+- If a selected root directly `digest-tag-referrer` points to a retained/protected manifest, that root is blocked.
+- Helper roots that point only to unretained manifests should still remain deletable.
