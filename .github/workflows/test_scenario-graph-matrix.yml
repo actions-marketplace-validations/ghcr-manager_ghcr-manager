@@ -15,6 +15,7 @@ run-name: "Test Scenario Graph Matrix (executors: ${{ inputs.executors }})"
           - ghcr-cleanup-action
           - ghcrctl
           - vlaurin-action-ghcr-prune
+          - chizkiyahu-delete-untagged-ghcr-action
       upload_artifacts:
         description: Upload the final rescan DB artifact from inside the action.
         required: false

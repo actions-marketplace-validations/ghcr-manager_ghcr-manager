@@ -18,11 +18,15 @@ Classes:
 
 ### `quartx-analytics/ghcr-cleaner`
 
-- class: `strong candidate`
+- class: `drop`
 - why:
   - explicitly handles truly untagged images
   - explicitly accounts for multiplatform dependencies
   - explicitly mentions provenance/attestation-related extra manifests
+  - but it is a stale fork of `chizkiyahu/delete-untagged-ghcr-action`
+  - repo last change was about 3 years ago
+  - GitHub reports it as `25` commits ahead and `37` commits behind `chizkiyahu/delete-untagged-ghcr-action:main`
+  - the org itself also looks effectively inactive for this purpose
 - best-fit scenarios:
   - graph `2multiarch2tags` variants:
     - `base`
@@ -31,6 +35,8 @@ Classes:
     - `cosign-attestations`
   - possible follow-up graph family: `2images1tag` if we add it
   - `delete-untagged` cases where dependency-aware behavior matters
+
+=> exclude. Stale fork; prefer the active upstream-like repo `chizkiyahu/delete-untagged-ghcr-action`.
 
 ### `chizkiyahu/delete-untagged-ghcr-action`
 
@@ -108,7 +114,6 @@ Classes:
 
 ## Recommended deeper pass
 
-- `quartx-analytics/ghcr-cleaner`
 - `chizkiyahu/delete-untagged-ghcr-action`
 - `vlaurin/action-ghcr-prune`
 - maybe `freke/github_docker_package_cleanup`
@@ -129,38 +134,6 @@ Classes:
   flavor
 - adding another executor is not just one workflow `uses:` line
 - but adding a new executor no longer requires inventing another top-level scenario field just for that tool
-
-### `quartx-analytics/ghcr-cleaner`
-
-- best functional fit:
-  - graph packages with untagged manifests
-  - especially `attestations` variants
-  - maybe some `delete-untagged` non-graph cases too
-- important limit:
-  - it does not support delete-by-tag
-  - it supports:
-    - `delete-untagged`
-    - `keep-at-most`
-    - tag glob filtering for the keep-at-most pass
-- practical implication:
-  - it is not a fit for the current graph delete-tag operations
-  - but it is already a fit for graph-shaped `delete-untagged` evaluation using `2multiarch2tags`
-  - adding a `2images1tag`-style graph family could make this even cleaner, but it is not required to start
-- likely best scenarios:
-  - `graph-2multiarch2tags-base`
-  - `graph-2multiarch2tags-attestations`
-  - `graph-2multiarch2tags-cosign`
-  - `graph-2multiarch2tags-cosign-attestations`
-  - `delete-untagged-real`
-  - `delete-untagged-noop`
-- notable behavior detail:
-  - dependency protection only looks at child digests referenced from tagged manifest lists
-  - that means attestation/referrer cleanup behavior is worth observing
-- framework cost:
-  - medium
-  - add new executor lane
-  - add quartx-specific scenario input mapping
-  - probably add new scenarios rather than only reusing existing graph delete-tag scenarios
 
 ### `chizkiyahu/delete-untagged-ghcr-action`
 
@@ -192,6 +165,15 @@ Classes:
   - may not need brand-new graph base layouts to start
   - a `2images1tag` family would still be a useful follow-up because it gives a smaller, easier-to-explain
     `delete-untagged` graph case
+- current implementation:
+  - first-pass wiring added on:
+    - `delete-untagged-noop`
+    - `delete-untagged-real`
+    - `graph-2multiarch2tags-base--delete-untagged`
+    - `graph-2multiarch2tags-attestations--delete-untagged`
+    - `graph-2multiarch2tags-cosign--delete-untagged`
+    - `graph-2multiarch2tags-cosign-attestations--delete-untagged`
+  - shared scenario assertions stay unchanged on purpose; mismatches are comparison signal
 
 ### `vlaurin/action-ghcr-prune`
 
@@ -256,9 +238,8 @@ Classes:
 
 ## Recommendation after deeper pass
 
-- strongest graph-oriented research candidates: `quartx-analytics/ghcr-cleaner` and
-  `chizkiyahu/delete-untagged-ghcr-action`
-  - start them on `graph-2multiarch2tags-*` plus `delete-untagged-real/noop`
+- strongest next graph-oriented research candidate: `chizkiyahu/delete-untagged-ghcr-action`
+  - start it on `graph-2multiarch2tags-*` plus `delete-untagged-real/noop`
   - optionally add a smaller `2images1tag` family afterward if we want an easier-to-read graph case
 - strongest near-term non-graph add: `vlaurin/action-ghcr-prune`
   - best reuse of existing scenarios
@@ -277,6 +258,4 @@ Classes:
   - regex-style protection already exists for us
   - protect-by-ID did not look compelling enough from this review to treat as a follow-up idea
 - `quartx-analytics/ghcr-cleaner`
-  - => no desired feature idea here
-  - the earlier note was about UI/parameter separation only, not about weakening graph safety
-  - do not treat this tool as suggesting a mode that ignores graph correctness or allows breaking deletes
+  - => no follow-up; treat as stale fork rather than an active comparison target

@@ -16,7 +16,7 @@ export const cleanupScenarios = {
       {
         "delete-untagged": "true"
       },
-      ["ghcr-manager", "ghcr-cleanup-action", "vlaurin-action-ghcr-prune"]
+      ["ghcr-manager", "ghcr-cleanup-action", "vlaurin-action-ghcr-prune", "chizkiyahu-delete-untagged-ghcr-action"]
     ),
     tagNames: {
       keepTag: "keep"
@@ -255,7 +255,7 @@ export const cleanupScenarios = {
       {
         "delete-untagged": "true"
       },
-      ["ghcr-manager", "ghcr-cleanup-action", "vlaurin-action-ghcr-prune"]
+      ["ghcr-manager", "ghcr-cleanup-action", "vlaurin-action-ghcr-prune", "chizkiyahu-delete-untagged-ghcr-action"]
     ),
     tagNames: {
       trackedTag: "tracked"

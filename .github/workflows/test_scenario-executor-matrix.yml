@@ -14,6 +14,7 @@ run-name: "Test Scenario Executor Matrix (executors: ${{ inputs.executors }})"
           - ghcr-manager
           - ghcr-cleanup-action
           - vlaurin-action-ghcr-prune
+          - chizkiyahu-delete-untagged-ghcr-action
       upload_artifacts:
         description: Upload the final rescan DB artifact from inside the action.
         required: false

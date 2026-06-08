@@ -77,6 +77,8 @@ Previous handoff material was archived to
   `delete-untagged` comparisons.
 - If Task 09 continues immediately, implement the chosen executor/scenario direction before returning to the older
   follow-up ideas.
+- Run the initial GitHub matrix lanes for `chizkiyahu/delete-untagged-ghcr-action` and inspect how it behaves on the
+  `2multiarch2tags` untagged graph family compared with `ghcr-manager`, `ghcr-cleanup-action`, and `vlaurin`.
 - Decide whether Task 09 should prioritize:
   - graph `delete-untagged` evaluation first using the existing `2multiarch2tags` family for
     `quartx-analytics/ghcr-cleaner` and `chizkiyahu/delete-untagged-ghcr-action`, now that `vlaurin/action-ghcr-prune`
@@ -125,6 +127,10 @@ Previous handoff material was archived to
   - no multi-tag scenario support
   - no multi-call mapping to emulate one scenario
   - executor outcome mismatches are valid comparison signal, not an adapter bug by default
+- `chizkiyahu/delete-untagged-ghcr-action` should follow the same comparison rule as other non-primary executors:
+  - wire only scenarios it can meaningfully run
+  - keep shared scenario expectations unchanged
+  - treat failures as comparison signal, not something to normalize away
 - Visualizer npm packaging should match the main CLI pattern: keep the shebang in `src/index.ts`, publish
   `dist/src/index.js`, and point the package `bin` at that built file.
 - Local visualizer startup should not expose separate source-mode vs built-mode behavior at repo root:
