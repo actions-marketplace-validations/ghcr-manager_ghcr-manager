@@ -64,6 +64,8 @@ Previous handoff material was archived to
 - [x] Add release-only Docker publishing for the visualizer image with tags `vX.Y.Z`, `vX`, and `latest`.
 - [x] Replace the visualizer image release workflow's dummy smoke test with a live container startup check against a
       tiny real SQLite DB.
+- [x] Change `exclude-tags` cleanup behavior from root-scoped protection to tag-scoped skipping so matching sibling tags
+      can still be untagged on the same root.
 
 ## Current Next Plan
 
@@ -151,6 +153,10 @@ Previous handoff material was archived to
   - enumerate matching run artifacts once
   - download by explicit artifact IDs
   - delete that exact same ID set after uploading the merged DB artifact
+- `exclude-tags` in tagged cleanup should be tag-scoped:
+  - matching tags are removed from the selected-tag set
+  - sibling tags on the same root may still be untagged or deleted if selected
+  - do not let one excluded sibling silently protect the whole root
 - Visualizer release distribution should include a container image, but keep scope minimal:
   - publish only the visualizer image for now
   - publish only from release tags, not branch pushes

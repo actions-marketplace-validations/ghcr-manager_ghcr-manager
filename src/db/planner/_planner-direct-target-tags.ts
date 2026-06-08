@@ -23,16 +23,17 @@ export class PlannerDirectTargetTags {
 
     const selectedTagPredicate = buildTagSelectorPredicate(this.#sql.database, "t.tag", deleteTags, useRegex);
     const params: Array<number | string> = [scanId, ...selectedTagPredicate.params];
-    let excludedRootSql = "";
+    let excludedTagSql = "";
     let olderThanSql = "";
     if (excludeTags.length > 0) {
       const excludedTagPredicate = buildTagSelectorPredicate(this.#sql.database, "xt.tag", excludeTags, useRegex);
-      excludedRootSql = `
+      excludedTagSql = `
         AND NOT EXISTS (
           SELECT 1
           FROM tags xt
           WHERE xt.scan_id = t.scan_id
             AND xt.version_id = t.version_id
+            AND xt.tag = t.tag
             AND (${excludedTagPredicate.sql})
         )
       `;
@@ -58,7 +59,7 @@ export class PlannerDirectTargetTags {
       WHERE t.scan_id = ?
         AND t.is_digest_tag = ?
         AND (${selectedTagPredicate.sql})
-        ${excludedRootSql}
+        ${excludedTagSql}
         ${olderThanSql}
       ORDER BY tag
     `;

@@ -278,13 +278,10 @@ export const cleanupScenarios = {
       deleteTag: "delete-me",
       keepTag: "keep-me"
     },
-    scanAssertions: [
-      { tagNameKey: "deleteTag", requireRoot: true },
-      { tagNameKey: "keepTag", requireRoot: true }
-    ],
+    scanAssertions: [{ tagNameKey: "keepTag", requireRoot: true }],
     latestScanAssertions: {
       manifestCount: 1,
-      tagCount: 2
+      tagCount: 1
     }
   },
   "keep-n-tagged-overflow": {

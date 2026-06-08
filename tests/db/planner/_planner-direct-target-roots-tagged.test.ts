@@ -33,7 +33,7 @@ test("tagged-only direct target roots return empty when no delete tags are reque
   database.close();
 });
 
-test("tagged-only direct target roots honor cutoff timestamps and excluded tags", () => {
+test("tagged-only direct target roots honor cutoff timestamps and exclude only matching sibling tags", () => {
   const database = openDatabase(":memory:");
   const writer = new ScanWriter(database);
 
@@ -51,7 +51,7 @@ test("tagged-only direct target roots honor cutoff timestamps and excluded tags"
     manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
-  writer.insertTag({ versionId: 1, tag: "delete-me" });
+  writer.insertTag({ versionId: 1, tag: "delete-old" });
   writer.insertTag({ versionId: 1, tag: "keep-me" });
   writer.insertPackageVersion({
     versionId: 2,
@@ -64,7 +64,7 @@ test("tagged-only direct target roots honor cutoff timestamps and excluded tags"
     manifestKind: ManifestKinds.imageManifest,
     mediaType: "application/vnd.oci.image.manifest.v1+json"
   });
-  writer.insertTag({ versionId: 2, tag: "delete-me" });
+  writer.insertTag({ versionId: 2, tag: "delete-new" });
   writer.markScanCompleted("2026-06-03T10:00:00.000Z");
 
   const sql = buildSql(database);
@@ -79,7 +79,15 @@ test("tagged-only direct target roots honor cutoff timestamps and excluded tags"
   };
   const roots = listTaggedOnlyDirectTargetRoots(sql, writer.getActiveScanId(), options);
 
-  assert.deepEqual(roots, []);
+  assert.deepEqual(roots, [
+    {
+      versionId: 1,
+      digest: "sha256:keep-old",
+      manifestKind: ManifestKinds.imageManifest,
+      reason: "delete-tags-partial-tag-match",
+      selectionMode: "untag-only"
+    }
+  ]);
   database.close();
 });
 

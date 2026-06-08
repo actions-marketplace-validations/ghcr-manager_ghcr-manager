@@ -61,13 +61,21 @@ test("planner repository matches regex delete and exclude selectors in SQL", () 
     useRegex: true
   });
 
-  assert.deepEqual(plan.directTargetTags, []);
-  assert.deepEqual(plan.directTargetRoots, []);
+  assert.deepEqual(plan.directTargetTags, ["latest"]);
+  assert.deepEqual(plan.directTargetRoots, [
+    {
+      versionId: 1,
+      digest: "sha256:protected-root",
+      manifestKind: ManifestKinds.imageManifest,
+      reason: "delete-tags-partial-tag-match",
+      selectionMode: "untag-only"
+    }
+  ]);
 
   database.close();
 });
 
-test("planner repository lets exclude-tags protect a matched root", () => {
+test("planner repository lets exclude-tags skip only the matching sibling tags", () => {
   const database = openDatabase(":memory:");
   const writer = new ScanWriter(database);
   const repository = new PlannerRepository(database);
@@ -92,8 +100,16 @@ test("planner repository lets exclude-tags protect a matched root", () => {
 
   const plan = repository.getDeleteTagsPlan("acme", "exclude-tags", ["latest"], ["keep-me"]);
 
-  assert.deepEqual(plan.directTargetTags, []);
-  assert.deepEqual(plan.directTargetRoots, []);
+  assert.deepEqual(plan.directTargetTags, ["latest"]);
+  assert.deepEqual(plan.directTargetRoots, [
+    {
+      versionId: 1,
+      digest: "sha256:protected-root",
+      manifestKind: ManifestKinds.imageManifest,
+      reason: "delete-tags-partial-tag-match",
+      selectionMode: "untag-only"
+    }
+  ]);
 
   database.close();
 });

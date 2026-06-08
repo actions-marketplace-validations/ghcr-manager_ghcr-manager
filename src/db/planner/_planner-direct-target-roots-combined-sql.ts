@@ -9,8 +9,7 @@ export interface CombinedDirectTargetRootsQuery {
 export function buildCombinedDirectTargetRootsQuery(
   scanId: number,
   options: DirectTargetRootOptions,
-  selectedTagsSql: string,
-  excludedVersionsSql: string
+  selectedTagsSql: string
 ): CombinedDirectTargetRootsQuery {
   const baseParams: Array<number | string> = [scanId];
   const cutoffSql = options.cutoffTimestamp ? "AND created_at < ?" : "";
@@ -86,9 +85,6 @@ export function buildCombinedDirectTargetRootsQuery(
     selected_tags AS (
       ${selectedTagsSql}
     ),
-    excluded_versions AS (
-      ${excludedVersionsSql}
-    ),
     matched_tag_counts AS (
       SELECT
         st.version_id,
@@ -111,13 +107,10 @@ export function buildCombinedDirectTargetRootsQuery(
       FROM root_candidates rc
       LEFT JOIN matched_tag_counts mtc
         ON mtc.version_id = rc.version_id
-      LEFT JOIN excluded_versions ev
-        ON ev.version_id = rc.version_id
       WHERE (
           rc.tag_count > 0
           OR (? = 1 AND COALESCE(mtc.matched_tag_count, 0) > 0)
         )
-        AND ev.version_id IS NULL
         AND ? = 1
     ),
     ranked_tagged_roots AS (

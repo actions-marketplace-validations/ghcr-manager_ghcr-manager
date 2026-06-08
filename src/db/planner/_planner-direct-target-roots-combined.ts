@@ -9,21 +9,10 @@ export function listCombinedDirectTargetRoots(
   scanId: number,
   options: DirectTargetRootOptions
 ): DeletePlanRoot[] {
-  const { selectedTagsSql, selectedParams, excludedVersionsSql, excludedParams } = buildDirectTargetRootTagFilters(
-    sql,
-    scanId,
-    options
-  );
-  const { query, baseParams, tailParams } = buildCombinedDirectTargetRootsQuery(
-    scanId,
-    options,
-    selectedTagsSql,
-    excludedVersionsSql
-  );
+  const { selectedTagsSql, selectedParams } = buildDirectTargetRootTagFilters(sql, scanId, options);
+  const { query, baseParams, tailParams } = buildCombinedDirectTargetRootsQuery(scanId, options, selectedTagsSql);
 
   return sql
-    .all<
-      Parameters<typeof mapPlanRootRow>[0]
-    >(query, [...baseParams, ...selectedParams, ...excludedParams, ...tailParams])
+    .all<Parameters<typeof mapPlanRootRow>[0]>(query, [...baseParams, ...selectedParams, ...tailParams])
     .map(mapPlanRootRow);
 }

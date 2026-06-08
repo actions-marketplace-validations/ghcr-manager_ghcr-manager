@@ -19,9 +19,6 @@ export function listTaggedOnlyDirectTargetRoots(
 
   const params: Array<number | string> = [];
   const cutoffSql = options.cutoffTimestamp ? "AND pv.created_at < ?" : "";
-  if (options.cutoffTimestamp) {
-    params.push(options.cutoffTimestamp);
-  }
 
   const selectedTagDigestFlag = options.deleteOrphanedImages ? 1 : 0;
   const selectedTagsSql = selectedTagPredicate
@@ -31,38 +28,37 @@ export function listTaggedOnlyDirectTargetRoots(
         WHERE t.scan_id = ?
           AND t.is_digest_tag = ?
           AND (${selectedTagPredicate.sql})
+          ${
+            excludedTagPredicate
+              ? `
+          AND NOT EXISTS (
+            SELECT 1
+            FROM tags xt
+            WHERE xt.scan_id = t.scan_id
+              AND xt.version_id = t.version_id
+              AND xt.tag = t.tag
+              AND (${excludedTagPredicate.sql})
+          )
+        `
+              : ""
+          }
       `
     : `
         SELECT NULL AS version_id, NULL AS tag
         WHERE 1 = 0
       `;
   if (selectedTagPredicate) {
-    params.push(scanId, selectedTagDigestFlag, ...selectedTagPredicate.params);
+    params.push(scanId, selectedTagDigestFlag, ...selectedTagPredicate.params, ...(excludedTagPredicate?.params ?? []));
   }
-
-  const excludedVersionsSql = excludedTagPredicate
-    ? `
-      SELECT DISTINCT xt.version_id
-      FROM tags xt
-      WHERE xt.scan_id = ?
-        AND xt.is_digest_tag = 0
-        AND (${excludedTagPredicate.sql})
-    `
-    : `
-      SELECT NULL AS version_id
-      WHERE 1 = 0
-    `;
-  if (excludedTagPredicate) {
-    params.push(scanId, ...excludedTagPredicate.params);
+  params.push(scanId);
+  if (options.cutoffTimestamp) {
+    params.push(options.cutoffTimestamp);
   }
 
   const deleteOrphanedImages = options.deleteOrphanedImages ? 1 : 0;
   const query = `
     WITH selected_tags AS (
       ${selectedTagsSql}
-    ),
-    excluded_versions AS (
-      ${excludedVersionsSql}
     ),
     matched_tag_counts AS (
       SELECT
@@ -106,13 +102,10 @@ export function listTaggedOnlyDirectTargetRoots(
       FROM tagged_versions tv
       LEFT JOIN matched_tag_counts mtc
         ON mtc.version_id = tv.version_id
-      LEFT JOIN excluded_versions ev
-        ON ev.version_id = tv.version_id
       WHERE (
           tv.total_tag_count > 0
           OR (? = 1 AND COALESCE(mtc.matched_tag_count, 0) > 0)
         )
-        AND ev.version_id IS NULL
         AND matched_tag_count > 0
     )
     SELECT
@@ -134,6 +127,6 @@ export function listTaggedOnlyDirectTargetRoots(
   `;
 
   return sql
-    .all<Parameters<typeof mapPlanRootRow>[0]>(query, [...params, scanId, deleteOrphanedImages, deleteOrphanedImages])
+    .all<Parameters<typeof mapPlanRootRow>[0]>(query, [...params, deleteOrphanedImages, deleteOrphanedImages])
     .map(mapPlanRootRow);
 }
