@@ -7,6 +7,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [v1.0.7] - 2026-06-08
+
+### Added
+
+- Added a release-published Docker image for `ghcr-manager-visualizer` on GHCR, tagged as `vX.Y.Z`, `vX`, and `latest`.
+
+### Changed
+
+- The visualizer release image now defaults to container-friendly startup behavior and is smoke-tested through the real
+  server entrypoint during release publishing.
+
+### Fixed
+
+- Cleanup now blocks selected `sha-tag` helper roots when they still point into retained manifests, so signature helper
+  artifacts needed by surviving images are no longer deleted as ordinary untagged roots.
+- `exclude-tags` in cleanup is now tag-scoped instead of root-scoped, so excluding one sibling tag no longer silently
+  protects the whole root from partial untagging.
+
 ## [v1.0.6] - 2026-06-07
 
 ### Fixed
