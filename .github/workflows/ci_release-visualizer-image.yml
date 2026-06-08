@@ -14,7 +14,6 @@ env:
   IMAGE_REF: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-visualizer
 
 jobs:
-
   prepare:
     name: Resolve image refs
     runs-on: ubuntu-latest
