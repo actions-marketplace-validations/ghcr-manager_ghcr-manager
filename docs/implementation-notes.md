@@ -61,6 +61,9 @@ Previous handoff material was archived to
       merging, and deleting that exact same artifact set by ID.
 - [x] Add `chizkiyahu/delete-untagged-ghcr-action` as another comparison executor on the initial untagged-only scenario
       subset.
+- [x] Add release-only Docker publishing for the visualizer image with tags `vX.Y.Z`, `vX`, and `latest`.
+- [x] Replace the visualizer image release workflow's dummy smoke test with a live container startup check against a
+      tiny real SQLite DB.
 
 ## Current Next Plan
 
@@ -79,6 +82,8 @@ Previous handoff material was archived to
   follow-up ideas.
 - Run the initial GitHub matrix lanes for `chizkiyahu/delete-untagged-ghcr-action` and inspect how it behaves on the
   `2multiarch2tags` untagged graph family compared with `ghcr-manager`, `ghcr-cleanup-action`, and `vlaurin`.
+- Validate the visualizer release image on GitHub and confirm the published container starts with the expected default
+  host/port behavior.
 - Decide whether Task 09 should prioritize:
   - graph `delete-untagged` evaluation first using the existing `2multiarch2tags` family for
     `quartx-analytics/ghcr-cleaner` and `chizkiyahu/delete-untagged-ghcr-action`, now that `vlaurin/action-ghcr-prune`
@@ -146,6 +151,15 @@ Previous handoff material was archived to
   - enumerate matching run artifacts once
   - download by explicit artifact IDs
   - delete that exact same ID set after uploading the merged DB artifact
+- Visualizer release distribution should include a container image, but keep scope minimal:
+  - publish only the visualizer image for now
+  - publish only from release tags, not branch pushes
+  - tag images as `vX.Y.Z`, `vX`, and `latest`
+  - container default bind host should be `0.0.0.0`
+- The visualizer release image workflow should smoke-test the real container entrypoint:
+  - create a tiny SQLite DB from the repo schema/views
+  - start the image with `--db`
+  - verify `/api/owners` responds with the seeded owner list
 - The cosign helper-index bug needs a root-validation rule for selected helper roots.
 - If a selected root directly `digest-tag-referrer` points to a retained/protected manifest, that root is blocked.
 - Helper roots that point only to unretained manifests should still remain deletable.
