@@ -7,6 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [v1.0.8] - 2026-06-11
+
+### Changed
+
+- Marketplace-facing action metadata and README opening copy now lead more directly with GHCR cleanup terminology.
+- User-facing docs and related metadata now use the product name `GHCR Cleanup Manager` more consistently.
+- The main README's visualizer demo section now also points to Docker-based visualizer usage.
+
 ## [v1.0.7] - 2026-06-08
 
 ### Added

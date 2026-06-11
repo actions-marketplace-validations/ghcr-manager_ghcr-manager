@@ -41,7 +41,7 @@ jobs:
 
       - name: Preview GHCR cleanup
         id: ghcr-manager
-        uses: ghcr-manager/ghcr-manager@v1.0.7
+        uses: ghcr-manager/ghcr-manager@v1.0.8
         with:
           command: cleanup
           token: ${{ github.token }}
@@ -84,7 +84,7 @@ The action supports two commands:
 ### Preview cleanup
 
 ```yaml
-- uses: ghcr-manager/ghcr-manager@v1.0.7
+- uses: ghcr-manager/ghcr-manager@v1.0.8
   with:
     command: cleanup
     token: ${{ github.token }}
@@ -105,7 +105,7 @@ The action supports two commands:
 ### Apply cleanup
 
 ```yaml
-- uses: ghcr-manager/ghcr-manager@v1.0.7
+- uses: ghcr-manager/ghcr-manager@v1.0.8
   with:
     command: cleanup
     token: ${{ github.token }}
@@ -127,7 +127,7 @@ off `dry-run`.
 ### Scan one package
 
 ```yaml
-- uses: ghcr-manager/ghcr-manager@v1.0.7
+- uses: ghcr-manager/ghcr-manager@v1.0.8
   with:
     command: scan
     token: ${{ github.token }}
