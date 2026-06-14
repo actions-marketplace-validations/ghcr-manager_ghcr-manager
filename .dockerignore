@@ -1,8 +1,0 @@
-.git
-.github
-artifacts
-dist
-docs/archive
-node_modules
-visualizer/dist
-visualizer/node_modules

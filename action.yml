@@ -1,12 +1,11 @@
 name: GHCR Cleanup Manager
 description: >
-  GHCR cleanup action for GitHub Container Registry packages. Clean tagged and untagged images safely, handle multi-arch
-  images correctly, and account for OCI referrers including provenance attestations and cosign signatures.
+  GHCR cleanup action for GitHub Container Registry package. Handles multi-arch, provenance attestation, and cosign
+  signature.
 
 branding:
   icon: package
   color: blue
-
 inputs:
   command:
     description: Action command to run (`scan` or `cleanup`)
@@ -89,179 +88,40 @@ inputs:
 outputs:
   db-path:
     description: Path to the SQLite database in the GitHub action runner
-    value: ${{ steps.prepare-db.outputs.db_path }}
+    value: ${{ steps.ghcr-cleanup-manager.outputs.db-path }}
   summary-json-path:
     description: Path to the command summary JSON file for commands that emit one
-    value: ${{ inputs.command == 'cleanup' && steps.prepare-cleanup.outputs.summary_path }}
+    value: ${{ steps.ghcr-cleanup-manager.outputs.summary-json-path }}
 
 runs:
   using: composite
   steps:
-    - name: Set up Node.js
-      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+    - name: Warn about moved action
+      shell: bash
+      run: |
+        echo "::warning title=Action moved::ghcr-manager/ghcr-manager is now a wrapper."
+        echo "::warning title=Action moved::Please migrate to ghcr-manager/ghcr-cleanup-manager."
+
+    - id: ghcr-cleanup-manager
+      uses: ghcr-manager/ghcr-cleanup-manager@3ff1156424b762fdcbebb026021191db128931b3  # v1.1.0
       with:
-        node-version: "24"
-
-    - name: Install dependencies
-      shell: bash
-      working-directory: ${{ github.action_path }}
-      run: |
-        set -euo pipefail
-        npm ci
-
-    - name: Build ghcr-manager
-      shell: bash
-      working-directory: ${{ github.action_path }}
-      run: |
-        set -euo pipefail
-        npm run build
-
-    - name: Validate action command
-      shell: bash
-      run: |
-        set -euo pipefail
-        case "${{ inputs.command }}" in
-          scan|cleanup) ;;
-          *)
-            echo "Unsupported command '${{ inputs.command }}'. Expected 'scan' or 'cleanup'." >&2
-            exit 1
-            ;;
-        esac
-
-    - name: Resolve artifact upload intent
-      id: resolve-upload
-      shell: bash
-      run: |
-        set -euo pipefail
-        upload_artifacts="${{ inputs.upload-artifacts }}"
-        if [[ "${{ inputs.command }}" == "scan" ]]; then
-          upload_artifacts="true"
-        fi
-        echo "upload_artifacts=$upload_artifacts" >> "$GITHUB_OUTPUT"
-
-    - name: Prepare scan DB path
-      id: prepare-db
-      if: ${{ inputs.command == 'scan' || inputs.command == 'cleanup' }}
-      shell: bash
-      env:
-        INPUT_DB_PATH: ${{ inputs.db-path }}
-        RUNNER_TEMP: ${{ runner.temp }}
-      run: |
-        set -euo pipefail
-        db_file="${{ inputs.owner }}__${{ inputs.package }}.sqlite"
-        if [[ -n "$INPUT_DB_PATH" ]]; then
-          db_path="$INPUT_DB_PATH"
-          db_dir="$(dirname "$db_path")"
-          db_file="$(basename "$db_path")"
-        else
-          db_dir="$(mktemp -d -p "$RUNNER_TEMP")"
-          db_path="$db_dir/$db_file"
-        fi
-        mkdir -p "$db_dir"
-        echo "db_file=$db_file" >> "$GITHUB_OUTPUT"
-        echo "db_path=$db_path" >> "$GITHUB_OUTPUT"
-
-    - name: Scan before command
-      id: scan-before
-      if: ${{ inputs.command == 'scan' || inputs.command == 'cleanup' }}
-      shell: bash
-      working-directory: ${{ github.action_path }}
-      run: |
-        set -euo pipefail
-        scan_args=(
-          --db "${{ steps.prepare-db.outputs.db_path }}"
-          --log-level "${{ inputs.log-level }}"
-          --owner "${{ inputs.owner }}"
-          --package "${{ inputs.package }}"
-          --token "${{ inputs.token }}"
-          --github-output "$GITHUB_OUTPUT"
-        )
-        npm run ghcr-manager:dist -- scan \
-          "${scan_args[@]}"
-
-    - name: Prepare cleanup args
-      id: prepare-cleanup
-      if: ${{ inputs.command == 'cleanup' }}
-      shell: bash
-      working-directory: ${{ github.action_path }}
-      env:
-        DELETE_TAGS: ${{ inputs.delete-tags }}
-        DELETE_UNTAGGED: ${{ inputs.delete-untagged }}
-        DELETE_GHOST_IMAGES: ${{ inputs.delete-ghost-images }}
-        DELETE_ORPHANED_IMAGES: ${{ inputs.delete-orphaned-images }}
-        DELETE_PARTIAL_IMAGES: ${{ inputs.delete-partial-images }}
-        DB_PATH: ${{ steps.prepare-db.outputs.db_path }}
-        DRY_RUN: ${{ inputs.dry-run }}
-        EXCLUDE_TAGS: ${{ inputs.exclude-tags }}
-        KEEP_N_TAGGED: ${{ inputs.keep-n-tagged }}
-        KEEP_N_UNTAGGED: ${{ inputs.keep-n-untagged }}
-        LOG_LEVEL: ${{ inputs.log-level }}
-        OLDER_THAN: ${{ inputs.older-than }}
-        OWNER: ${{ inputs.owner }}
-        PACKAGE: ${{ inputs.package }}
-        RUNNER_TEMP: ${{ runner.temp }}
-        TOKEN: ${{ inputs.token }}
-        USE_REGEX: ${{ inputs.use-regex }}
-      run: |
-        set -euo pipefail
-        node tools/prepare-action-args.mjs cleanup
-
-    - name: Run cleanup
-      id: run-cleanup
-      if: ${{ inputs.command == 'cleanup' }}
-      shell: bash
-      working-directory: ${{ github.action_path }}
-      run: |
-        set -euo pipefail
-        mapfile -d '' -t cleanup_args < "${{ steps.prepare-cleanup.outputs.args_path }}"
-        printf 'Running CLI command: ghcr-manager cleanup'
-        printf ' %q' "${cleanup_args[@]}"
-        printf '\n'
-        npm run --silent ghcr-manager:dist -- cleanup "${cleanup_args[@]}"
-        cat "${{ steps.prepare-cleanup.outputs.summary_path }}" | jq . >&2
-
-    - name: Scan after live cleanup
-      id: scan-after
-      if: ${{ inputs.command == 'cleanup' && inputs.dry-run != 'true' && inputs.scan-after-cleanup == 'true' }}
-      shell: bash
-      working-directory: ${{ github.action_path }}
-      run: |
-        set -euo pipefail
-        npm run ghcr-manager:dist -- scan \
-          --db "${{ steps.prepare-db.outputs.db_path }}" \
-          --log-level "${{ inputs.log-level }}" \
-          --owner "${{ inputs.owner }}" \
-          --package "${{ inputs.package }}" \
-          --token "${{ inputs.token }}" \
-          --github-output "$GITHUB_OUTPUT"
-
-    - name: Upload DB artifact
-      id: upload
-      if:
-        ${{ (inputs.command == 'scan' || inputs.command == 'cleanup') && steps.resolve-upload.outputs.upload_artifacts
-        == 'true' }}
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-      with:
-        name: ${{ steps.prepare-db.outputs.db_file }}
-        path: ${{ steps.prepare-db.outputs.db_path }}
-        retention-days:
-          ${{ inputs.db-artifact-retention-days != '' && inputs.db-artifact-retention-days || github.retention_days }}
-
-    - name: Upload cleanup summary artifact
-      if: ${{ inputs.command == 'cleanup' && steps.resolve-upload.outputs.upload_artifacts == 'true' }}
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-      with:
-        name: ${{ steps.prepare-cleanup.outputs.summary_file }}
-        path: ${{ steps.prepare-cleanup.outputs.summary_path }}
-        retention-days:
-          ${{ inputs.db-artifact-retention-days != '' && inputs.db-artifact-retention-days || github.retention_days }}
-
-    - name: Write cleanup step summary
-      if: ${{ inputs.command == 'cleanup' }}
-      shell: bash
-      working-directory: ${{ github.action_path }}
-      run: |
-        set -euo pipefail
-        node tools/write-cleanup-step-summary.mjs \
-          --step-summary-path "$GITHUB_STEP_SUMMARY" \
-          --summary-json-path "${{ steps.prepare-cleanup.outputs.summary_path }}"
+        command: ${{ inputs.command }}
+        token: ${{ inputs.token }}
+        owner: ${{ inputs.owner }}
+        package: ${{ inputs.package }}
+        db-path: ${{ inputs.db-path }}
+        upload-artifacts: ${{ inputs.upload-artifacts }}
+        scan-after-cleanup: ${{ inputs.scan-after-cleanup }}
+        db-artifact-retention-days: ${{ inputs.db-artifact-retention-days }}
+        delete-tags: ${{ inputs.delete-tags }}
+        exclude-tags: ${{ inputs.exclude-tags }}
+        keep-n-tagged: ${{ inputs.keep-n-tagged }}
+        keep-n-untagged: ${{ inputs.keep-n-untagged }}
+        delete-untagged: ${{ inputs.delete-untagged }}
+        delete-ghost-images: ${{ inputs.delete-ghost-images }}
+        delete-partial-images: ${{ inputs.delete-partial-images }}
+        delete-orphaned-images: ${{ inputs.delete-orphaned-images }}
+        older-than: ${{ inputs.older-than }}
+        use-regex: ${{ inputs.use-regex }}
+        dry-run: ${{ inputs.dry-run }}
+        log-level: ${{ inputs.log-level }}

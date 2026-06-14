@@ -1,0 +1,139 @@
+name: "CI: Sync upstream release"
+
+"on":
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream-release
+  cancel-in-progress: false
+
+env:
+  UPSTREAM_REPOSITORY: ghcr-manager/ghcr-cleanup-manager
+
+jobs:
+  sync-upstream-release:
+    runs-on: ubuntu-latest
+    outputs:
+      branch: ${{ steps.branch.outputs.name }}
+      exists: ${{ steps.existing.outputs.exists }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          fetch-depth: 0
+
+      - name: Resolve target branch
+        id: branch
+        run: |
+          echo "name=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve latest upstream release
+        id: upstream
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          upstream_tag="$(GITHUB_REPOSITORY="${UPSTREAM_REPOSITORY}" scripts/latest-release-tag.sh)"
+          upstream_sha="$(
+            git ls-remote "https://github.com/${UPSTREAM_REPOSITORY}" "refs/tags/${upstream_tag}" | cut -f1
+          )"
+          if [[ -z "${upstream_sha}" ]]; then
+            echo "Could not resolve upstream tag ${upstream_tag} to a commit SHA." >&2
+            exit 1
+          fi
+          echo "upstream_tag=${upstream_tag}" >> "$GITHUB_OUTPUT"
+          echo "upstream_sha=${upstream_sha}" >> "$GITHUB_OUTPUT"
+
+      - name: Check whether this release already exists here
+        id: existing
+        env:
+          UPSTREAM_TAG: ${{ steps.upstream.outputs.upstream_tag }}
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --tags origin "refs/tags/${UPSTREAM_TAG}" >/dev/null 2>&1; then
+            echo "Release ${UPSTREAM_TAG} already exists in ghcr-manager/ghcr-manager."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fetch upstream action metadata
+        if: ${{ steps.existing.outputs.exists != 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          UPSTREAM_TAG: ${{ steps.upstream.outputs.upstream_tag }}
+        run: |
+          set -euo pipefail
+          curl \
+            -fsSL \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            "https://raw.githubusercontent.com/${UPSTREAM_REPOSITORY}/${UPSTREAM_TAG}/action.yml" \
+            -o /tmp/upstream-action.yml
+
+      - name: Render wrapper action
+        if: ${{ steps.existing.outputs.exists != 'true' }}
+        env:
+          OUTPUT_PATH: action.yml
+          UPSTREAM_ACTION_FILE: /tmp/upstream-action.yml
+          UPSTREAM_ACTION_SHA: ${{ steps.upstream.outputs.upstream_sha }}
+          UPSTREAM_ACTION_TAG: ${{ steps.upstream.outputs.upstream_tag }}
+        run: scripts/render-wrapper-action.sh
+
+      - name: Show rendered action.yml
+        if: ${{ steps.existing.outputs.exists != 'true' }}
+        run: |
+          echo '--- action.yml ---'
+          cat action.yml
+
+      - name: lint
+        if: ${{ steps.existing.outputs.exists != 'true' }}
+        uses: ./.github/actions/lint
+
+      - name: Commit wrapper update
+        if: ${{ steps.existing.outputs.exists != 'true' }}
+        env:
+          UPSTREAM_TAG: ${{ steps.upstream.outputs.upstream_tag }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "No tracked file changes to commit."
+          else
+            git add -A
+            git commit -m "Sync wrapper to ${UPSTREAM_TAG}"
+            git push origin HEAD:${GITHUB_REF_NAME}
+          fi
+
+      - name: Move major tag
+        if: ${{ steps.existing.outputs.exists != 'true' }}
+        env:
+          UPSTREAM_TAG: ${{ steps.upstream.outputs.upstream_tag }}
+        run: |
+          set -euo pipefail
+          major_tag="${UPSTREAM_TAG%%.*}"
+          git tag -f "${major_tag}" HEAD
+          git push origin "refs/tags/${major_tag}" --force
+
+      - name: Create version tag
+        if: ${{ steps.existing.outputs.exists != 'true' }}
+        env:
+          UPSTREAM_TAG: ${{ steps.upstream.outputs.upstream_tag }}
+        run: |
+          set -euo pipefail
+          git tag "${UPSTREAM_TAG}" HEAD
+          git push origin "refs/tags/${UPSTREAM_TAG}"
+
+      - name: Create GitHub release
+        if: ${{ steps.existing.outputs.exists != 'true' }}
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
+        with:
+          name: Release ${{ steps.upstream.outputs.upstream_tag }}
+          tag_name: ${{ steps.upstream.outputs.upstream_tag }}
+          generate_release_notes: true
