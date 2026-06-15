@@ -3,6 +3,15 @@ name: "CI: lint"
 "on":
   workflow_call:
   workflow_dispatch:
+    inputs:
+      write-job-summary:
+        description: "Controls job summary output"
+        required: false
+        default: "on-failure-only"
+        type: choice
+        options:
+          - "on-failure-only"
+          - "true"
   pull_request:
   push:
 
@@ -23,7 +32,7 @@ jobs:
         uses: joshjohanning/ensure-immutable-actions@9467f3db8f5f3c942629468981c4a2a67d0caa64  # v2.6.1
         with:
           include-first-party: "true"
-          write-job-summary: "on-failure-only"
+          write-job-summary: ${{ inputs.write-job-summary || 'on-failure-only' }}
 
       - name: Super-Linter
         uses: ./.github/actions/lint
