@@ -20,10 +20,11 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       branch: ${{ steps.branch.outputs.name }}
+      target_sha: ${{ steps.stage.outputs.target_sha || steps.commit.outputs.commit }}
       exists: ${{ steps.existing.outputs.exists }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+      - name: Checkout # zizmor: ignore[artipacked] this workflow must push commits and tags back to the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0
 
@@ -93,47 +94,70 @@ jobs:
 
       - name: lint
         if: ${{ steps.existing.outputs.exists != 'true' }}
-        uses: ./.github/actions/lint
-
-      - name: Commit wrapper update
-        if: ${{ steps.existing.outputs.exists != 'true' }}
+        uses: super-linter/super-linter@4ce20838b8ab83717e78138c5b3a1407148e0918 # v8.7.0
         env:
-          UPSTREAM_TAG: ${{ steps.upstream.outputs.upstream_tag }}
+          GITHUB_TOKEN: ${{ github.token }}
+          MULTI_STATUS: false
+          VALIDATE_ALL_CODEBASE: true
+          VALIDATE_BASH: true
+          VALIDATE_MARKDOWN: true
+          VALIDATE_YAML: true
+
+      - name: Stage wrapper update
+        id: stage
+        if: ${{ steps.existing.outputs.exists != 'true' }}
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet; then
+          git add -A
+          if git diff --cached --quiet; then
             echo "No tracked file changes to commit."
-          else
-            git add -A
-            git commit -m "Sync wrapper to ${UPSTREAM_TAG}"
-            git push origin HEAD:${GITHUB_REF_NAME}
+            echo "target_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Move major tag
+      - name: Commit wrapper update
+        id: commit
+        if: ${{ steps.existing.outputs.exists != 'true' && !steps.stage.outputs.target_sha }}
+        uses: iarekylew00t/verified-bot-commit@42a042b0407248f3c0acac00c389e729e3476e86 # v2
+        with:
+          auto-stage: false
+          files: |
+            **
+          message: Sync wrapper to ${{ steps.upstream.outputs.upstream_tag }}
+          ref: ${{ github.ref }}
+          repository: ${{ github.repository }}
+          update-local: false
+
+      - name: Fetch signed commit
+        if: ${{ steps.existing.outputs.exists != 'true' && steps.commit.outputs.commit }}
+        run: |
+          set -euo pipefail
+          git fetch origin "${GITHUB_REF_NAME}" --depth=1
+
+      - name: Push tags
         if: ${{ steps.existing.outputs.exists != 'true' }}
         env:
+          TARGET_SHA: ${{ steps.stage.outputs.target_sha || steps.commit.outputs.commit }}
           UPSTREAM_TAG: ${{ steps.upstream.outputs.upstream_tag }}
         run: |
           set -euo pipefail
           major_tag="${UPSTREAM_TAG%%.*}"
-          git tag -f "${major_tag}" HEAD
+          git tag -f "${major_tag}" "${TARGET_SHA}"
           git push origin "refs/tags/${major_tag}" --force
 
-      - name: Create version tag
-        if: ${{ steps.existing.outputs.exists != 'true' }}
-        env:
-          UPSTREAM_TAG: ${{ steps.upstream.outputs.upstream_tag }}
-        run: |
-          set -euo pipefail
-          git tag "${UPSTREAM_TAG}" HEAD
+          if git rev-parse -q --verify "refs/tags/${UPSTREAM_TAG}" >/dev/null; then
+            git tag -d "${UPSTREAM_TAG}"
+          fi
+          git tag "${UPSTREAM_TAG}" "${TARGET_SHA}"
           git push origin "refs/tags/${UPSTREAM_TAG}"
 
       - name: Create GitHub release
         if: ${{ steps.existing.outputs.exists != 'true' }}
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
-        with:
-          name: Release ${{ steps.upstream.outputs.upstream_tag }}
-          tag_name: ${{ steps.upstream.outputs.upstream_tag }}
-          generate_release_notes: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPSTREAM_TAG: ${{ steps.upstream.outputs.upstream_tag }}
+        run: |
+          set -euo pipefail
+          gh release create "${UPSTREAM_TAG}" \
+            --verify-tag \
+            --title "Release ${UPSTREAM_TAG}" \
+            --generate-notes
